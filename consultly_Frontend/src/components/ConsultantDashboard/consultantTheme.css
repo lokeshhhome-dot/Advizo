@@ -1,0 +1,126 @@
+/* =========================================================================
+   Consultant Dashboard — shared design tokens (single source of truth).
+   Imported once by the shell (TabNavigation). Every consultant screen and
+   shell surface consumes these variables, so light/dark flip together and
+   spacing/radius/elevation stay consistent across the whole product.
+
+   Theme resolution order:
+     1. system preference  (@media prefers-color-scheme)
+     2. explicit override  ([data-theme="dark"] / [data-theme="light"])  -> wins
+   ========================================================================= */
+
+:root {
+  /* Palette — light */
+  --ds-bg: #eef1f6;
+  --ds-surface: #ffffff;
+  --ds-surface-2: #f8fafc;
+  --ds-sidebar: #ffffff;
+  --ds-header: #ffffff;
+  --ds-border: #e5e7eb;
+  --ds-border-strong: #d5dbe3;
+  --ds-text: #0f172a;
+  --ds-text-muted: #64748b;
+  --ds-text-subtle: #94a3b8;
+  --ds-overlay: rgba(15, 23, 42, 0.5);
+
+  --ds-brand: #4a6cf7;
+  --ds-brand-strong: #3b57d6;
+  --ds-brand-soft: #eef1fe;
+
+  --ds-success: #12b76a;
+  --ds-success-soft: #e7f7ef;
+  --ds-warning: #f79009;
+  --ds-warning-soft: #fdf2e3;
+  --ds-danger: #f04438;
+  --ds-danger-soft: #fdecea;
+  --ds-info: #0ea5e9;
+  --ds-info-soft: #e6f6fe;
+
+  /* Elevation */
+  --ds-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --ds-shadow-md: 0 4px 14px rgba(15, 23, 42, 0.07);
+  --ds-shadow-lg: 0 12px 30px rgba(15, 23, 42, 0.10);
+
+  /* Radius */
+  --ds-r-sm: 10px;
+  --ds-r-md: 14px;
+  --ds-r-lg: 20px;
+}
+
+/* ---- Dark: follow the OS unless an explicit theme is set ---- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ds-bg: #0b1120;
+    --ds-surface: #111827;
+    --ds-surface-2: #0f1626;
+    --ds-sidebar: #0f1626;
+    --ds-header: #0f1626;
+    --ds-border: #1f2937;
+    --ds-border-strong: #2a3547;
+    --ds-text: #e5e9f0;
+    --ds-text-muted: #94a3b8;
+    --ds-text-subtle: #64748b;
+    --ds-overlay: rgba(0, 0, 0, 0.6);
+
+    --ds-brand-soft: #1a2338;
+    --ds-success-soft: #0f2a1f;
+    --ds-warning-soft: #2a1f10;
+    --ds-danger-soft: #2a1514;
+    --ds-info-soft: #0d2230;
+
+    --ds-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --ds-shadow-md: 0 4px 14px rgba(0, 0, 0, 0.45);
+    --ds-shadow-lg: 0 12px 30px rgba(0, 0, 0, 0.55);
+  }
+}
+
+/* ---- Light: explicit lock (wins over OS dark). Applied on the shell wrapper
+   so the whole consultant area stays cohesively light while inner pages still
+   use Polaris (light-only). Remove data-theme="light" from the wrapper to let
+   the app follow the OS once those pages are migrated off Polaris. ---- */
+[data-theme="light"] {
+  --ds-bg: #eef1f6;
+  --ds-surface: #ffffff;
+  --ds-surface-2: #f8fafc;
+  --ds-sidebar: #ffffff;
+  --ds-header: #ffffff;
+  --ds-border: #e5e7eb;
+  --ds-border-strong: #d5dbe3;
+  --ds-text: #0f172a;
+  --ds-text-muted: #64748b;
+  --ds-text-subtle: #94a3b8;
+  --ds-overlay: rgba(15, 23, 42, 0.5);
+  --ds-brand-soft: #eef1fe;
+  --ds-success-soft: #e7f7ef;
+  --ds-warning-soft: #fdf2e3;
+  --ds-danger-soft: #fdecea;
+  --ds-info-soft: #e6f6fe;
+  --ds-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --ds-shadow-md: 0 4px 14px rgba(15, 23, 42, 0.07);
+  --ds-shadow-lg: 0 12px 30px rgba(15, 23, 42, 0.10);
+}
+
+/* ---- Dark: explicit opt-in (wins over OS) ---- */
+[data-theme="dark"] {
+  --ds-bg: #0b1120;
+  --ds-surface: #111827;
+  --ds-surface-2: #0f1626;
+  --ds-sidebar: #0f1626;
+  --ds-header: #0f1626;
+  --ds-border: #1f2937;
+  --ds-border-strong: #2a3547;
+  --ds-text: #e5e9f0;
+  --ds-text-muted: #94a3b8;
+  --ds-text-subtle: #64748b;
+  --ds-overlay: rgba(0, 0, 0, 0.6);
+
+  --ds-brand-soft: #1a2338;
+  --ds-success-soft: #0f2a1f;
+  --ds-warning-soft: #2a1f10;
+  --ds-danger-soft: #2a1514;
+  --ds-info-soft: #0d2230;
+
+  --ds-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --ds-shadow-md: 0 4px 14px rgba(0, 0, 0, 0.45);
+  --ds-shadow-lg: 0 12px 30px rgba(0, 0, 0, 0.55);
+}

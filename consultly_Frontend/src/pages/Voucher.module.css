@@ -1,0 +1,119 @@
+.voucherPage {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.title {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0;
+    color: #111827;
+}
+
+.balanceSection {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 16px;
+}
+
+.balanceLabel {
+    color: #6b7280;
+}
+
+.balanceValue {
+    font-size: 15px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.sectionHeader {
+    margin-top: 8px;
+}
+
+.sectionTitle {
+    font-size: 18px;
+    font-weight: 500;
+    margin: 0;
+    color: #111827;
+}
+
+.cardGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 160px);
+    gap: 16px;
+    justify-content: start; /* left align */
+}
+
+.rechargeCard {
+    position: relative;
+    padding: 16px 12px 14px;
+    background-color: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.rechargeCard:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.1);
+    border-color: #cbd5f5;
+}
+
+.rechargeCardHighlighted {
+    border-color: #f97316;
+    
+}
+
+.badge {
+    position: absolute;
+    top: 4px;
+    right: -54px;
+    width: 150px;
+    padding: 6px 0;
+    background: #551d97;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 600;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    transform: rotate(45deg);
+    pointer-events: none;
+    box-shadow: 0px 0px 5px 1px #5e5e5e;
+}
+
+.amount {
+    margin-top: 8px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.extra {
+    width: 100%;
+    text-align: center;
+    margin-top: 4px;
+    padding-top: 6px;
+    border-top: 1px solid #e5e7eb;
+    font-size: 13px;
+    color: #000000;
+    
+}
+
+@media (max-width: 768px) {
+    .voucherPage {
+        gap: 16px;
+    }
+}
+
+

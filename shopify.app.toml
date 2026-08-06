@@ -1,0 +1,81 @@
+client_id = "7836ff4ee618db510c5ac4c20b75049f"
+name = "Consultly Live Expert Calls"
+application_url = "https://consultation.zend-apps.com"
+embedded = true
+handle = "consultly-live-expert-calls"
+
+[webhooks]
+api_version = "2026-07"
+
+# -------------------------------
+# Orders
+# -------------------------------
+
+[[webhooks.subscriptions]]
+topics = ["orders/create"]
+uri = "/api/webhooks/shop/orders-created"
+
+[[webhooks.subscriptions]]
+topics = ["orders/paid"]
+uri = "/api/webhooks/shop/orders-paid"
+
+[[webhooks.subscriptions]]
+topics = ["orders/delete"]
+uri = "/api/webhooks/shop/orders-deleted"
+
+# Optional (recommended if wallet/payment logic needs them)
+
+[[webhooks.subscriptions]]
+topics = ["orders/cancelled"]
+uri = "/api/webhooks/shop/orders-cancelled"
+
+[[webhooks.subscriptions]]
+topics = ["refunds/create"]
+uri = "/api/webhooks/shop/refunds-created"
+
+# -------------------------------
+# Themes
+# -------------------------------
+
+[[webhooks.subscriptions]]
+topics = [
+  "themes/publish",
+  "themes/update"
+]
+uri = "/api/webhooks/theme/webhooks"
+
+# -------------------------------
+# App lifecycle
+# -------------------------------
+
+[[webhooks.subscriptions]]
+topics = ["app/uninstalled"]
+uri = "/api/webhooks/app-uninstalled"
+
+# -------------------------------
+# GDPR Compliance
+# -------------------------------
+
+[[webhooks.subscriptions]]
+compliance_topics = [
+  "customers/data_request",
+  "customers/redact",
+  "shop/redact"
+]
+uri = "/api/webhooks/webhooks"
+
+[access_scopes]
+scopes ="read_customers,write_customers,write_draft_orders,read_online_store_navigation,write_online_store_navigation,read_orders,write_orders,read_themes"
+optional_scopes = []
+
+use_legacy_install_flow = false
+
+[auth]
+redirect_urls = [
+  "https://consultation.zend-apps.com/api/app/callback"
+]
+
+[app_proxy]
+url = "https://consultation.zend-apps.com/api/app/consultly"
+subpath = "consultly"
+prefix = "apps"

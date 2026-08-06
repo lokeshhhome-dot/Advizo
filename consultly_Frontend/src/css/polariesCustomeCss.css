@@ -1,0 +1,14 @@
+.Polaris-Page {
+    padding-bottom: 30px !important;
+}
+
+@media (min-width: 30.625em) {
+    .Polaris-Page {
+        padding-bottom: 30px !important;
+    }
+}
+.Polaris-Thumbnail > *{
+    width: 100% !important; 
+    height: 100% !important;
+    object-fit: cover !important;
+}

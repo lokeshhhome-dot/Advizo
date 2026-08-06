@@ -1,0 +1,224 @@
+/* Consultant profile modal — premium redesign.
+   Tokens from consultantTheme.css; the root carries data-theme="light" so the
+   modal matches the (light-pinned) app even when it portals outside the shell. */
+
+.dialog {
+    max-width: 520px;
+}
+
+.content {
+    border: none !important;
+    border-radius: var(--ds-r-lg) !important;
+    overflow: hidden;
+    background: var(--ds-surface) !important;
+    box-shadow: var(--ds-shadow-lg) !important;
+}
+
+/* Gradient header */
+.header {
+    position: relative;
+    height: 96px;
+    background: linear-gradient(135deg, var(--ds-brand) 0%, var(--ds-brand-strong) 100%);
+}
+
+.closeBtn {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.18s ease;
+    font-size: 18px;
+    line-height: 1;
+}
+
+.closeBtn:hover {
+    background: rgba(255, 255, 255, 0.32);
+}
+
+/* Avatar overlapping the header */
+.avatarBlock {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: -52px;
+    padding: 0 24px;
+}
+
+.avatarWrap {
+    position: relative;
+    width: 104px;
+    height: 104px;
+}
+
+.avatar {
+    width: 104px;
+    height: 104px;
+    border-radius: 28px;
+    object-fit: cover;
+    border: 4px solid var(--ds-surface);
+    box-shadow: var(--ds-shadow-md);
+    background: var(--ds-surface-2);
+}
+
+.cameraBtn {
+    position: absolute;
+    right: -4px;
+    bottom: -4px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 3px solid var(--ds-surface);
+    background: var(--ds-brand);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.18s ease;
+}
+
+.cameraBtn:hover {
+    background: var(--ds-brand-strong);
+}
+
+.avatarName {
+    margin-top: 12px;
+    font-size: 18px;
+    font-weight: 750;
+    letter-spacing: -0.01em;
+    color: var(--ds-text);
+}
+
+.avatarHint {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--ds-text-subtle);
+}
+
+/* Form */
+.body {
+    padding: 20px 24px 4px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.fieldFull {
+    grid-column: 1 / -1;
+}
+
+.textarea {
+    resize: vertical;
+    min-height: 76px;
+    font-family: inherit;
+    line-height: 1.5;
+}
+
+.charCount {
+    font-size: 11px;
+    color: var(--ds-text-subtle);
+    text-align: right;
+}
+
+.label {
+    font-size: 12px;
+    font-weight: 650;
+    color: var(--ds-text-muted);
+    letter-spacing: 0.01em;
+}
+
+.input,
+.select {
+    width: 100%;
+    padding: 11px 13px;
+    border: 1px solid var(--ds-border-strong);
+    border-radius: var(--ds-r-sm);
+    font-size: 14px;
+    color: var(--ds-text);
+    background: var(--ds-surface);
+    outline: none;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.input::placeholder {
+    color: var(--ds-text-subtle);
+}
+
+.input:focus,
+.select:focus {
+    border-color: var(--ds-brand);
+    box-shadow: 0 0 0 3px var(--ds-brand-soft);
+}
+
+/* Footer */
+.footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 24px 22px;
+    margin-top: 12px;
+    border-top: 1px solid var(--ds-border);
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: var(--ds-r-sm);
+    font-size: 14px;
+    font-weight: 650;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.btnPrimary {
+    background: var(--ds-brand);
+    color: #fff;
+}
+
+.btnPrimary:hover {
+    background: var(--ds-brand-strong);
+}
+
+.btnPrimary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btnDanger {
+    background: var(--ds-danger-soft);
+    color: var(--ds-danger);
+    border-color: transparent;
+}
+
+.btnDanger:hover {
+    background: var(--ds-danger);
+    color: #fff;
+}
+
+@media (max-width: 520px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+}

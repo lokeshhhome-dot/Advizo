@@ -1,0 +1,45 @@
+.footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 20px 16px 24px;
+    /* Never let the footer shrink; margin-top keeps it pinned to the bottom
+       even if the parent flex column changes. */
+    flex-shrink: 0;
+    margin-top: auto;
+    border-top: 1px solid #ececef;
+}
+
+.copyright {
+    margin: 0;
+    font-size: 12px;
+    color: #6d7175;
+    text-align: center;
+}
+
+.brand {
+    font-weight: 600;
+    color: #202223;
+}
+
+.links {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.link {
+    font-size: 12px;
+    color: #005bd3;
+    text-decoration: none;
+}
+
+.link:hover {
+    text-decoration: underline;
+}
+
+.divider {
+    font-size: 12px;
+    color: #8c9196;
+}

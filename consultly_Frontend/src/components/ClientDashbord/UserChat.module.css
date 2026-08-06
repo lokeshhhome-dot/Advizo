@@ -1,0 +1,773 @@
+/* Chat Page Container
+ * --chat-vh is kept in sync with window.visualViewport by UserChat.js, so
+ * when the mobile keyboard opens the whole chat shrinks to the visible area
+ * (Instagram-style) instead of the keyboard covering the input. */
+.chatPageContainer {
+    display: flex;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    height: var(--chat-vh, 100dvh);
+    overflow: hidden;
+    background: #f8f9fa;
+    justify-content: center;
+    align-items: center;
+    /* Breathing room around the card on desktop. box-sizing is load-bearing:
+       with the default content-box this padding would be ADDED to the 100dvh
+       height and push the bottom of the chat below the fold. */
+    padding: clamp(0px, 2.5vh, 28px) clamp(0px, 2.5vw, 28px);
+    box-sizing: border-box;
+}
+
+/* The centered chat card — same geometry as the call page, so the chat is
+   always vertically and horizontally centred and can never extend past the
+   viewport on a laptop or a large desktop. */
+.container {
+    width: 100%;
+    max-width: 980px;
+    height: 100%;
+    max-height: 760px;
+    min-height: 320px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    border-radius: 18px;
+    overflow: hidden;
+    background: #ffffff;
+    box-shadow:
+        0 2px 8px rgba(10, 14, 20, 0.08),
+        0 18px 48px rgba(10, 14, 20, 0.14);
+}
+
+.avatarWrapper {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.onlineIndicator {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #10b981;
+    /* border: 2px solid white; */
+}
+
+/* Chat Window */
+.chatWindow {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    overflow: hidden;
+    /* Lets the messages area (flex:1) shrink instead of forcing the card taller
+       than its max-height. */
+    min-height: 0;
+}
+
+.chatWindowContent {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+/* Chat Header */
+.chatHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e9ecef;
+    background: white;
+    flex-shrink: 0;
+}
+
+
+.chatHeaderInfo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.backButton {
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    color: #6c757d;
+    border-radius: 8px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 4px;
+    flex-shrink: 0;
+}
+
+.backButton:hover {
+    background: #f8f9fa;
+    color: #495057;
+}
+
+.chatHeaderAvatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    object-fit: cover;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.chatHeaderName {
+    font-size: 16px;
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+}
+
+.chatHeaderStatus {
+    font-size: 13px;
+    color: #6c757d;
+}
+
+.chatHeaderActions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/* Session timer + stop button */
+.timerWrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.timerPill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    border-radius: 999px;
+    background: #e7f6ec;
+    color: #135430;
+    font-size: 13px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.timerDot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #10b981;
+    animation: timerBlink 1.6s ease-in-out infinite;
+}
+
+@keyframes timerBlink {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.35;
+    }
+}
+
+.stopChatBtn {
+    padding: 6px 14px;
+    background: #ff4d4f;
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background 0.15s ease, transform 0.12s ease;
+}
+
+.stopChatBtn:hover {
+    background: #e6393b;
+}
+
+.stopChatBtn:active {
+    transform: scale(0.96);
+}
+
+.headerButton {
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    color: #6c757d;
+    border-radius: 8px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.headerButton:hover {
+    background: #f8f9fa;
+    color: #495057;
+}
+
+/* Messages Area */
+.messagesArea {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: #f0f2f5;
+    scroll-behavior: auto;
+    overscroll-behavior: contain;
+}
+
+.emptyMessages {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 24px;
+}
+
+.emptyMessages p {
+    margin: 0;
+    font-size: 14px;
+    color: #6c757d;
+}
+
+.messagesArea::-webkit-scrollbar {
+    width: 6px;
+}
+
+.messagesArea::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.messagesArea::-webkit-scrollbar-thumb {
+    background: #dee2e6;
+    border-radius: 3px;
+}
+
+.messagesArea::-webkit-scrollbar-thumb:hover {
+    background: #adb5bd;
+}
+
+/* Chat end center pop */
+.chatEndOverlay {
+    position: fixed;
+    inset: 0;
+    /* background: rgba(0, 0, 0, 0.35); */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1200;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+.chatEndBox {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 24px 28px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    max-width: 470px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.chatEndIcon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #fff4e5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+}
+
+.lockWrapper {
+    position: relative;
+    width: 44px;
+    height: 44px;
+}
+
+.lockIcon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #fff4e5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    z-index: 2;
+}
+
+.reverseRing {
+    position: absolute;
+    inset: -5px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    border-bottom: 3px solid orange;
+    border-left: 3px solid orange;
+    animation: reverseSpin 1.2s linear infinite;
+}
+
+@keyframes reverseSpin {
+    from {
+        transform: rotate(360deg);
+    }
+
+    to {
+        transform: rotate(0deg);
+    }
+}
+
+
+.chatEndContent h4 {
+    margin: 0 0 6px 0;
+    font-size: 16px;
+    color: #111827;
+}
+
+.chatEndContent p {
+    margin: 0;
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.chatEndButtonAccept,
+.chatEndButtonStart {
+    margin-left: auto;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    min-width: 100px;
+    font-family: sans-serif;
+    flex-shrink: 0;
+}
+
+.chatEndButtonAccept {
+    background: green;
+    color: #fff;
+}
+
+.chatEndButtonStart {
+    background: yellow;
+    color: #000;
+}
+
+.chatEndButtonStart.chatEndButtonWaiting {
+    background: gray;
+    color: #fff;
+    cursor: not-allowed;
+}
+
+.chatEndButtonAccept:hover {
+    filter: brightness(1.1);
+}
+
+.chatEndButton:hover {
+    background: #0f9f73;
+}
+
+.messageContainer {
+    display: flex;
+  
+}
+
+.messageContainerLeft {
+    justify-content: flex-start;
+}
+
+.messageContainerRight {
+    justify-content: flex-end;
+}
+
+.messageBubble {
+    max-width: 70%;
+    padding: 10px;
+    border-radius: 8px;
+    word-wrap: break-word;
+    /* border: 1px solid red; */
+}
+
+.messageBubbleOwn {
+    background: #dcf8c6;
+    border-bottom-right-radius: 4px;
+}
+
+.messageBubbleOther {
+    background: white;
+    border-bottom-left-radius: 4px;
+}
+
+.messageSender {
+    font-size: 12px;
+    font-weight: 600;
+    color: #667eea;
+    margin-bottom: 4px;
+}
+
+.messageText {
+    font-size: 14px;
+    color: #212529;
+    line-height: 1.5;
+    margin-bottom: 4px;
+}
+
+.messageTimestamp {
+    font-size: 11px;
+    color: #6c757d;
+    text-align: right;
+    margin-top: 4px;
+}
+
+.messageBubbleOther .messageTimestamp {
+    text-align: left;
+}
+
+/* Message Input Area */
+.messageInputArea {
+    padding: 16px 20px;
+    border-top: 1px solid #e9ecef;
+    background: white;
+    flex-shrink: 0;
+}
+
+.inputGroup {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f0f2f5;
+    border-radius: 24px;
+    padding: 8px 12px;
+}
+
+.attachButton {
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    color: #6c757d;
+    border-radius: 50%;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.attachButton:hover {
+    background: #e9ecef;
+    color: #495057;
+}
+
+.messageInput {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 14px;
+    color: #212529;
+    padding: 8px 12px;
+}
+
+.messageInput::placeholder {
+    color: #adb5bd;
+}
+
+.sendButton {
+    background: #25d366;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    color: white;
+    border-radius: 50%;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+}
+
+.sendButton:hover {
+    background: #20ba5a;
+    transform: scale(1.05);
+}
+
+.sendIcon {
+    width: 18px;
+    height: 18px;
+    stroke: white;
+}
+
+/* Empty Chat State */
+.emptyChatState {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 40px 20px;
+}
+
+.emptyChatContent {
+    text-align: center;
+}
+
+.emptyChatIcon {
+    color: #adb5bd;
+    margin-bottom: 16px;
+}
+
+.emptyChatText {
+    color: #6c757d;
+    font-size: 15px;
+    margin: 0;
+}
+
+/* ================= CHAT CARD RESPONSIVE ================= */
+
+/* Phones and small tablets: the chat takes the whole screen, exactly like the
+   call page. A floating card wastes space this size and the on-screen keyboard
+   needs every pixel (--chat-vh already tracks the visual viewport). */
+@media (max-width: 768px) {
+    .chatPageContainer {
+        padding: 0;
+    }
+
+    .container {
+        max-width: 100%;
+        max-height: 100%;
+        min-height: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+}
+
+/* Short viewports (landscape phones, small laptops): drop the vertical inset so
+   the card keeps its full usable height instead of being squeezed. */
+@media (max-height: 600px) {
+    .chatPageContainer {
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+
+    .container {
+        max-height: 100%;
+        min-height: 0;
+        border-radius: 0;
+    }
+}
+
+/* Large desktops: a slightly wider card, matching the call page. */
+@media (min-width: 1440px) {
+    .container {
+        max-width: 1080px;
+    }
+}
+
+/* ================= MOBILE RESPONSIVE TABLE ================= */
+
+@media (max-width: 768px) {
+
+    .user-table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+        min-width: 700px;
+        /* allows horizontal scroll */
+    }
+
+    th,
+    td {
+        white-space: nowrap;
+        font-size: 12px;
+        padding: 8px;
+    }
+
+    h5 {
+        font-size: 16px;
+    }
+
+    .pagination {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .pagination .page-link {
+        font-size: 12px;
+        padding: 4px 8px;
+    }
+
+    select.form-select {
+        font-size: 12px;
+    }
+}
+
+/* Chat page – mobile */
+@media (max-width: 480px) {
+    .chatHeader {
+        padding: 10px 12px;
+        gap: 6px;
+    }
+
+    .chatHeaderInfo {
+        gap: 8px;
+    }
+
+    .backButton {
+        padding: 6px;
+        margin-right: 0;
+    }
+
+    .chatHeaderAvatar {
+        width: 36px;
+        height: 36px;
+    }
+
+    .chatHeaderName {
+        font-size: 15px;
+        max-width: 110px;
+    }
+
+    .chatHeaderStatus {
+        font-size: 12px;
+    }
+
+    .timerWrap {
+        gap: 6px;
+    }
+
+    .timerPill {
+        padding: 4px 9px;
+        font-size: 12px;
+    }
+
+    .stopChatBtn {
+        padding: 6px 11px;
+        font-size: 12px;
+    }
+
+    .messagesArea {
+        padding: 14px 12px;
+    }
+
+    .messageBubble {
+        max-width: 82%;
+    }
+
+    .messageInputArea {
+        padding: 10px 12px;
+    }
+}
+
+/* Chat end overlay – mobile */
+@media (max-width: 480px) {
+    .chatEndOverlay {
+        padding: 12px;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .chatEndBox {
+        flex-direction: column;
+        text-align: center;
+        padding: 20px 16px;
+        width: 100%;
+        max-width: 100%;
+        gap: 12px;
+    }
+
+    .chatEndBox button {
+       margin: 0 auto;
+       width: 150px !important;
+    }
+
+    .chatEndContent {
+        width: 100%;
+    }
+
+    .chatEndContent h4 {
+        font-size: 15px;
+        margin-bottom: 4px;
+    }
+
+    .chatEndContent p {
+        font-size: 13px;
+    }
+
+    .lockIconWrapper {
+        order: 1;
+    }
+
+    .chatEndButtonAccept,
+    .chatEndButtonStart {
+        order: 3;
+        margin-left: 0;
+        width: 100%;
+        min-width: 0;
+        padding: 10px 16px;
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 360px) {
+    .chatEndBox {
+        padding: 16px 12px;
+        gap: 10px;
+    }
+
+    .chatEndContent h4 {
+        font-size: 14px;
+    }
+
+    .chatEndContent p {
+        font-size: 12px;
+    }
+
+    .lockIconWrapper {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .reverseRing {
+        inset: -4px;
+    }
+}

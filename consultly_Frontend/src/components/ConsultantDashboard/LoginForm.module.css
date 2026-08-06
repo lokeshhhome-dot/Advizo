@@ -1,0 +1,283 @@
+/* Login Page Container */
+.loginPageContainer {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    padding: 20px;
+    /* border: 1px solid red; */
+}
+
+/* Login Container */
+.loginContainer {
+    width: 100%;
+    max-width: 650px;
+    /* border: 1px solid blue; */
+}
+
+/* Login Title */
+.loginTitle {
+    font-size: 36px;
+    font-weight: 700;
+    color: #212529;
+    text-align: center;
+    margin: 0 0 40px 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Login Form */
+.loginForm {
+    width: 100%;
+}
+
+/* Form Group */
+.formGroup {
+    margin-bottom: 24px;
+}
+
+.formLabel {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    color: #212529;
+    margin-bottom: 8px;
+}
+
+.formInput {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    font-size: 15px;
+    color: #212529;
+    background: #ffffff;
+    transition: all 0.2s;
+    outline: none;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+.formInput:focus {
+    background: #ffffff;
+    border-color: #212529;
+    outline: none;
+    box-shadow: 0 0 0 1px #212529;
+}
+
+.formInput::placeholder {
+    color: #6c757d;
+}
+
+/* Password Input Wrapper */
+.passwordInputWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.passwordInputWrapper .formInput {
+    padding-right: 48px;
+}
+
+/* Password Toggle */
+.passwordToggle {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+    z-index: 1;
+}
+
+.passwordToggle:hover {
+    color: #495057;
+}
+
+.passwordToggle:focus {
+    outline: none;
+}
+
+.inputError {
+    border-color: #dc3545;
+    background: #fff5f5;
+}
+
+.inputError:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+}
+
+/* Error Message */
+.errorMessage {
+    display: block;
+    font-size: 13px;
+    color: #dc3545;
+    margin-top: 6px;
+}
+
+/* Forgot Password Container */
+.forgotPasswordContainer {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.forgotPassword {
+    font-size: 14px;
+    color: #212529;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.forgotPassword:hover {
+    color: #495057;
+    text-decoration: underline;
+}
+
+/* Submit Button */
+.submitButton {
+    width: 100%;
+    padding: 14px;
+    background: #495057;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-transform: none;
+}
+
+.submitButton:hover:not(:disabled) {
+    background: #3d4146;
+}
+
+.submitButton:active:not(:disabled) {
+    background: #343a40;
+}
+
+.submitButton:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.buttonLoading {
+    pointer-events: none;
+}
+
+.spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Create Account Link */
+.createAccountLink {
+    text-align: center;
+    font-size: 14px;
+    color: #212529;
+    margin-top: 24px;
+}
+
+.createAccountLink a {
+    color: #212529;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.createAccountLink a:hover {
+    color: #495057;
+    text-decoration: underline;
+}
+
+/* Subtitle under the title (forgot / reset views) */
+.subtitleText {
+    text-align: center;
+    font-size: 14px;
+    color: #6c757d;
+    margin: -24px 0 32px;
+}
+
+/* Link-style buttons (forgot password, back to login) */
+.linkButton {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 14px;
+    font-family: inherit;
+    color: #212529;
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.linkButton:hover {
+    color: #495057;
+    text-decoration: underline;
+}
+
+.backLinkContainer {
+    text-align: center;
+    margin-top: 20px;
+}
+
+/* OTP input */
+.otpInput {
+    letter-spacing: 8px;
+    font-size: 20px;
+    font-weight: 600;
+    text-align: center;
+}
+
+/* Banners */
+.errorBanner {
+    padding: 12px 14px;
+    border-radius: 6px;
+    background: #fff5f5;
+    border: 1px solid #f1aeb5;
+    color: #b02a37;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+.successBanner {
+    padding: 12px 14px;
+    border-radius: 6px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+    .loginTitle {
+        font-size: 32px;
+    }
+
+    .loginContainer {
+        max-width: 100%;
+    }
+}
+

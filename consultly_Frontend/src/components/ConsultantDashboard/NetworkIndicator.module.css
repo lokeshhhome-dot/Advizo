@@ -1,0 +1,132 @@
+/* Network status pill — right edge of the call stage, vertically centred.
+   Purely informational: pointer-events are off so it can never intercept a
+   click meant for the video, the self-view or the call controls. */
+.indicator {
+    position: absolute;
+    top: 50%;
+    right: 14px;
+    transform: translateY(-50%);
+    z-index: 9;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: calc(100% - 28px);
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(14, 17, 22, 0.72);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #f4f6f8;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: 0 6px 18px rgba(10, 14, 20, 0.35);
+    animation: indicatorIn 0.22s ease-out;
+}
+
+@keyframes indicatorIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50%) translateX(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(-50%) translateX(0);
+    }
+}
+
+/* Fading out requires the element to stay mounted, so the parent keeps it for
+   the duration of this animation before unmounting. */
+.leaving {
+    animation: indicatorOut 0.22s ease-in forwards;
+}
+
+@keyframes indicatorOut {
+    from {
+        opacity: 1;
+        transform: translateY(-50%) translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-50%) translateX(8px);
+    }
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: #f59e0b;
+}
+
+.dotPoor {
+    background: #f59e0b;
+}
+
+.dotReconnecting {
+    background: #f59e0b;
+    animation: dotPulse 1.1s ease-in-out infinite;
+}
+
+.dotLost {
+    background: #ef4444;
+    animation: dotPulse 1.1s ease-in-out infinite;
+}
+
+@keyframes dotPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.35; transform: scale(0.8); }
+}
+
+.label {
+    display: inline-block;
+}
+
+/* Who the warning is about — omitted entirely when it is the local user, so the
+   common case stays as short as possible. */
+.scope {
+    opacity: 0.62;
+    font-weight: 500;
+}
+
+@media (max-width: 768px) {
+    .indicator {
+        right: 10px;
+        padding: 7px 10px;
+        font-size: 11px;
+        gap: 6px;
+    }
+
+    .dot {
+        width: 7px;
+        height: 7px;
+    }
+}
+
+/* Short viewports: sit just under the header instead of mid-stage, where it
+   would overlap the remote video's face area. */
+@media (max-height: 480px) {
+    .indicator {
+        top: 10px;
+        transform: none;
+        animation: none;
+    }
+
+    .leaving {
+        animation: none;
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .indicator,
+    .leaving,
+    .dotReconnecting,
+    .dotLost {
+        animation: none;
+    }
+}

@@ -1,0 +1,52 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+.language-card-wrapper .Polaris-LegacyCard {
+  overflow: visible;
+}
+
+/* Hide React error overlay - show loader instead */
+#react-error-overlay {
+  display: none !important;
+}
+
+iframe[id*="webpack-dev-server"] {
+  display: none !important;
+}
+
+/* Hide any error messages that might appear */
+body > div[style*="position: fixed"][style*="z-index: 9999"] {
+  display: none !important;
+}
+
+/* Hide WebSocket connection error messages */
+body > div[style*="position: fixed"]:has-text("WebSocket") {
+  display: none !important;
+}
+
+/* Suppress React Refresh WebSocket errors */
+script[src*="react-refresh"] {
+  display: none;
+}
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+.consultant-dashboard {
+  height: 100vh;
+}
+.site-footer {
+  margin-top: 0;
+}

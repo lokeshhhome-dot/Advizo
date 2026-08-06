@@ -1,0 +1,79 @@
+.react-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.react-toast-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #323232;
+    color: #fff;
+    padding: 14px 20px;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 250px;
+    max-width: 400px;
+    gap: 12px;
+}
+
+.react-toast-message {
+    flex: 1;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.react-toast-close {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.react-toast-close:hover {
+    opacity: 1;
+}
+
+/* Success variant */
+.react-toast.success .react-toast-content {
+    background-color: #4caf50;
+}
+
+/* Error variant */
+.react-toast.error .react-toast-content {
+    background-color: #f44336;
+}
+
+/* Warning variant */
+.react-toast.warning .react-toast-content {
+    background-color: #ff9800;
+}
+
+/* Info variant */
+.react-toast.info .react-toast-content {
+    background-color: #2196f3;
+}

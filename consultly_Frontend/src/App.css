@@ -1,0 +1,120 @@
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+.Polaris-LegacyCard + .Polaris-LegacyCard{
+  margin-top: 0px !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+  border: 1px solid red;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+.Polaris-LegacyCard {
+  overflow: visible !important;
+}
+.Polaris-Page {
+  padding-bottom: 30px !important;
+}
+
+.Polaris-IndexTable__IndexTableWrapper {
+  border-radius: 0 0 var(--p-border-radius-300) var(--p-border-radius-300) !important;
+}
+
+.Polaris-IndexFilters-Container {
+  border-top-left-radius: var(--p-border-radius-300) !important;
+  border-top-right-radius: var(--p-border-radius-300) !important;
+}
+
+@media (min-width: 30.625em) {
+  .Polaris-Page {
+      padding-bottom: 30px !important;
+  }
+}
+
+.page-fade-in {
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.22s ease-out, transform 0.22s ease-out;
+}
+
+.page-fade-in--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.dashboard-action-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+  align-items: stretch;
+}
+
+.dashboard-action-card {
+  min-width: 0;
+  height: 100%;
+}
+
+.dashboard-action-card .Polaris-LegacyCard {
+  height: 100%;
+}
+
+/* Consultant details form: every field in a row gets the exact same width */
+.consultant-details-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.consultant-details-grid + .consultant-details-grid {
+  margin-top: 16px;
+}
+
+/* Date inputs size to their content by default — stretch like the others */
+.consultant-details-grid .Polaris-TextField,
+.consultant-details-grid .Polaris-TextField input,
+.consultant-details-grid .Polaris-Select {
+  width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 767.98px) {
+  .consultant-details-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+

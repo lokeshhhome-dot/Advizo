@@ -1,0 +1,10 @@
+{
+  "name": "shopify-consultly",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Consultly Shopify app (backend + frontend workspaces)",
+  "workspaces": [],
+  "scripts": {
+    "deploy": "shopify app deploy"
+  }
+}

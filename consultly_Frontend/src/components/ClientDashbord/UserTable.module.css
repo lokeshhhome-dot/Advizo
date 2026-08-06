@@ -1,0 +1,222 @@
+/* ================= USER DATA TABLE ================= */
+
+.tableWrapper {
+    width: 100%;
+}
+
+.tableHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.tableTitle {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0;
+}
+
+.rowsSelect {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 1px solid #e2e4e9;
+    border-radius: 8px;
+    background-color: #ffffff;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='none' stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m1 1 4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding: 6px 28px 6px 12px;
+    font-size: 12px;
+    color: #374151;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+
+.rowsSelect:hover,
+.rowsSelect:focus {
+    border-color: #9ca3af;
+}
+
+.tableCard {
+    border: 1px solid #eceef2;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+.tableScroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.dataTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    color: #374151;
+}
+
+.dataTable thead th {
+    background: #f8f9fb;
+    color: #6b7280;
+    font-size: 11.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-align: left;
+    padding: 12px 16px;
+    border-bottom: 1px solid #eceef2;
+    white-space: nowrap;
+}
+
+.dataTable tbody td {
+    padding: 13px 16px;
+    border-bottom: 1px solid #f1f3f6;
+    text-align: left;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.dataTable tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.dataTable tbody tr {
+    transition: background-color 0.12s ease;
+}
+
+.dataTable tbody tr:hover {
+    background-color: #f8f9fb;
+}
+
+.indexCell {
+    color: #9ca3af;
+    font-size: 12.5px;
+    width: 48px;
+}
+
+.stateCell {
+    padding: 2.5rem 1rem !important;
+    text-align: center !important;
+}
+
+.emptyText {
+    color: #6b7280;
+    font-size: 14px;
+    margin: 0;
+}
+
+/* Badges rendered by column renderers (bootstrap .badge) get a pill look */
+.dataTable :global(.badge) {
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 4px 10px;
+    text-transform: capitalize;
+}
+
+.dataTable :global(.badge.bg-success) {
+    background-color: #e7f6ec !important;
+    color: #17843b;
+}
+
+.dataTable :global(.badge.bg-danger) {
+    background-color: #fdecec !important;
+    color: #d92d20;
+}
+
+.dataTable :global(.badge.bg-warning) {
+    background-color: #fff4e5 !important;
+    color: #b54708;
+}
+
+/* ================= PAGINATION ================= */
+
+.paginationBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.paginationInfo {
+    font-size: 12.5px;
+    color: #6b7280;
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.pageBtn {
+    min-width: 32px;
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid #e2e4e9;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #374151;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pageBtn:hover:not(:disabled):not(.pageBtnActive) {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+}
+
+.pageBtn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.pageBtnActive {
+    background: #1a1a1a;
+    border-color: #1a1a1a;
+    color: #ffffff;
+}
+
+/* ================= MOBILE ================= */
+
+@media (max-width: 768px) {
+    .dataTable {
+        min-width: 640px;
+        font-size: 12.5px;
+    }
+
+    .dataTable thead th,
+    .dataTable tbody td {
+        padding: 10px 12px;
+    }
+
+    .tableTitle {
+        font-size: 16px;
+    }
+
+    .paginationBar {
+        justify-content: center;
+    }
+
+    .paginationInfo {
+        width: 100%;
+        text-align: center;
+    }
+}

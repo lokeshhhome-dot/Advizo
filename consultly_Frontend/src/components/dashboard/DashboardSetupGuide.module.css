@@ -1,0 +1,316 @@
+.shell {
+  background: #ffffff;
+  border: 1px solid #e3e3e3;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.header {
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid #ececef;
+}
+
+.headerTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  color: #202223;
+}
+
+.subtitle {
+  margin: 3px 0 0;
+  font-size: 13px;
+  color: #6d7175;
+  line-height: 1.4;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.progressText {
+  margin: 0;
+  font-size: 13px;
+  color: #6d7175;
+  white-space: nowrap;
+}
+
+.iconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #6d7175;
+  cursor: pointer;
+}
+
+.iconBtn:hover {
+  background: #f1f1f1;
+  color: #202223;
+}
+
+.progressTrack {
+  margin-top: 12px;
+  height: 4px;
+  background: #e9e9eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: #29845a;
+  border-radius: 999px;
+  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.stepList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+}
+
+.stepItem {
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.stepItemCompleted:hover,
+.stepItemUpcoming:hover {
+  background: #f7f7f8;
+}
+
+.stepItemCurrent {
+  background: #f6f6f7;
+  padding: 16px 14px;
+}
+
+.stepItemUpcoming .stepTitle {
+  color: #6d7175;
+}
+
+.stepRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.stepIcon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.stepIconDone {
+  background: #29845a;
+}
+
+.stepIconDone svg {
+  fill: #ffffff !important;
+}
+
+.stepIconPending {
+  border: 2px dashed #8c9196;
+  background: transparent;
+}
+
+.stepItemUpcoming .stepIconPending {
+  border-color: #c9cccf;
+}
+
+.stepBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.stepTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #202223;
+  line-height: 1.4;
+}
+
+.stepDescription {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #6d7175;
+}
+
+.stepExpanded {
+  margin-top: 14px;
+}
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+}
+
+.checkItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #202223;
+}
+
+.checkItemLabel {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #202223;
+}
+
+.checkItemContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.menuLinkList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+}
+
+.menuLinkItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e9e9eb;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.menuLinkLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.menuLinkIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.menuLinkIcon svg {
+  fill: currentColor !important;
+}
+
+.menuLinkText {
+  min-width: 0;
+}
+
+.menuLinkTitle {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #202223;
+  margin-bottom: 2px;
+}
+
+.menuLinkUrl {
+  display: block;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #6d7175;
+  word-break: break-all;
+}
+
+.menuLinkStatus {
+  display: block;
+  font-size: 12px;
+  color: #008060;
+}
+
+.linkCopyRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.menuLink {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #202223;
+  background: #f6f6f7;
+  border: 1px solid #e3e3e3;
+  border-radius: 8px;
+  word-break: break-all;
+}
+
+.checkHint {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: #6d7175;
+  word-break: break-all;
+}
+
+.checkDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #8c9196;
+  margin-top: 7px;
+  flex-shrink: 0;
+}
+
+.checkDotDone {
+  background: #008060;
+}
+
+.stepCta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.collapsedBody {
+  display: none;
+}
