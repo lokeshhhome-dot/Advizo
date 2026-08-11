@@ -191,10 +191,11 @@ export default function App() {
             <Route
               element={
                 <ProtectAdminRoute installed={installed}>
-                  <BillingProtectedRoute>
-                    <SetupGuideProtectRoutes>
+                   <BillingProtectedRoute>
+                     <SetupGuideProtectRoutes>
+
                       <LayoutFrame />
-                    </SetupGuideProtectRoutes>
+                     </SetupGuideProtectRoutes>
                   </BillingProtectedRoute>
                 </ProtectAdminRoute>
               }

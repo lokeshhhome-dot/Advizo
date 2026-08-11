@@ -171,7 +171,7 @@ const installShopifyApp = async (req, res) => {
   }
 
   const installUrl =
-    `${getAppBaseUrl(req)}/api/app/install/begin?shop=${encodeURIComponent(shop)}`;
+    `${process.env.BACKEND_HOST_DOMAIN}/api/app/install/begin?shop=${encodeURIComponent(shop)}`;
 
   const shopDoc = await shopModel.findOne({ shop });
 
@@ -231,7 +231,7 @@ const beginOAuth = async (req, res) => {
   const installUrl =
     `https://${shop}/admin/oauth/authorize?client_id=${encodeURIComponent(client_id)}` +
     `&scope=${encodeURIComponent(SCOPES || "")}` +
-    `&redirect_uri=${encodeURIComponent("https://untaxed-cattishly-renewal.ngrok-free.dev")}` +
+    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
     `&state=${encodeURIComponent(state)}`;
   console.log("installUrl", installUrl)
 
@@ -322,7 +322,7 @@ const authCallback = async (req, res) => {
 
 
     const restartUrl =
-      `${getAppBaseUrl(req)}/api/app/install/begin?shop=${encodeURIComponent(shop)}`;
+      `${process.env.BACKEND_HOST_DOMAIN}/api/app/install/begin?shop=${encodeURIComponent(shop)}`;
 
     if (!state || !stateCheck.valid) {
       logOAuthDebug("authCallback", {

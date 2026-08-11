@@ -1,8 +1,8 @@
-client_id = "7836ff4ee618db510c5ac4c20b75049f"
+client_id = "1216ebdd9f32511b5357c889ecf00478"
 name = "Consultly Live Expert Calls"
-application_url = "https://consultation.zend-apps.com"
+application_url = "https://untaxed-cattishly-renewal.ngrok-free.dev"
 embedded = true
-handle = "consultly-live-expert-calls"
+handle = "talk2consultant"
 
 [webhooks]
 api_version = "2026-07"
@@ -72,10 +72,10 @@ use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
-  "https://consultation.zend-apps.com/api/app/callback"
+  "https://untaxed-cattishly-renewal.ngrok-free.dev/api/app/callback"
 ]
 
 [app_proxy]
-url = "https://consultation.zend-apps.com/api/app/consultly"
+url = "https://untaxed-cattishly-renewal.ngrok-free.dev/api/app/consultly"
 subpath = "consultly"
 prefix = "apps"
