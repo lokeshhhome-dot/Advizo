@@ -187,16 +187,14 @@ export default function App() {
 
           <Routes>
             {/* -------- Admin -------- */}
-
+ {/* // <BillingProtectedRoute></BillingProtectedRoute> use after protect route  */}
             <Route
               element={
                 <ProtectAdminRoute installed={installed}>
-                   <BillingProtectedRoute>
+                 
                      <SetupGuideProtectRoutes>
-
                       <LayoutFrame />
                      </SetupGuideProtectRoutes>
-                  </BillingProtectedRoute>
                 </ProtectAdminRoute>
               }
             >

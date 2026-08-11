@@ -38,7 +38,7 @@ export const UseAppInstall = (shop, app) => {
             const token = await getAppBridgeToken(app);
             try {
                 const response = await fetch(
-                    `${process.env.REACT_APP_BACKEND_HOST}/app/install/begin${shop}`
+                    `${process.env.REACT_APP_BACKEND_HOST}/app/install/${shop}`
                     , {
                         headers: {
                             Authorization: `Bearer ${token}`
