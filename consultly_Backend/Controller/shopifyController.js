@@ -231,7 +231,7 @@ const beginOAuth = async (req, res) => {
   const installUrl =
     `https://${shop}/admin/oauth/authorize?client_id=${encodeURIComponent(client_id)}` +
     `&scope=${encodeURIComponent(SCOPES || "")}` +
-    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+    `&redirect_uri=${encodeURIComponent("https://untaxed-cattishly-renewal.ngrok-free.dev")}` +
     `&state=${encodeURIComponent(state)}`;
   console.log("installUrl", installUrl)
 

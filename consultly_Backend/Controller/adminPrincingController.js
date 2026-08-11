@@ -298,7 +298,7 @@ const pricingCallback = async (req, res) => {
             console.log("process.env.SHOPIFY_APP_HANDLE", process.env.SHOPIFY_APP_HANDLE)
             return res.send(`
                 <script>
-                window.top.location.href = "https://admin.shopify.com/store/${shopHandle}/apps/${process.env.SHOPIFY_APP_HANDLE || "consultly-live-expert-calls"}";
+                window.top.location.href = "https://admin.shopify.com/store/${shopHandle}/apps/${process.env.SHOPIFY_APP_HANDLE || "talk2consultant"}";
                 </script>
                 `);
         }
@@ -310,7 +310,7 @@ const pricingCallback = async (req, res) => {
 
         return res.send(`
                 <script>
-                window.top.location.href = "https://admin.shopify.com/store/${shopHandle}/apps/${process.env.SHOPIFY_APP_HANDLE || "consultly-live-expert-calls"}";
+                window.top.location.href = "https://admin.shopify.com/store/${shopHandle}/apps/${process.env.SHOPIFY_APP_HANDLE || "talk2consultant"}";
                 </script>
                 `);
     } catch (err) {
