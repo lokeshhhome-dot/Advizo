@@ -1,0 +1,444 @@
+/*
+ * Consultly — Consultant Listing storefront styles.
+ *
+ * Ported from consultly_Frontend/src/components/ConsultantCards/ConsultantCards.css
+ * (colors, spacing, card shape all preserved), rebuilt on namespaced
+ * .consultly-consultant-card classes and native CSS Grid instead of
+ * Bootstrap's .row/.col-*/.card/.btn — this file must not depend on
+ * Bootstrap being present, and must not leak styles onto the merchant's
+ * theme via bare element selectors.
+ */
+
+.consultly-consultant-card {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #212529;
+  position: relative;
+}
+
+.consultly-consultant-card__heading {
+  font-size: 28px;
+  font-weight: 700;
+  color: #212529;
+  margin: 0 0 20px;
+}
+
+/* ---------- loading / empty / error states ---------- */
+
+.consultly-consultant-card__placeholder {
+  color: #6c757d;
+  font-size: 14px;
+  padding: 24px 0;
+  text-align: center;
+}
+
+.consultly-consultant-card__empty,
+.consultly-consultant-card__error {
+  max-width: 560px;
+  margin: 0 auto;
+  background: #ffffff;
+  border: 1px solid #eceef2;
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.consultly-consultant-card__empty-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #212529;
+  margin: 0 0 8px;
+}
+
+.consultly-consultant-card__empty-text,
+.consultly-consultant-card__error p {
+  font-size: 14px;
+  color: #6c757d;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* ---------- grid ---------- */
+
+.consultly-consultant-card__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+@media (min-width: 576px) {
+  .consultly-consultant-card__grid {
+    gap: 1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .consultly-consultant-card__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+  }
+}
+
+@media (min-width: 992px) {
+  .consultly-consultant-card__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
+}
+
+.consultly-consultant-card__item {
+  min-width: 0;
+}
+
+/* ---------- card ---------- */
+
+.consultly-consultant {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #eceef2;
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 16px rgba(16, 24, 40, 0.04);
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.25s ease;
+}
+
+.consultly-consultant:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 2px 6px rgba(16, 24, 40, 0.05), 0 20px 40px rgba(16, 24, 40, 0.1);
+  border-color: #e2e5ea;
+}
+
+.consultly-consultant__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+}
+
+.consultly-consultant__header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.consultly-consultant__avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.consultly-consultant__avatar {
+  display: block;
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 3px solid #ffffff;
+  background-color: #f3f4f6;
+  box-shadow: 0 0 0 1px #e7e9ee, 0 4px 10px rgba(16, 24, 40, 0.08);
+}
+
+.consultly-consultant-card__status-dot {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 14px;
+  height: 14px;
+  background-color: #28a745;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.consultly-consultant__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.consultly-consultant__name {
+  font-size: 18px;
+  color: #111;
+  margin: 0 0 2px;
+  font-weight: 700;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.consultly-consultant__profession {
+  color: #6c757d;
+  font-size: 14px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.consultly-consultant__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.consultly-consultant-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background-color: #faf6ec;
+  border: 1px solid #eee3c8;
+  color: #8a6a1f;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+}
+
+.consultly-consultant-card__badge svg {
+  flex-shrink: 0;
+}
+
+.consultly-consultant-card__badge--busy {
+  background-color: #feecec;
+  border-color: transparent;
+  color: #d93636;
+}
+
+.consultly-consultant-card__busy-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #d93636;
+}
+
+.consultly-consultant__divider {
+  margin: 16px 0;
+  border: none;
+  border-top: 1px solid #eef0f2;
+}
+
+.consultly-consultant__languages {
+  color: #495057;
+  font-size: 14px;
+  margin: 0 0 16px;
+  line-height: 1.6;
+}
+
+.consultly-consultant__languages strong {
+  color: #000;
+  font-weight: 600;
+}
+
+.consultly-consultant__actions-title {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #8a94a0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+/* ---------- action buttons (chat / voice / video) ---------- */
+
+.consultly-consultant__actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: auto;
+}
+
+.consultly-consultant-card__action {
+  align-items: center;
+  background-color: #fafbfc;
+  border: 1px solid #e7e9ee;
+  border-radius: 7px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  justify-content: center;
+  min-width: 0;
+  padding: 4px 9px;
+  text-align: center;
+  transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  font: inherit;
+  color: inherit;
+}
+
+.consultly-consultant-card__action:hover {
+  background-color: #ffffff;
+  border-color: #1a1a1a;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(16, 24, 40, 0.1);
+}
+
+.consultly-consultant-card__action:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* aria-disabled (not the disabled attribute) so the click still fires and
+   the handler can explain why via a toast — same reasoning as the existing
+   React implementation. */
+.consultly-consultant-card__action[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.consultly-consultant-card__action[aria-disabled="true"]:hover {
+  background-color: #fafbfc;
+  border-color: #e7e9ee;
+  transform: none;
+  box-shadow: none;
+}
+
+.consultly-consultant-card__action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #eef0f3;
+  color: #4b5563;
+  transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.consultly-consultant-card__action:hover .consultly-consultant-card__action-icon {
+  background-color: #1a1a1a;
+  color: #ffffff;
+}
+
+.consultly-consultant-card__action[aria-disabled="true"]:hover .consultly-consultant-card__action-icon {
+  background-color: #eef0f3;
+  color: #4b5563;
+}
+
+.consultly-consultant-card__action-icon svg {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+}
+
+.consultly-consultant-card__action-price {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.consultly-consultant-card__currency {
+  font-size: 0.65em;
+  margin-right: 1px;
+  opacity: 0.85;
+}
+
+.consultly-consultant-card__action-unit {
+  font-size: 11px;
+  font-weight: 500;
+  color: #6b7280;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* ---------- toast (communication-disabled notice) ---------- */
+
+.consultly-consultant-card__toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
+  padding: 14px 16px;
+  min-width: 240px;
+  max-width: 340px;
+  font-size: 14px;
+  color: #212529;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+}
+
+.consultly-consultant-card__toast.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---------- responsive ---------- */
+
+@media (max-width: 767.98px) {
+  .consultly-consultant-card__heading {
+    font-size: 22px;
+  }
+
+  .consultly-consultant__name {
+    font-size: 16px;
+  }
+
+  .consultly-consultant__avatar {
+    width: 70px;
+    height: 70px;
+  }
+
+  .consultly-consultant-card__badge {
+    font-size: 10px;
+    padding: 3px 8px;
+  }
+
+  .consultly-consultant__body {
+    padding: 18px;
+  }
+
+  .consultly-consultant__actions {
+    gap: 8px;
+  }
+
+  .consultly-consultant-card__action {
+    padding: 12px 4px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .consultly-consultant__body {
+    padding: 16px;
+  }
+
+  .consultly-consultant__header {
+    gap: 12px;
+  }
+
+  .consultly-consultant__avatar {
+    width: 64px;
+    height: 64px;
+  }
+
+  .consultly-consultant__name {
+    font-size: 16px;
+  }
+
+  .consultly-consultant__profession {
+    font-size: 13px;
+  }
+
+  .consultly-consultant-card__action-icon {
+    width: 34px;
+    height: 34px;
+  }
+
+  .consultly-consultant-card__action-price {
+    font-size: 13px;
+  }
+}

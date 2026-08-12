@@ -1,5 +1,5 @@
 client_id = "1216ebdd9f32511b5357c889ecf00478"
-name = "Consultly Live Expert Calls"
+name = "talk2consultant"
 application_url = "https://untaxed-cattishly-renewal.ngrok-free.dev"
 embedded = true
 handle = "talk2consultant"
@@ -8,30 +8,36 @@ handle = "talk2consultant"
 api_version = "2026-07"
 
 # -------------------------------
-# Orders
+# Orders / Refunds — TEMPORARILY REMOVED
 # -------------------------------
-
-[[webhooks.subscriptions]]
-topics = ["orders/create"]
-uri = "/api/webhooks/shop/orders-created"
-
-[[webhooks.subscriptions]]
-topics = ["orders/paid"]
-uri = "/api/webhooks/shop/orders-paid"
-
-[[webhooks.subscriptions]]
-topics = ["orders/delete"]
-uri = "/api/webhooks/shop/orders-deleted"
-
-# Optional (recommended if wallet/payment logic needs them)
-
-[[webhooks.subscriptions]]
-topics = ["orders/cancelled"]
-uri = "/api/webhooks/shop/orders-cancelled"
-
-[[webhooks.subscriptions]]
-topics = ["refunds/create"]
-uri = "/api/webhooks/shop/refunds-created"
+# orders/create, orders/paid, orders/delete, orders/cancelled, refunds/create
+# all require Shopify's "Protected Customer Data" approval before a real app
+# version can be created (`shopify app deploy` hard-fails otherwise — `shopify
+# app dev` does not enforce this, which is why it worked without them).
+# Their handlers still exist in consultly_Backend/Controller/webHookController.js
+# and consultly_Backend/Routes/webHookRoute.js — nothing there was touched.
+# Restore this block once Protected Customer Data access is approved in the
+# Partner Dashboard: https://shopify.dev/docs/apps/launch/protected-customer-data
+#
+# [[webhooks.subscriptions]]
+# topics = ["orders/create"]
+# uri = "/api/webhooks/shop/orders-created"
+#
+# [[webhooks.subscriptions]]
+# topics = ["orders/paid"]
+# uri = "/api/webhooks/shop/orders-paid"
+#
+# [[webhooks.subscriptions]]
+# topics = ["orders/delete"]
+# uri = "/api/webhooks/shop/orders-deleted"
+#
+# [[webhooks.subscriptions]]
+# topics = ["orders/cancelled"]
+# uri = "/api/webhooks/shop/orders-cancelled"
+#
+# [[webhooks.subscriptions]]
+# topics = ["refunds/create"]
+# uri = "/api/webhooks/shop/refunds-created"
 
 # -------------------------------
 # Themes
@@ -76,6 +82,10 @@ redirect_urls = [
 ]
 
 [app_proxy]
+# Points at the local backend via the static ngrok tunnel — this is where
+# Step 2/4's new code actually lives. consultly-backend.onrender.com does
+# NOT have it (that's why /apps/consultly/consultants was 404ing). Switch
+# this back to the Render URL once the updated backend is deployed there.
 url = "https://untaxed-cattishly-renewal.ngrok-free.dev/api/app/consultly"
 subpath = "consultly"
 prefix = "apps"

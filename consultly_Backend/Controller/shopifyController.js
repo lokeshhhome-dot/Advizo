@@ -18,6 +18,7 @@ const {
 const { sendEmail } = require("../MiddleWare/ShopifyMiddleware/nodemailer");
 const { resolveShopProfile } = require("../Utils/shopifyShopProfile");
 const { setupStorefrontMenu } = require("../Utils/setupStorefrontMenu");
+const { getConsultantsForShop } = require("./usersController");
 const {
   getAppBaseUrl,
   getOAuthRedirectUri,
@@ -601,6 +602,68 @@ const proxyThemeAssetsController = async (req, res) => {
   }
 };
 
+/**
+ * JSON App Proxy endpoint for the Theme App Extension's Consultant Card
+ * block. Same shopper-identity resolution and consultant data source as
+ * proxyThemeAssetsController above — reuses resolveStorefrontCustomer
+ * (logged_in_customer_id -> manageShopifyUser, else app-JWT-cookie fallback
+ * via resolveUserFromAppToken) and getConsultantsForShop (same query +
+ * cache as the existing /public/find-consultant/:shop_id REST route).
+ * Unlike proxyThemeAssetsController, this does NOT scrape the theme
+ * header/footer and does NOT render an iframe/HTML page — JSON only.
+ */
+const proxyConsultantsJson = async (req, res) => {
+  try {
+    const shop = req.query.shop;
+    if (!shop) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing shop" });
+    }
+
+    // Anonymous shoppers are a valid case here (the listing is public) —
+    // resolveStorefrontCustomer returns null rather than rejecting them.
+    const userResult = await resolveStorefrontCustomer(req, shop);
+    const token = userResult?.token;
+
+    let shopDocId = userResult?.shop_id;
+    if (!shopDocId) {
+      shopDocId = (await getCachedShopDoc(shop))?._id;
+    }
+    if (!shopDocId) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Shop not found" });
+    }
+
+    // Same session-recovery cookie the HTML pages set today — lets a later
+    // app-proxy hit (this endpoint or any other) recover identity on a
+    // request where Shopify omits logged_in_customer_id. The JWT itself is
+    // NOT put in the JSON body; this endpoint's job is the public listing,
+    // not issuing bearer tokens to the storefront.
+    setAppSessionCookie(res, token);
+
+    const { consultants, communicationDisabled } = await getConsultantsForShop(
+      String(shopDocId),
+    );
+
+    res.set("Cache-Control", "no-store");
+    return res.status(200).json({
+      success: true,
+      authenticated: Boolean(userResult?.userId),
+      customerId: userResult?.userId || null,
+      shopId: String(shopDocId),
+      findConsultant: consultants,
+      communicationDisabled,
+    });
+  } catch (err) {
+    console.error("[app-proxy] /consultly/consultants error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to load consultants" });
+  }
+};
+
 const proxyShopifyConsultantPage = async (req, res) => {
   try {
     const shop = req.query.shop;
@@ -917,6 +980,7 @@ module.exports = {
   // shopifyLogin,
   appIsInstalled,
   proxyThemeAssetsController,
+  proxyConsultantsJson,
   proxyShopifyConsultantPage,
   proxyShopifyConsultantLoginPage,
   proxySHopifyConsultantChat,

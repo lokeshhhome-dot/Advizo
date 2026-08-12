@@ -211,6 +211,45 @@ const checkUserAvailable = async (req, res) => {
   }
 };
 
+// Shared data-fetch, extracted so the existing iframe-era REST endpoint
+// (getConsultant below) and the new App Proxy JSON endpoint
+// (shopifyController.proxyConsultantsJson) query the exact same data the
+// exact same way — no second, slightly-different consultant query.
+const getConsultantsForShop = async (shop_id) => {
+  // Computed fresh on every call (never cached with the list) so the
+  // storefront learns immediately when the shop's minute pool runs out.
+  const commStatus = await getCommunicationStatus(shop_id);
+  const communicationDisabled = !commStatus.allowed;
+
+  const cacheKey = consultantListKey(shop_id);
+  const cached = await cacheGetJSON(cacheKey);
+  if (cached) {
+    return { consultants: cached, communicationDisabled };
+  }
+
+  let consultants = await User.find({
+    userType: "consultant",
+    shop_id: shop_id,
+  })
+    .select(
+      "fullname displayName profileImage profession specialization experience language voicePerMinute videoPerMinute chatPerMinute isActive isBusy consultantStatus rating shop_id agoraUid",
+    )
+    .lean();
+
+  consultants = consultants.map((item) => {
+    return {
+      ...item,
+      profileImage: item.profileImage
+        ? `${process.env.APP_URL}/${item.profileImage.replace(/\\/g, "/")}`
+        : null,
+    };
+  });
+
+  await cacheSetJSON(cacheKey, consultants, CONSULTANT_LIST_TTL_SECONDS);
+
+  return { consultants, communicationDisabled };
+};
+
 const getConsultant = async (req, res) => {
   try {
     const { shop_id } = req.params;
@@ -219,38 +258,9 @@ const getConsultant = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Invalid shop ID" });
     }
-    // Computed fresh on every request (never cached with the list) so the
-    // storefront learns immediately when the shop's minute pool runs out.
-    const commStatus = await getCommunicationStatus(shop_id);
-    const communicationDisabled = !commStatus.allowed;
 
-    const cacheKey = consultantListKey(shop_id);
-    const cached = await cacheGetJSON(cacheKey);
-    if (cached) {
-      return res
-        .status(200)
-        .send({ success: true, findConsultant: cached, communicationDisabled });
-    }
-
-    let consultants = await User.find({
-      userType: "consultant",
-      shop_id: shop_id,
-    })
-      .select(
-        "fullname displayName profileImage profession specialization experience language voicePerMinute videoPerMinute chatPerMinute isActive isBusy consultantStatus rating shop_id agoraUid",
-      )
-      .lean();
-
-    consultants = consultants.map((item) => {
-      return {
-        ...item,
-        profileImage: item.profileImage
-          ? `${process.env.APP_URL}/${item.profileImage.replace(/\\/g, "/")}`
-          : null,
-      };
-    });
-
-    await cacheSetJSON(cacheKey, consultants, CONSULTANT_LIST_TTL_SECONDS);
+    const { consultants, communicationDisabled } =
+      await getConsultantsForShop(shop_id);
 
     return res
       .status(200)
@@ -261,4 +271,10 @@ const getConsultant = async (req, res) => {
   }
 };
 
-module.exports = { usersController, checkedUserBlance, checkUserAvailable, getConsultant };
+module.exports = {
+  usersController,
+  checkedUserBlance,
+  checkUserAvailable,
+  getConsultant,
+  getConsultantsForShop,
+};

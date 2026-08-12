@@ -4,6 +4,7 @@ const { installShopifyApp,
     beginOAuth,
     authCallback,
     proxyThemeAssetsController,
+    proxyConsultantsJson,
     proxyShopifyConsultantPage,
     proxyShopifyConsultantLoginPage,
     proxySHopifyConsultantChat,
@@ -32,6 +33,9 @@ shopifyRoute.get('/callback', authCallback);
 // shop/logged_in_customer_id requests that would otherwise mint an auth token
 // for any customer (account takeover).
 shopifyRoute.get('/consultly', verifyAppProxy, proxyThemeAssetsController);
+// New JSON endpoint for the Theme App Extension's Consultant Card block —
+// the HTML/iframe route above is untouched and keeps working in parallel.
+shopifyRoute.get('/consultly/consultants', verifyAppProxy, proxyConsultantsJson);
 shopifyRoute.get('/consultly/login', verifyAppProxy, proxyShopifyConsultantPage);
 shopifyRoute.get('/consultly/consultant-dashboard', verifyAppProxy, proxyShopifyConsultantLoginPage);
 shopifyRoute.get('/consultly/consultant-chats-section', verifyAppProxy, proxySHopifyConsultantChat);
