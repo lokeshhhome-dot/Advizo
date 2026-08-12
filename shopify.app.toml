@@ -78,14 +78,10 @@ use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
-  "https://untaxed-cattishly-renewal.ngrok-free.dev/api/app/callback"
+  "https://consultly-backend.onrender.com/api/app/callback"
 ]
 
 [app_proxy]
-# Points at the local backend via the static ngrok tunnel — this is where
-# Step 2/4's new code actually lives. consultly-backend.onrender.com does
-# NOT have it (that's why /apps/consultly/consultants was 404ing). Switch
-# this back to the Render URL once the updated backend is deployed there.
-url = "https://untaxed-cattishly-renewal.ngrok-free.dev/api/app/consultly"
+url = "https://consultly-backend.onrender.com/api/app/consultly"
 subpath = "consultly"
 prefix = "apps"

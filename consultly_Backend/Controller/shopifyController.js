@@ -19,6 +19,9 @@ const { sendEmail } = require("../MiddleWare/ShopifyMiddleware/nodemailer");
 const { resolveShopProfile } = require("../Utils/shopifyShopProfile");
 const { setupStorefrontMenu } = require("../Utils/setupStorefrontMenu");
 const { getConsultantsForShop } = require("./usersController");
+const { getConsultantProfileForShop } = require("./consultantController");
+const { getCommunicationStatus } = require("../services/subscriptionMinutes");
+const mongoose = require("mongoose");
 const {
   getAppBaseUrl,
   getOAuthRedirectUri,
@@ -603,6 +606,100 @@ const proxyThemeAssetsController = async (req, res) => {
 };
 
 /**
+ * JSON App Proxy endpoint for the Theme App Extension's Consultant Profile
+ * block. Same identity resolution as proxyConsultantsJson below, and the
+ * exact same consultant query as the existing
+ * /api-consultant/consultant-by-shop-id-and-consultant-id/:shop_id/:consultant_id
+ * REST route (getConsultantProfileForShop) — no second, slightly different
+ * query. Unlike that REST route, this one deliberately strips
+ * walletBalance before responding: that field is the consultant's own
+ * financial data and has no business reaching an anonymous storefront
+ * visitor, even though the shared query still selects it for the
+ * admin/consultant-dashboard callers that need it.
+ */
+const proxyConsultantProfileJson = async (req, res) => {
+  try {
+    const shop = req.query.shop;
+    const consultantId = req.params.id;
+
+    if (!shop) {
+      return res.status(400).json({ success: false, message: "Missing shop" });
+    }
+    if (!mongoose.Types.ObjectId.isValid(consultantId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid consultant id" });
+    }
+
+    const userResult = await resolveStorefrontCustomer(req, shop);
+    const token = userResult?.token;
+
+    let shopDocId = userResult?.shop_id;
+    if (!shopDocId) {
+      shopDocId = (await getCachedShopDoc(shop))?._id;
+    }
+    if (!shopDocId) {
+      return res.status(404).json({ success: false, message: "Shop not found" });
+    }
+
+    setAppSessionCookie(res, token);
+
+    // The query itself enforces shop ownership (shop_id filter) — a
+    // consultant id from a different shop simply won't match, regardless of
+    // what the caller passes in the URL.
+    const consultant = await getConsultantProfileForShop(
+      String(shopDocId),
+      consultantId,
+    );
+
+    if (!consultant) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Consultant not found" });
+    }
+
+    // Same shop-level minute-pool flag the listing endpoint exposes — reused
+    // via the existing service, not recomputed differently here.
+    const commStatus = await getCommunicationStatus(String(shopDocId));
+
+    const safeConsultant = {
+      id: consultant._id,
+      fullname: consultant.fullname,
+      displayName: consultant.displayName,
+      profileImage: consultant.profileImage
+        ? `${process.env.APP_URL}/${String(consultant.profileImage).replace(/\\/g, "/")}`
+        : null,
+      profession: consultant.profession,
+      specialization: consultant.specialization,
+      experience: consultant.experience,
+      language: consultant.language,
+      voicePerMinute: consultant.voicePerMinute,
+      videoPerMinute: consultant.videoPerMinute,
+      chatPerMinute: consultant.chatPerMinute,
+      isActive: consultant.isActive,
+      isBusy: consultant.isBusy,
+      bio: consultant.bio,
+      // walletBalance intentionally omitted — see function comment above.
+    };
+
+    res.set("Cache-Control", "no-store");
+    return res.status(200).json({
+      success: true,
+      authenticated: Boolean(userResult?.userId),
+      customerId: userResult?.userId || null,
+      shopId: String(shopDocId),
+      communicationDisabled: !commStatus.allowed,
+      consultant: safeConsultant,
+    });
+  } catch (err) {
+    console.error("[app-proxy] /consultly/consultant/:id error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to load consultant" });
+  }
+};
+
+/**
  * JSON App Proxy endpoint for the Theme App Extension's Consultant Card
  * block. Same shopper-identity resolution and consultant data source as
  * proxyThemeAssetsController above — reuses resolveStorefrontCustomer
@@ -981,6 +1078,7 @@ module.exports = {
   appIsInstalled,
   proxyThemeAssetsController,
   proxyConsultantsJson,
+  proxyConsultantProfileJson,
   proxyShopifyConsultantPage,
   proxyShopifyConsultantLoginPage,
   proxySHopifyConsultantChat,

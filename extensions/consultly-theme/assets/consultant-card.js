@@ -118,22 +118,15 @@
     );
   }
 
-  // TEMPORARY bridge. The Consultant Profile Theme App Block doesn't exist
-  // yet, so this reuses the existing, still-live iframe Profile page — the
-  // only place today that holds the auth token needed to actually start a
-  // chat/call (this storefront bundle deliberately never receives one; see
-  // Step 4 report). Replace with a link to the native Profile App Block once
-  // that migration lands, and re-evaluate whether call/chat need their own
-  // authenticated bridge at that point.
-  function buildProfileUrl(shop, consultantId, shopId) {
-    return (
-      "https://" +
-      shop +
-      "/apps/consultly/view-profile?consultantId=" +
-      encodeURIComponent(consultantId) +
-      "&shopId=" +
-      encodeURIComponent(shopId || "")
-    );
+  // Native Consultant Profile page (Theme App Extension block), added
+  // alongside this card. Relative + plain window.location — this bundle
+  // runs directly in the theme now, not inside an iframe, so there's no
+  // need to break out via window.top the way the old iframe-era code had
+  // to. The merchant must have a Shopify Page at this handle with the
+  // "Consultant Profile" app block added (Theme Editor) — see the block's
+  // own comments for that one-time setup step.
+  function buildProfileUrl(consultantId) {
+    return "/pages/consultant-profile?id=" + encodeURIComponent(consultantId);
   }
 
   function priceMarkup(currencySymbol, amount) {
@@ -272,7 +265,7 @@
       var consultantId = cardEl.getAttribute("data-consultant-id");
 
       cardEl.addEventListener("click", function () {
-        window.top.location.href = buildProfileUrl(ctx.shop, consultantId, ctx.shopId);
+        window.location.href = buildProfileUrl(consultantId);
       });
 
       cardEl.querySelectorAll("[data-action]").forEach(function (btn) {
@@ -284,10 +277,13 @@
             return;
           }
           if (!ctx.authenticated) {
-            window.top.location.href = buildLoginUrl(ctx.shop);
+            window.location.href = buildLoginUrl(ctx.shop);
             return;
           }
-          window.top.location.href = buildProfileUrl(ctx.shop, consultantId, ctx.shopId);
+          // Actually starting the chat/call still happens on the profile
+          // page (it holds the same temporary auth-bridge — see that
+          // block's consultant-profile.js comments).
+          window.location.href = buildProfileUrl(consultantId);
         });
       });
     });

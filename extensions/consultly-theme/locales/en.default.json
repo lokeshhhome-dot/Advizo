@@ -1,5 +1,8 @@
 {
   "consultant_card": {
     "loading": "Loading consultants…"
+  },
+  "consultant_profile": {
+    "loading": "Loading consultant profile…"
   }
 }

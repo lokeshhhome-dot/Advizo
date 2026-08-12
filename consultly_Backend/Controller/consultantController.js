@@ -894,6 +894,23 @@ const deleteConsultant = async (request, response) => {
  * @returns {Promise<{success: boolean, message: string, consultants: User[]}>}
  */
 
+// Shared query, extracted so the existing REST endpoint below and the new
+// App Proxy JSON endpoint (shopifyController.proxyConsultantProfileJson)
+// fetch the exact same consultant the exact same way — no second, slightly
+// different query. Callers decide what's safe to forward to a browser;
+// this returns the full Mongoose document as selected here.
+const getConsultantProfileForShop = async (shop_id, consultant_id) => {
+  // Only ever selects storefront-plausible fields — never password/
+  // firebaseToken/PAN/etc. walletBalance is intentionally selected here
+  // (existing admin/consultant-dashboard callers may rely on it) but the
+  // App Proxy endpoint strips it before responding — that's the one that
+  // reaches an anonymous storefront visitor.
+  return User.findOne(
+    { _id: consultant_id, shop_id: shop_id, userType: "consultant" },
+    "fullname displayName profileImage profession specialization experience language voicePerMinute videoPerMinute chatPerMinute isActive isBusy consultantStatus shop_id agoraUid bio walletBalance",
+  );
+};
+
 const getConsultantByShopIdAndConsultantId = async (request, response) => {
   try {
     const { shop_id, consultant_id } = request.params;
@@ -909,12 +926,8 @@ const getConsultantByShopIdAndConsultantId = async (request, response) => {
         .status(400)
         .json({ message: "Consultant Shop  ID is required" });
     }
-    // Only expose storefront-safe fields — never password/firebaseToken/PAN/etc.
-    const consultant = await User.findOne(
-      { _id: consultant_id, shop_id: shop_id, userType: "consultant" },
-      "fullname displayName profileImage profession specialization experience language voicePerMinute videoPerMinute chatPerMinute isActive isBusy consultantStatus shop_id agoraUid bio walletBalance",
-    );
 
+    const consultant = await getConsultantProfileForShop(shop_id, consultant_id);
 
     return response.status(200).send({ success: true, consultant });
   } catch (error) {
@@ -1941,6 +1954,7 @@ module.exports = {
   getConsultantAllUserHistory,
   deleteConsultant,
   getConsultantByShopIdAndConsultantId,
+  getConsultantProfileForShop,
   loginConsultant,
   forgotConsultantPassword,
   resetConsultantPassword,

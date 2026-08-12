@@ -1,0 +1,333 @@
+/*
+ * Consultly — Consultant Profile storefront styles.
+ *
+ * Same visual language as consultant-card.css (colors, radii, spacing
+ * ported from consultly_Frontend/src/components/ConsultantCards/
+ * ConsultantCards.css's shared/view-profile rules), namespaced under
+ * .consultly-consultant-profile, no Bootstrap, no bare element selectors.
+ */
+
+.consultly-consultant-profile {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #212529;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+.consultly-consultant-profile__eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  color: #8a94a0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 12px;
+}
+
+.consultly-consultant-profile__placeholder {
+  color: #6c757d;
+  font-size: 14px;
+  padding: 32px 0;
+  text-align: center;
+}
+
+.consultly-consultant-profile__state {
+  max-width: 480px;
+  margin: 24px auto;
+  background: #ffffff;
+  border: 1px solid #eceef2;
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.consultly-consultant-profile__state p {
+  font-size: 14px;
+  color: #6c757d;
+  margin: 0 0 12px;
+  line-height: 1.6;
+}
+
+.consultly-consultant-profile__retry {
+  background-color: #1a1a1a;
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.consultly-consultant-profile__retry:hover {
+  background-color: #333333;
+}
+
+/* ---------- header ---------- */
+
+.consultly-consultant-profile__header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: #ffffff;
+  border: 1px solid #eceef2;
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 16px rgba(16, 24, 40, 0.04);
+  padding: 28px;
+  margin-bottom: 24px;
+}
+
+.consultly-consultant-profile__avatar {
+  display: block;
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 3px solid #ffffff;
+  background-color: #f3f4f6;
+  box-shadow: 0 0 0 1px #e7e9ee, 0 6px 14px rgba(16, 24, 40, 0.1);
+  flex-shrink: 0;
+}
+
+.consultly-consultant-profile__header-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.consultly-consultant-profile__name {
+  font-size: 28px;
+  font-weight: 700;
+  color: #111;
+  margin: 0 0 4px;
+  line-height: 1.25;
+}
+
+.consultly-consultant-profile__profession {
+  color: #6c757d;
+  font-size: 16px;
+  margin: 0 0 10px;
+}
+
+.consultly-consultant-profile__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.consultly-consultant-profile__badge {
+  display: inline-flex;
+  align-items: center;
+  background-color: #faf6ec;
+  border: 1px solid #eee3c8;
+  color: #8a6a1f;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.consultly-consultant-profile__status {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.consultly-consultant-profile__status--active {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.consultly-consultant-profile__status--busy {
+  background-color: #feecec;
+  color: #d93636;
+}
+
+.consultly-consultant-profile__languages {
+  color: #495057;
+  font-size: 14px;
+  margin: 0;
+}
+
+.consultly-consultant-profile__languages strong {
+  color: #000;
+  font-weight: 600;
+}
+
+/* ---------- sections (About / Expertise / Consultation) ---------- */
+
+.consultly-consultant-profile__section {
+  background: #ffffff;
+  border: 1px solid #eceef2;
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  padding: 24px 28px;
+  margin-bottom: 20px;
+}
+
+.consultly-consultant-profile__section-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #212529;
+  margin: 0 0 12px;
+}
+
+.consultly-consultant-profile__about {
+  font-size: 15px;
+  line-height: 1.7;
+  color: #495057;
+  margin: 0;
+}
+
+.consultly-consultant-profile__expertise-tag {
+  display: inline-block;
+  background-color: #fff4f0;
+  color: #ff6b35;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* ---------- consultation action buttons ---------- */
+
+.consultly-consultant-profile__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.consultly-consultant-profile__action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #fafbfc;
+  border: 1px solid #e7e9ee;
+  border-radius: 10px;
+  padding: 12px 18px;
+  cursor: pointer;
+  flex: 1 1 160px;
+  min-width: 0;
+  font: inherit;
+  color: inherit;
+  transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.consultly-consultant-profile__action:hover {
+  background-color: #ffffff;
+  border-color: #1a1a1a;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(16, 24, 40, 0.1);
+}
+
+.consultly-consultant-profile__action[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.consultly-consultant-profile__action[aria-disabled="true"]:hover {
+  background-color: #fafbfc;
+  border-color: #e7e9ee;
+  transform: none;
+  box-shadow: none;
+}
+
+.consultly-consultant-profile__action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #eef0f3;
+  color: #4b5563;
+  flex-shrink: 0;
+}
+
+.consultly-consultant-profile__action:hover .consultly-consultant-profile__action-icon {
+  background-color: #1a1a1a;
+  color: #ffffff;
+}
+
+.consultly-consultant-profile__action-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #212529;
+  flex: 1;
+  text-align: left;
+}
+
+.consultly-consultant-profile__action-price {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.consultly-consultant-profile__currency {
+  font-size: 0.65em;
+  margin-right: 1px;
+  opacity: 0.85;
+}
+
+.consultly-consultant-profile__action-unit {
+  font-size: 11px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+/* ---------- responsive ---------- */
+
+@media (max-width: 767.98px) {
+  .consultly-consultant-profile {
+    padding: 16px 12px 32px;
+  }
+
+  .consultly-consultant-profile__header {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    padding: 20px;
+  }
+
+  .consultly-consultant-profile__avatar {
+    width: 96px;
+    height: 96px;
+  }
+
+  .consultly-consultant-profile__name {
+    font-size: 22px;
+  }
+
+  .consultly-consultant-profile__section {
+    padding: 18px 20px;
+  }
+
+  .consultly-consultant-profile__action {
+    flex: 1 1 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .consultly-consultant-profile__header {
+    align-items: center;
+    text-align: center;
+  }
+
+  .consultly-consultant-profile__meta,
+  .consultly-consultant-profile__languages {
+    justify-content: center;
+  }
+}

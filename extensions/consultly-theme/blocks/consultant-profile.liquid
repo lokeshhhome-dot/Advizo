@@ -1,0 +1,71 @@
+{% comment %}
+  Consultly — Consultant Profile App Block.
+
+  Same pattern as consultant-card.liquid: a thin shell handing context to
+  the JS bundle via data attributes, nothing else. The consultant id comes
+  from the page's own URL (?id=...), read client-side — not from Liquid —
+  so this same block works for any consultant without per-page setup.
+
+  ONE-TIME MERCHANT SETUP required for this block to be reachable at all:
+  Shopify only serves /pages/consultant-profile if a Page with that handle
+  exists. In Shopify Admin: Online Store → Pages → Add page → title it so
+  the handle becomes "consultant-profile" (Shopify derives the handle from
+  the title, editable under "Search engine listing" if it doesn't match) →
+  Save. Then in Theme Editor, open that page → Add block → Apps →
+  "Consultant Profile".
+{% endcomment %}
+<div
+  class="consultly-consultant-profile"
+  id="consultly-consultant-profile-{{ block.id }}"
+  data-block-id="{{ block.id }}"
+  data-shop="{{ shop.permanent_domain }}"
+  data-api-base="/apps/consultly/consultant"
+  data-show-about="{{ block.settings.show_about }}"
+  data-show-expertise="{{ block.settings.show_expertise }}"
+  data-show-consultation="{{ block.settings.show_consultation }}"
+  {{ block.shopify_attributes }}
+>
+  {%- if block.settings.heading != blank -%}
+    <p class="consultly-consultant-profile__eyebrow">{{ block.settings.heading }}</p>
+  {%- endif -%}
+
+  <div class="consultly-consultant-profile__root" aria-live="polite">
+    <p class="consultly-consultant-profile__placeholder">{{ 'consultant_profile.loading' | t }}</p>
+  </div>
+</div>
+
+<link rel="stylesheet" href="{{ 'consultant-profile.css' | asset_url }}">
+<script src="{{ 'consultant-profile.js' | asset_url }}" defer="defer"></script>
+
+{% schema %}
+{
+  "name": "Consultant Profile",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Eyebrow text",
+      "default": "Consultant Profile"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_about",
+      "label": "Show About section",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_expertise",
+      "label": "Show Expertise section",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_consultation",
+      "label": "Show consultation options",
+      "default": true
+    }
+  ]
+}
+{% endschema %}
