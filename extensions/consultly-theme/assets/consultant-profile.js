@@ -16,6 +16,16 @@
 (function () {
   "use strict";
 
+  // TEMPORARY debug logging — remove once the profile page is confirmed
+  // working. Filter the browser Console by "[consultly-profile]".
+  var DEBUG = true;
+  function log() {
+    if (!DEBUG) return;
+    var args = ["[consultly-profile]"].concat([].slice.call(arguments));
+    console.log.apply(console, args);
+  }
+  log("script loaded, url =", window.location.href);
+
   var DEFAULT_AVATAR_SVG =
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
     '<circle cx="32" cy="32" r="32" fill="#f3f4f6"/>' +
@@ -277,7 +287,10 @@
     container.setAttribute("data-consultly-initialized", "1");
 
     var root = container.querySelector(".consultly-consultant-profile__root");
-    if (!root) return;
+    if (!root) {
+      log("ABORT: .consultly-consultant-profile__root not found inside block");
+      return;
+    }
 
     var apiBase = container.getAttribute("data-api-base");
     var shop = container.getAttribute("data-shop");
@@ -286,11 +299,15 @@
     var showConsultation = container.getAttribute("data-show-consultation") === "true";
 
     var consultantId = getConsultantId();
+    log("apiBase =", apiBase, "| shop =", shop, "| consultantId =", consultantId);
+
     if (!consultantId) {
+      log("ABORT: no ?id= in URL — rendering not-found");
       renderNotFound(root);
       return;
     }
     if (!apiBase) {
+      log("ABORT: data-api-base attribute missing — rendering error");
       renderError(root, function () {
         initConsultantProfileLoad();
       });
@@ -301,11 +318,15 @@
       root.innerHTML =
         '<p class="consultly-consultant-profile__placeholder">Loading consultant profile…</p>';
 
-      fetch(apiBase + "/" + encodeURIComponent(consultantId), {
+      var fetchUrl = apiBase + "/" + encodeURIComponent(consultantId);
+      log("fetching:", fetchUrl);
+
+      fetch(fetchUrl, {
         credentials: "same-origin",
         headers: { Accept: "application/json" },
       })
         .then(function (res) {
+          log("response status:", res.status, "content-type:", res.headers.get("content-type"));
           if (res.status === 400 || res.status === 404) {
             var notFoundErr = new Error("not_found");
             notFoundErr.notFound = true;
@@ -315,9 +336,11 @@
           return res.json();
         })
         .then(function (data) {
+          log("parsed response body:", data);
           if (!data || data.success !== true || !data.consultant) {
             throw new Error("Unexpected response shape");
           }
+          log("rendering profile for:", data.consultant && data.consultant.displayName);
           renderProfile(container, root, data, {
             shop: shop,
             showAbout: showAbout,
@@ -327,10 +350,11 @@
         })
         .catch(function (err) {
           if (err && err.notFound) {
+            log("endpoint returned 400/404 — rendering not-found");
             renderNotFound(root);
             return;
           }
-          console.error("[consultly] failed to load consultant profile:", err);
+          console.error("[consultly-profile] failed to load consultant profile:", err);
           renderError(root, initConsultantProfileLoad);
         });
     }
@@ -339,7 +363,9 @@
   }
 
   function initAll() {
-    document.querySelectorAll(".consultly-consultant-profile").forEach(initConsultantProfile);
+    var blocks = document.querySelectorAll(".consultly-consultant-profile");
+    log("initAll: found", blocks.length, "profile block(s)");
+    blocks.forEach(initConsultantProfile);
   }
 
   if (document.readyState === "loading") {

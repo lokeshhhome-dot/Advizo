@@ -621,6 +621,9 @@ const proxyConsultantProfileJson = async (req, res) => {
   try {
     const shop = req.query.shop;
     const consultantId = req.params.id;
+    // TEMPORARY debug log — this is the endpoint the profile page actually
+    // hits (NOT getConsultantByShopIdAndConsultantId). Remove once confirmed.
+    console.log("[app-proxy][profile] hit — shop:", shop, "consultantId:", consultantId);
 
     if (!shop) {
       return res.status(400).json({ success: false, message: "Missing shop" });
