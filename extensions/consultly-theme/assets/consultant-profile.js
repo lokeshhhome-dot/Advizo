@@ -16,15 +16,73 @@
 (function () {
   "use strict";
 
+  // UNCONDITIONAL — deliberately NOT gated by DEBUG below. If this line
+  // never shows up in the live storefront's console, this file did not
+  // execute at all (script tag missing/404/wrong version deployed) — that
+  // is a different bug class than anything downstream of this point.
+  console.log("[CONSULTANT PROFILE] JS FILE LOADED", {
+    href: window.location.href,
+    scriptTag: document.currentScript ? document.currentScript.src : null,
+  });
+
+  // UNCONDITIONAL — same reasoning as the console line above: a visible,
+  // always-on marker so "did this JS file even run on this page" can be
+  // answered by looking at the page, no DevTools required. Remove once the
+  // deploy/versioning question below is resolved.
+  (function renderUnconditionalLoadMarker() {
+    try {
+      var marker = document.createElement("div");
+      marker.id = "consultly-profile-js-loaded-marker";
+      marker.setAttribute(
+        "style",
+        "position:fixed;bottom:0;left:0;z-index:2147483647;" +
+          "background:#065f46;color:#fff;font:11px/1.4 -apple-system,BlinkMacSystemFont,Arial,sans-serif;" +
+          "padding:4px 8px;",
+      );
+      marker.textContent = "consultant-profile.js loaded (" + new Date().toISOString() + ")";
+      var attach = function () {
+        document.body.appendChild(marker);
+      };
+      if (document.body) {
+        attach();
+      } else {
+        document.addEventListener("DOMContentLoaded", attach);
+      }
+    } catch (e) {
+      // Never let the diagnostic marker itself break the page.
+    }
+  })();
+
   // TEMPORARY debug logging — remove once the profile page is confirmed
-  // working. Filter the browser Console by "[consultly-profile]".
+  // working. Filter the browser Console by "[CONSULTANT PROFILE".
   var DEBUG = true;
   function log() {
     if (!DEBUG) return;
-    var args = ["[consultly-profile]"].concat([].slice.call(arguments));
-    console.log.apply(console, args);
+    console.log.apply(console, ["[CONSULTANT PROFILE]"].concat([].slice.call(arguments)));
   }
-  log("script loaded, url =", window.location.href);
+  function logErr() {
+    console.error.apply(console, ["[CONSULTANT PROFILE ERROR]"].concat([].slice.call(arguments)));
+  }
+  log("Script loaded");
+
+  // TEMPORARY on-page debug banner — same lifespan as DEBUG above. Surfaces
+  // "page loaded but data isn't coming" failures visibly, since a merchant
+  // or QA tester checking the storefront won't have DevTools open.
+  function showDebugBanner(detail) {
+    if (!DEBUG) return;
+    if (document.getElementById("consultly-profile-debug-banner")) return;
+    var banner = document.createElement("div");
+    banner.id = "consultly-profile-debug-banner";
+    banner.setAttribute(
+      "style",
+      "position:fixed;top:0;left:0;right:0;z-index:2147483647;" +
+        "background:#b91c1c;color:#fff;font:14px/1.4 -apple-system,BlinkMacSystemFont,Arial,sans-serif;" +
+        "padding:10px 16px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.3);",
+    );
+    banner.textContent =
+      "[DEBUG] Page load but data is not coming" + (detail ? " — " + detail : "");
+    document.body.appendChild(banner);
+  }
 
   var DEFAULT_AVATAR_SVG =
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
@@ -266,7 +324,7 @@
         function () {
           avatarEl.src = DEFAULT_AVATAR;
         },
-        { once: true },
+        { once: true }, 
       );
     }
 
@@ -283,12 +341,22 @@
   }
 
   function initConsultantProfile(container) {
-    if (container.getAttribute("data-consultly-initialized") === "1") return;
+    log("initConsultantProfile started");
+    if (container.getAttribute("data-consultly-initialized") === "1") {
+      log("skip: this block was already initialized");
+      return;
+    }
     container.setAttribute("data-consultly-initialized", "1");
 
+    log("Current URL:", window.location.href);
+
     var root = container.querySelector(".consultly-consultant-profile__root");
+    // UNCONDITIONAL — proves the block's own markup rendered and this
+    // function found it, independent of the DEBUG flag.
+    console.log("[CONSULTANT PROFILE] block root found?", Boolean(root), root);
     if (!root) {
-      log("ABORT: .consultly-consultant-profile__root not found inside block");
+      logErr("Block root (.consultly-consultant-profile__root) not found — cannot render");
+      showDebugBanner("block root element (.consultly-consultant-profile__root) missing");
       return;
     }
 
@@ -299,15 +367,23 @@
     var showConsultation = container.getAttribute("data-show-consultation") === "true";
 
     var consultantId = getConsultantId();
-    log("apiBase =", apiBase, "| shop =", shop, "| consultantId =", consultantId);
+    // UNCONDITIONAL — the consultant id parsed from the URL, unconditional
+    // because a wrong/missing id here explains a blank page just as well as
+    // a script-not-loaded issue does.
+    console.log("[CONSULTANT PROFILE] consultant id from URL:", consultantId, "| full URL:", window.location.href);
+    log("Consultant ID from URL:", consultantId);
+    // The Mongo shop id is NOT known to the browser by design — the App Proxy
+    // request carries the shop, and the backend resolves the shop id itself.
+    log("Shop (domain):", shop, "| Shop ID: resolved server-side by App Proxy (not sent from browser)");
 
     if (!consultantId) {
-      log("ABORT: no ?id= in URL — rendering not-found");
+      logErr("Consultant ID missing — rendering 'Consultant not found.'");
       renderNotFound(root);
       return;
     }
     if (!apiBase) {
-      log("ABORT: data-api-base attribute missing — rendering error");
+      logErr("API URL could not be constructed — data-api-base attribute missing");
+      showDebugBanner("data-api-base attribute missing on the block");
       renderError(root, function () {
         initConsultantProfileLoad();
       });
@@ -318,59 +394,107 @@
       root.innerHTML =
         '<p class="consultly-consultant-profile__placeholder">Loading consultant profile…</p>';
 
+      log("About to build API URL (base =", apiBase + ")");
       var fetchUrl = apiBase + "/" + encodeURIComponent(consultantId);
-      log("fetching:", fetchUrl);
+      // UNCONDITIONAL — the exact URL this browser is about to request,
+      // right before the request fires.
+      console.log("[CONSULTANT PROFILE] about to fetch:", fetchUrl);
 
       fetch(fetchUrl, {
         credentials: "same-origin",
         headers: { Accept: "application/json" },
       })
         .then(function (res) {
-          log("response status:", res.status, "content-type:", res.headers.get("content-type"));
+          // UNCONDITIONAL — the raw HTTP status that came back.
+          console.log(
+            "[CONSULTANT PROFILE] fetch response status:",
+            res.status,
+            "content-type:",
+            res.headers.get("content-type"),
+          );
           if (res.status === 400 || res.status === 404) {
             var notFoundErr = new Error("not_found");
             notFoundErr.notFound = true;
             throw notFoundErr;
           }
           if (!res.ok) throw new Error("Request failed with status " + res.status);
-          return res.json();
+          return res.json().catch(function (jsonErr) {
+            logErr("JSON parsing failed:", jsonErr);
+            throw jsonErr;
+          });
         })
         .then(function (data) {
-          log("parsed response body:", data);
+          // UNCONDITIONAL — the parsed response body.
+          console.log("[CONSULTANT PROFILE] response body:", data);
           if (!data || data.success !== true || !data.consultant) {
             throw new Error("Unexpected response shape");
           }
-          log("rendering profile for:", data.consultant && data.consultant.displayName);
-          renderProfile(container, root, data, {
-            shop: shop,
-            showAbout: showAbout,
-            showExpertise: showExpertise,
-            showConsultation: showConsultation,
-          });
+          // UNCONDITIONAL — the last checkpoint before actually painting the DOM.
+          console.log(
+            "[CONSULTANT PROFILE] about to call renderProfile() for:",
+            data.consultant && data.consultant.displayName,
+          );
+          try {
+            renderProfile(container, root, data, {
+              shop: shop,
+              showAbout: showAbout,
+              showExpertise: showExpertise,
+              showConsultation: showConsultation,
+            });
+          } catch (renderErr) {
+            logErr("Rendering failed:", renderErr);
+            renderError(root, initConsultantProfileLoad);
+          }
         })
         .catch(function (err) {
           if (err && err.notFound) {
-            log("endpoint returned 400/404 — rendering not-found");
+            logErr("Endpoint returned 400/404 — rendering 'Consultant not found.'");
+            showDebugBanner("API returned 400/404 for consultant id " + consultantId);
             renderNotFound(root);
             return;
           }
-          console.error("[consultly-profile] failed to load consultant profile:", err);
+          logErr("Fetch failed:", err);
+          showDebugBanner(
+            "request to " + fetchUrl + " failed (" + (err && err.message ? err.message : "unknown error") + ")",
+          );
           renderError(root, initConsultantProfileLoad);
         });
     }
 
+    log("About to start load (fetch flow)");
     initConsultantProfileLoad();
   }
 
   function initAll() {
     var blocks = document.querySelectorAll(".consultly-consultant-profile");
-    log("initAll: found", blocks.length, "profile block(s)");
+    // UNCONDITIONAL — does the Liquid block's own markup exist in this
+    // page's DOM at all? If this logs 0 on the live storefront while the
+    // Theme Editor preview shows the block, the live page is rendering an
+    // extension version that doesn't have this block yet (most likely:
+    // `shopify app deploy` hasn't been released to the app's active
+    // version — Theme Editor preview during `shopify app dev` uses the
+    // local/dev extension version, which is separate).
+    console.log("[CONSULTANT PROFILE] blocks found in DOM:", blocks.length);
+    log("initAll fired — found", blocks.length, "profile block(s) on page");
+    if (!blocks.length) {
+      logErr("No .consultly-consultant-profile block found in the DOM on this page load");
+      showDebugBanner(
+        "no .consultly-consultant-profile block in the DOM — likely an undeployed/unreleased extension version, not a Theme Editor setup issue",
+      );
+    }
     blocks.forEach(initConsultantProfile);
   }
 
+  log("readyState at script run =", document.readyState);
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initAll);
+    document.addEventListener("DOMContentLoaded", function () {
+      log("DOMContentLoaded fired");
+      initAll();
+    });
   } else {
+    // Deferred scripts usually run after parsing — DOMContentLoaded already
+    // passed, so run immediately.
+    log("readyState not 'loading' — running initAll immediately");
     initAll();
   }
 

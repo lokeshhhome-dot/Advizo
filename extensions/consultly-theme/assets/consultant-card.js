@@ -265,7 +265,12 @@
       var consultantId = cardEl.getAttribute("data-consultant-id");
 
       cardEl.addEventListener("click", function () {
-        window.location.href = buildProfileUrl(consultantId);
+        var profileUrl = buildProfileUrl(consultantId);
+        console.log("[CONSULTANT CARD] Card clicked");
+        console.log("[CONSULTANT CARD] Consultant ID:", consultantId);
+        console.log("[CONSULTANT CARD] Profile URL:", profileUrl);
+        console.log("[CONSULTANT CARD] Navigating to:", profileUrl);
+        window.location.href = profileUrl;
       });
 
       cardEl.querySelectorAll("[data-action]").forEach(function (btn) {
