@@ -18,6 +18,7 @@ const {
 const { sendEmail } = require("../MiddleWare/ShopifyMiddleware/nodemailer");
 const { resolveShopProfile } = require("../Utils/shopifyShopProfile");
 const { setupStorefrontMenu } = require("../Utils/setupStorefrontMenu");
+const { ensureConsultantProfilePage } = require("../Utils/ensureConsultantProfilePage");
 const { getConsultantsForShop } = require("./usersController");
 const { getConsultantProfileForShop } = require("./consultantController");
 const { getCommunicationStatus } = require("../services/subscriptionMinutes");
@@ -409,6 +410,13 @@ const authCallback = async (req, res) => {
     setupStorefrontMenu(shop, accessToken).catch((error) => {
       console.error(
         "[authCallback] setupStorefrontMenu error:",
+        error?.message || error,
+      );
+    });
+
+    ensureConsultantProfilePage(shop, accessToken).catch((error) => {
+      console.error(
+        "[authCallback] ensureConsultantProfilePage error:",
         error?.message || error,
       );
     });
