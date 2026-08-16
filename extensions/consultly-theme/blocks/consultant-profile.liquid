@@ -13,29 +13,48 @@
   the title, editable under "Search engine listing" if it doesn't match) →
   Save. Then in Theme Editor, open that page → Add block → Apps →
   "Consultant Profile".
+
+  PAGE GUARD: this block's "target": "section" (below) means Shopify lets a
+  merchant add it to ANY section on ANY template — Home page included —
+  there's no schema field that restricts which template a section-target
+  app block may be dropped into. So this template checks the current page
+  itself and renders nothing at all outside the one page this block is for,
+  rather than relying on merchants never adding it elsewhere.
 {% endcomment %}
-<div
-  class="consultly-consultant-profile"
-  id="consultly-consultant-profile-{{ block.id }}"
-  data-block-id="{{ block.id }}"
-  data-shop="{{ shop.permanent_domain }}"
-  data-api-base="/apps/consultly/consultant"
-  data-show-about="{{ block.settings.show_about }}"
-  data-show-expertise="{{ block.settings.show_expertise }}"
-  data-show-consultation="{{ block.settings.show_consultation }}"
-  {{ block.shopify_attributes }}
->
-  {%- if block.settings.heading != blank -%}
-    <p class="consultly-consultant-profile__eyebrow">{{ block.settings.heading }}</p>
-  {%- endif -%}
+{%- assign consultly_is_profile_page = false -%}
+{%- if request.page_type == 'page' and page.handle == 'consultant-profile' -%}
+  {%- assign consultly_is_profile_page = true -%}
+{%- endif -%}
 
-  <div class="consultly-consultant-profile__root" aria-live="polite">
-    <p class="consultly-consultant-profile__placeholder">{{ 'consultant_profile.loading' | t }}</p>
+{%- if consultly_is_profile_page -%}
+  <div
+    class="consultly-consultant-profile"
+    id="consultly-consultant-profile-{{ block.id }}"
+    data-block-id="{{ block.id }}"
+    data-shop="{{ shop.permanent_domain }}"
+    data-api-base="/apps/consultly/consultant"
+    data-show-about="{{ block.settings.show_about }}"
+    data-show-expertise="{{ block.settings.show_expertise }}"
+    data-show-consultation="{{ block.settings.show_consultation }}"
+    {{ block.shopify_attributes }}
+  >
+    {%- if block.settings.heading != blank -%}
+      <p class="consultly-consultant-profile__eyebrow">{{ block.settings.heading }}</p>
+    {%- endif -%}
+
+    <div class="consultly-consultant-profile__root" aria-live="polite">
+      <p class="consultly-consultant-profile__placeholder">{{ 'consultant_profile.loading' | t }}</p>
+    </div>
   </div>
-</div>
 
-<link rel="stylesheet" href="{{ 'consultant-profile.css' | asset_url }}">
-<script src="{{ 'consultant-profile.js' | asset_url }}" defer="defer"></script>
+  <link rel="stylesheet" href="{{ 'consultant-profile.css' | asset_url }}">
+  <script src="{{ 'consultant-profile.js' | asset_url }}" defer="defer"></script>
+{%- elsif request.design_mode -%}
+  {%- comment -%} Theme Editor only — never shown on the live storefront — so a merchant who drops this block on the wrong page sees why it's blank instead of an empty gap. {%- endcomment -%}
+  <div {{ block.shopify_attributes }} style="padding:16px;border:1px dashed #c7cbd1;color:#6b7280;font:14px/1.4 -apple-system,sans-serif;">
+    Consultant Profile block only renders on the "consultant-profile" page — it will be hidden here on the live store.
+  </div>
+{%- endif -%}
 
 {% schema %}
 {
