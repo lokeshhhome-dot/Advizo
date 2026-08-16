@@ -14,12 +14,12 @@ const getStorefrontMenuItems = (shop) => {
   const shopDomain = normalizeShopDomain(shop);
   const shopBaseUrl = shopDomain ? `https://${shopDomain}` : "";
 
+  // "Our Consultant" (-> /apps/consultly/, the old iframe consultant-card
+  // listing) intentionally dropped — superseded by the native
+  // consultant-card.liquid block a merchant places on the Home page
+  // directly. Existing shops' menus are left untouched; this only affects
+  // what NEW installs get.
   return [
-    { title: "Our Consultant", type: "HTTP",
-      url: shopBaseUrl
-      ? `${shopBaseUrl}/apps/consultly/`
-      : "/apps/consultly/",
-     },
     {
       title: "Profile",
       type: "HTTP",

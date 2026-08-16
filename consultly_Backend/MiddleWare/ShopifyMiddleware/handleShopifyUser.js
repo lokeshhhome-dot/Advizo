@@ -256,6 +256,7 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
     // 3. Check existing user
     const existingUser = await User.findOne({
       shopifyCustomerId: String(customerId),
+      shop_id: shopDoc._id,
     })
       .select("_id shop_id shopifyCustomerId fullname email")
       .lean();
