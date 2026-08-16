@@ -19,6 +19,10 @@ const { sendEmail } = require("../MiddleWare/ShopifyMiddleware/nodemailer");
 const { resolveShopProfile } = require("../Utils/shopifyShopProfile");
 const { setupStorefrontMenu } = require("../Utils/setupStorefrontMenu");
 const { ensureConsultantProfilePage } = require("../Utils/ensureConsultantProfilePage");
+const { ensureMyProfilePage } = require("../Utils/ensureMyProfilePage");
+const { User } = require("../Modal/userSchema");
+const { WalletHistory } = require("../Modal/walletHistory");
+const { TransactionHistroy } = require("../Modal/transactionHistroy");
 const { getConsultantsForShop } = require("./usersController");
 const { getConsultantProfileForShop } = require("./consultantController");
 const { getCommunicationStatus } = require("../services/subscriptionMinutes");
@@ -417,6 +421,13 @@ const authCallback = async (req, res) => {
     ensureConsultantProfilePage(shop, accessToken).catch((error) => {
       console.error(
         "[authCallback] ensureConsultantProfilePage error:",
+        error?.message || error,
+      );
+    });
+
+    ensureMyProfilePage(shop, accessToken).catch((error) => {
+      console.error(
+        "[authCallback] ensureMyProfilePage error:",
         error?.message || error,
       );
     });
@@ -995,42 +1006,118 @@ const proxyShopifyChatSection = async (req, res) => {
   });
 };
 
-const proxyProfileSection = async (req, res) => {
-  const shop = req.query.shop;
-  const customerId = req.query.logged_in_customer_id;
+/**
+ * JSON App Proxy endpoint for the Theme App Extension's My Profile block
+ * (my-profile.liquid / my-profile.js, rendered on /pages/my-profile).
+ * Replaces the old proxyProfileSection iframe launcher — same identity
+ * resolution as proxyConsultantProfileJson (resolveStorefrontCustomer, the
+ * shared HMAC-verified App Proxy flow), but aggregates the customer's
+ * profile/wallet/history data server-side into one response instead of
+ * iframing the old React app. Deliberately does NOT return the app JWT —
+ * the block never needs a bearer token client-side, since every field it
+ * needs is resolved here using the already-authenticated identity.
+ */
+const proxyCustomerProfileJson = async (req, res) => {
+  try {
+    const shop = req.query.shop;
+    console.log("[app-proxy][my-profile] hit — shop:", shop);
 
-  const [userId, assets] = await Promise.all([
-    resolveStorefrontCustomer(req, shop),
-    resolvePageAssets(req),
-  ]);
+    if (!shop) {
+      return res.status(400).json({ success: false, message: "Missing shop" });
+    }
 
-  if (assets?.error === "password") {
-    return res.status(401).send("Storefront locked. Provide password.");
+    const userResult = await resolveStorefrontCustomer(req, shop);
+
+    if (!userResult?.userId) {
+      console.log("[app-proxy][my-profile] anonymous visitor — no data returned");
+      res.set("Cache-Control", "no-store");
+      return res.status(200).json({ success: true, authenticated: false });
+    }
+
+    setAppSessionCookie(res, userResult.token);
+
+    const user = await User.findById(userResult.userId).select(
+      "fullname email profileImage walletBalance createdAt",
+    );
+
+    if (!user) {
+      console.warn(
+        "[app-proxy][my-profile] resolved userId has no User doc:",
+        userResult.userId,
+      );
+      res.set("Cache-Control", "no-store");
+      return res.status(200).json({ success: true, authenticated: false });
+    }
+
+    const [walletHistory, conversations] = await Promise.all([
+      WalletHistory.find({ userId: userResult.userId, shop_id: userResult.shop_id })
+        .sort({ createdAt: -1 })
+        .limit(50)
+        .lean(),
+      TransactionHistroy.find({
+        $or: [{ senderId: userResult.userId }, { receiverId: userResult.userId }],
+      })
+        .populate("senderId", "fullname")
+        .populate("receiverId", "fullname")
+        .sort({ createdAt: -1 })
+        .limit(50)
+        .lean(),
+    ]);
+
+    const safeCustomer = {
+      id: user._id,
+      fullname: user.fullname,
+      email: user.email,
+      profileImage: user.profileImage
+        ? `${process.env.APP_URL}/${String(user.profileImage).replace(/\\/g, "/")}`
+        : null,
+      walletBalance: user.walletBalance || 0,
+      memberSince: user.createdAt,
+    };
+
+    const safeWalletHistory = walletHistory.map((entry) => ({
+      id: entry._id,
+      amount: entry.amount,
+      currency: entry.currency,
+      transactionType: entry.transactionType,
+      direction: entry.direction,
+      referenceType: entry.referenceType,
+      status: entry.status,
+      description: entry.description,
+      createdAt: entry.createdAt,
+    }));
+
+    const safeConsultationHistory = conversations.map((entry) => {
+      const isSender =
+        String(entry.senderId?._id || entry.senderId) === String(userResult.userId);
+      const consultant = isSender ? entry.receiverId : entry.senderId;
+      return {
+        id: entry._id,
+        type: entry.type,
+        status: entry.status,
+        duration: entry.totalSeconds || entry.duration || 0,
+        amount: entry.totalAmount || entry.amount || 0,
+        consultantName: consultant?.fullname || "Consultant",
+        startTime: entry.startTime,
+        endTime: entry.endTime,
+        createdAt: entry.createdAt,
+      };
+    });
+
+    res.set("Cache-Control", "no-store");
+    return res.status(200).json({
+      success: true,
+      authenticated: true,
+      customer: safeCustomer,
+      walletHistory: safeWalletHistory,
+      consultationHistory: safeConsultationHistory,
+    });
+  } catch (err) {
+    console.error("[app-proxy] /consultly/customer/me error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to load profile" });
   }
-
-  // Anonymous visitor: render the page anyway with a flag, so the app shows its
-  // own "Sign in Required" panel inside the storefront. A 302 to /account/login
-  // here is what threw shoppers straight to accounts.shopify.com before they
-  // were told why — and on new customer accounts that page is a full auth flow.
-  const anonymous = !userId?.userId;
-  if (anonymous) {
-    console.warn("[profile] anonymous visitor — rendering sign-in prompt");
-  } else {
-    setAppSessionCookie(res, userId.token);
-  }
-
-  const shopIdParams = userId?.shop_id?.toString() || "";
-  const iframeUrl =
-    `${resolveFrontendUrl(req)}/profile?&shop=${shop}` +
-    `&logged_in_customer_Id=${customerId || ""}` +
-    `&userId=${userId?.userId || ""}` +
-    `&shopId=${shopIdParams}` +
-    `&authToken=${encodeURIComponent(userId?.token || "")}` +
-    (anonymous ? "&requiresLogin=1" : "");
-  return renderShopifyPage(req, res, iframeUrl, {
-    title: "Profile Section",
-    preloadedAssets: assets,
-  });
 };
 const proxyShopifyCallAccepted = (req, res) => {
   console.log("============== VIDEO PAGE HIT ==============");
@@ -1095,6 +1182,6 @@ module.exports = {
   proxySHopifyConsultantChat,
   proxyShopifyViewProfile,
   proxyShopifyChatSection,
-  proxyProfileSection,
+  proxyCustomerProfileJson,
   proxyShopifyCallAccepted,
 };

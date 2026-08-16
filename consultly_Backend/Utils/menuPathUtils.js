@@ -1,10 +1,13 @@
 // "/apps/consultly" (the old "Our Consultant" iframe listing) removed —
 // setupStorefrontMenu.js no longer creates it, superseded by the native
-// consultant-card.liquid block. Kept in sync with getStorefrontMenuItems()
-// in setupStorefrontMenu.js so isMenuSetupComplete doesn't false-flag.
+// consultant-card.liquid block. "/apps/consultly/profile" replaced by
+// "/pages/my-profile" — the old iframe launcher (proxyProfileSection) was
+// removed in favor of the native My Profile Theme App Extension block.
+// Kept in sync with getStorefrontMenuItems() in setupStorefrontMenu.js so
+// isMenuSetupComplete doesn't false-flag.
 const REQUIRED_MENU_PATHS = [
   "https://the-bhaisaab.myshopify.com/apps/consultly/login",
-  "https://the-bhaisaab.myshopify.com/apps/consultly/profile",
+  "https://the-bhaisaab.myshopify.com/pages/my-profile",
 ];
 
 function normalizeMenuPath(url) {

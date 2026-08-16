@@ -1,0 +1,87 @@
+{% comment %}
+  Consultly — My Profile (Customer Profile) App Block.
+
+  Same pattern as consultant-profile.liquid: a thin shell handing context to
+  the JS bundle via data attributes. Unlike consultant-profile.liquid, there
+  is no id to read from the URL — the customer's identity comes entirely
+  from Shopify's own App Proxy signal (logged_in_customer_id), resolved
+  server-side by /apps/consultly/customer/me. Nothing customer-identifying
+  is ever read from this page's URL or query string.
+
+  Replaces the old /apps/consultly/profile iframe (proxyProfileSection,
+  removed from shopifyController.js) — this renders natively on the
+  storefront, no iframe.
+
+  ONE-TIME MERCHANT SETUP required for this block to be reachable at all:
+  the "My Profile" page (handle "my-profile") is created automatically on
+  install by ensureMyProfilePage.js. In Theme Editor, open that page →
+  Add block → Apps → "My Profile".
+
+  PAGE GUARD: this block's "target": "section" (below) means Shopify lets a
+  merchant add it to ANY section on ANY template — Home page included —
+  there's no schema field that restricts which template a section-target
+  app block may be dropped into. So this template checks the current page
+  itself and renders nothing at all outside the one page this block is for,
+  rather than relying on merchants never adding it elsewhere. Same
+  convention as consultant-profile.liquid's page.handle guard.
+{% endcomment %}
+{%- assign consultly_is_my_profile_page = false -%}
+{%- if request.page_type == 'page' and page.handle == 'my-profile' -%}
+  {%- assign consultly_is_my_profile_page = true -%}
+{%- endif -%}
+
+{%- if consultly_is_my_profile_page -%}
+  <div
+    class="consultly-my-profile"
+    id="consultly-my-profile-{{ block.id }}"
+    data-block-id="{{ block.id }}"
+    data-shop="{{ shop.permanent_domain }}"
+    data-api-base="/apps/consultly/customer/me"
+    data-show-wallet-history="{{ block.settings.show_wallet_history }}"
+    data-show-consultation-history="{{ block.settings.show_consultation_history }}"
+    {{ block.shopify_attributes }}
+  >
+    {%- if block.settings.heading != blank -%}
+      <p class="consultly-my-profile__eyebrow">{{ block.settings.heading }}</p>
+    {%- endif -%}
+
+    <div class="consultly-my-profile__root" aria-live="polite">
+      <p class="consultly-my-profile__placeholder">{{ 'my_profile.loading' | t }}</p>
+    </div>
+  </div>
+
+  <link rel="stylesheet" href="{{ 'my-profile.css' | asset_url }}">
+  <script src="{{ 'my-profile.js' | asset_url }}" defer="defer"></script>
+{%- elsif request.design_mode -%}
+  {%- comment -%} Theme Editor only — never shown on the live storefront — so a merchant who drops this block on the wrong page sees why it's blank instead of an empty gap. {%- endcomment -%}
+  <div {{ block.shopify_attributes }} style="padding:16px;border:1px dashed #c7cbd1;color:#6b7280;font:14px/1.4 -apple-system,sans-serif;">
+    My Profile block only renders on the "my-profile" page — it will be hidden here on the live store.
+  </div>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "My Profile",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Eyebrow text",
+      "default": "My Profile"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_wallet_history",
+      "label": "Show wallet/transaction history",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_consultation_history",
+      "label": "Show chat/call/video consultation history",
+      "default": true
+    }
+  ]
+}
+{% endschema %}

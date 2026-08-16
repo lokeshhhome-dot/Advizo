@@ -11,7 +11,7 @@ const { installShopifyApp,
     proxySHopifyConsultantChat,
     proxyShopifyViewProfile,
     proxyShopifyChatSection,
-    proxyProfileSection,
+    proxyCustomerProfileJson,
     proxyShopifyCallAccepted
 } = require('../Controller/shopifyController');
 
@@ -44,8 +44,11 @@ shopifyRoute.get('/consultly/login', verifyAppProxy, proxyShopifyConsultantPage)
 shopifyRoute.get('/consultly/consultant-dashboard', verifyAppProxy, proxyShopifyConsultantLoginPage);
 shopifyRoute.get('/consultly/consultant-chats-section', verifyAppProxy, proxySHopifyConsultantChat);
 shopifyRoute.get('/consultly/view-profile', verifyAppProxy, proxyShopifyViewProfile);
-shopifyRoute.get('/consultly/chats-c', verifyAppProxy, proxyShopifyChatSection); 
-shopifyRoute.get('/consultly/profile', verifyAppProxy, proxyProfileSection);
+shopifyRoute.get('/consultly/chats-c', verifyAppProxy, proxyShopifyChatSection);
+// JSON endpoint for the Theme App Extension's My Profile block —
+// /apps/consultly/customer/me, rendered on /pages/my-profile. Replaces the
+// old /consultly/profile iframe launcher (proxyProfileSection, removed).
+shopifyRoute.get('/consultly/customer/me', verifyAppProxy, proxyCustomerProfileJson);
 shopifyRoute.get('/consultly/video-calling-page', verifyAppProxy, proxyShopifyCallAccepted);
 
 module.exports = shopifyRoute;

@@ -4,5 +4,8 @@
   },
   "consultant_profile": {
     "loading": "Loading consultant profile…"
+  },
+  "my_profile": {
+    "loading": "Loading your profile…"
   }
 }

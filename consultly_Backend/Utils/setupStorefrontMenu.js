@@ -19,13 +19,18 @@ const getStorefrontMenuItems = (shop) => {
   // consultant-card.liquid block a merchant places on the Home page
   // directly. Existing shops' menus are left untouched; this only affects
   // what NEW installs get.
+  //
+  // "Profile" now points at the native /pages/my-profile Theme App
+  // Extension block instead of the old /apps/consultly/profile iframe
+  // (proxyProfileSection, removed from shopifyController.js) — matches
+  // ensureMyProfilePage.js, which creates that page automatically.
   return [
     {
-      title: "Profile",
+      title: "My Profile",
       type: "HTTP",
       url: shopBaseUrl
-        ? `${shopBaseUrl}/apps/consultly/profile`
-        : "/apps/consultly/profile",
+        ? `${shopBaseUrl}/pages/my-profile`
+        : "/pages/my-profile",
     },
     {
       title: CONSULTANT_LOGIN_TITLE,
