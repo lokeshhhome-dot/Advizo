@@ -30,6 +30,17 @@
   {%- assign consultly_is_my_profile_page = true -%}
 {%- endif -%}
 
+{%- comment -%}
+  UNCONDITIONAL diagnostic — renders regardless of the guard above, so
+  "View Page Source" (or a curl) shows exactly what Shopify resolved for
+  THIS block instance in THIS placement, even when the guard suppresses
+  everything else. This is the one thing that can prove/disprove whether
+  page.handle differs between a Header placement and a main-content
+  placement for the same URL. Remove once the Header-vs-main-content
+  behavior is confirmed fixed.
+{%- endcomment -%}
+<!-- Consultly[my-profile] page.handle="{{ page.handle }}" request.page_type="{{ request.page_type }}" template="{{ template }}" section.id="{{ section.id }}" block.id="{{ block.id }}" design_mode={{ request.design_mode }} -->
+
 {%- if consultly_is_my_profile_page -%}
   <div
     class="consultly-my-profile"
@@ -53,9 +64,11 @@
   <link rel="stylesheet" href="{{ 'my-profile.css' | asset_url }}">
   <script src="{{ 'my-profile.js' | asset_url }}" defer="defer"></script>
 {%- elsif request.design_mode -%}
-  {%- comment -%} Theme Editor only — never shown on the live storefront — so a merchant who drops this block on the wrong page sees why it's blank instead of an empty gap. {%- endcomment -%}
+  {%- comment -%} Theme Editor only — never shown on the live storefront — so a merchant who drops this block on the wrong page sees why it's blank instead of an empty gap. Shows the actual resolved values so a mismatch (wrong page selected in Theme Editor, shared default template, etc.) is visible immediately instead of just "it's blank." {%- endcomment -%}
   <div {{ block.shopify_attributes }} style="padding:16px;border:1px dashed #c7cbd1;color:#6b7280;font:14px/1.4 -apple-system,sans-serif;">
     My Profile block only renders on the "my-profile" page — it will be hidden here on the live store.
+    <br>
+    <code>page.handle = "{{ page.handle }}" | request.page_type = "{{ request.page_type }}" | template = "{{ template }}"</code>
   </div>
 {%- endif -%}
 
