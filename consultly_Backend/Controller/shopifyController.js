@@ -141,6 +141,41 @@ const resolveFrontendUrl = (req) => {
   return envUrl;
 };
 
+/**
+ * Standalone consultant portal redirect target — deliberately NOT
+ * resolveFrontendUrl(req) above. resolveFrontendUrl echoes the incoming
+ * request's own Host header for the OTHER 5 iframe embeds (consultant
+ * cards, chats, view-profile, video calling) and must keep doing that for
+ * them unchanged. A redirect destination must never be derived from
+ * request-controlled input (Host header, query params) — that's an open
+ * redirect. This reads a single, explicit, operator-configured env var
+ * instead, and only that.
+ *
+ * Returns null (not a guessed/fallback URL) until CONSULTANT_APP_URL is
+ * actually set to a real deployed frontend origin — callers must treat
+ * null as "standalone portal not configured yet" and fall back to the
+ * existing iframe behavior, not fail or redirect to something broken.
+ */
+const getTrustedConsultantAppUrl = () => {
+  const raw = (process.env.CONSULTANT_APP_URL || "").trim();
+  if (!raw) return null;
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      console.error(
+        `[consultant-portal] CONSULTANT_APP_URL has an unsupported protocol (${parsed.protocol}) — ignoring, falling back to iframe`,
+      );
+      return null;
+    }
+    return raw.replace(/\/+$/, "");
+  } catch (err) {
+    console.error(
+      `[consultant-portal] CONSULTANT_APP_URL is set but not a valid URL ("${raw}") — ignoring, falling back to iframe`,
+    );
+    return null;
+  }
+};
+
 const client_id = process.env.SHOPIFY_CLIENT_ID;
 const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET;
 const SCOPES = process.env.SCOPES;
@@ -743,7 +778,7 @@ const proxyConsultantsJson = async (req, res) => {
     // Anonymous shoppers are a valid case here (the listing is public) —
     // resolveStorefrontCustomer returns null rather than rejecting them.
     const userResult = await resolveStorefrontCustomer(req, shop);
-    const token = userResult?.token;
+    const token = userResult?.token; 
 
     let shopDocId = userResult?.shop_id;
     if (!shopDocId) {
@@ -784,8 +819,21 @@ const proxyConsultantsJson = async (req, res) => {
 };
 
 const proxyShopifyConsultantPage = async (req, res) => {
+  const shop = req.query.shop;
+
+  // Standalone consultant portal path — real top-level page, no iframe, no
+  // scraped Shopify header/footer. Only takes effect once CONSULTANT_APP_URL
+  // is explicitly configured; until then falls through to the existing
+  // iframe behavior below unchanged.
+  const consultantAppUrl = getTrustedConsultantAppUrl();
+  if (consultantAppUrl) {
+    const target = `${consultantAppUrl}/login?shop=${encodeURIComponent(shop || "")}`;
+    console.log(`[consultant-portal] /consultly/login -> 302 -> ${target}`);
+    res.set("Cache-Control", "no-store");
+    return res.redirect(302, target);
+  }
+
   try {
-    const shop = req.query.shop;
     const themeId = req.query.theme_id;
     const cookieHeader = req.headers.cookie || "";
     const userAgent = req.headers["user-agent"] || "node";
@@ -893,6 +941,18 @@ const proxyShopifyConsultantPage = async (req, res) => {
 
 const proxyShopifyConsultantLoginPage = (req, res) => {
   const shop = req.query.shop;
+
+  // Same gated redirect as proxyShopifyConsultantPage above — see that
+  // function's comment for why this reads CONSULTANT_APP_URL and not
+  // resolveFrontendUrl(req).
+  const consultantAppUrl = getTrustedConsultantAppUrl();
+  if (consultantAppUrl) {
+    const target = `${consultantAppUrl}/consultant-dashboard?shop=${encodeURIComponent(shop || "")}`;
+    console.log(`[consultant-portal] /consultly/consultant-dashboard -> 302 -> ${target}`);
+    res.set("Cache-Control", "no-store");
+    return res.redirect(302, target);
+  }
+
   return renderShopifyPage(
     req,
     res,

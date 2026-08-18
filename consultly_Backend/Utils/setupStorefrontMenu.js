@@ -3,7 +3,13 @@ const { flattenMenuItems } = require("./menuPathUtils");
 
 const SHOPIFY_API_VERSION = "2024-10";
 const MAIN_MENU_HANDLE = "main-menu";
+// Legacy label, kept only so findConsultantMenuItem can still recognize an
+// item created before the "Become a Consultant" rename.
 const CONSULTANT_LOGIN_TITLE = "Consultant Login";
+const BECOME_A_CONSULTANT_TITLE = "Become a Consultant";
+// Stable across the rename — the URL never changes, only the visible
+// label does, so this is what identity/idempotency is anchored to.
+const CONSULTANT_LOGIN_PATH = "/apps/consultly/login";
 
 const normalizeShopDomain = (shop) => {
   if (!shop || typeof shop !== "string") return "";
@@ -33,11 +39,11 @@ const getStorefrontMenuItems = (shop) => {
         : "/pages/my-profile",
     },
     {
-      title: CONSULTANT_LOGIN_TITLE,
+      title: BECOME_A_CONSULTANT_TITLE,
       type: "HTTP",
       url: shopBaseUrl
-        ? `${shopBaseUrl}/apps/consultly/login`
-        : "/apps/consultly/login",
+        ? `${shopBaseUrl}${CONSULTANT_LOGIN_PATH}`
+        : CONSULTANT_LOGIN_PATH,
     },
   ];
 };
@@ -138,21 +144,43 @@ const mapExistingMenuItem = (item) => {
   return mapped;
 };
 
-const hasConsultantLoginItem = (items = [], shop) => {
+// Finds the consultant menu entry by URL first — the URL is stable across
+// the "Consultant Login" -> "Become a Consultant" rename, so a re-run can
+// detect and migrate an old-titled item instead of a title mismatch being
+// mistaken for "menu not configured yet" (which would add a duplicate).
+// Title is checked too, as a fallback for any item whose URL was hand-edited.
+const findConsultantMenuItem = (items = [], shop) => {
   const shopDomain = normalizeShopDomain(shop);
-  const loginPath = "/apps/consultly/login";
 
-  return flattenMenuItems(items).some((item) => {
-    const titleMatch =
-      item.title?.trim().toLowerCase() ===
-      CONSULTANT_LOGIN_TITLE.toLowerCase();
-    const url = (item.url || "").toLowerCase();
-    const urlMatch =
-      url.includes(loginPath) ||
-      (shopDomain && url.includes(`${shopDomain}${loginPath}`));
+  return (
+    flattenMenuItems(items).find((item) => {
+      const url = (item.url || "").toLowerCase();
+      const urlMatch =
+        url.includes(CONSULTANT_LOGIN_PATH) ||
+        (shopDomain && url.includes(`${shopDomain}${CONSULTANT_LOGIN_PATH}`));
+      const titleMatch =
+        item.title?.trim().toLowerCase() === CONSULTANT_LOGIN_TITLE.toLowerCase() ||
+        item.title?.trim().toLowerCase() === BECOME_A_CONSULTANT_TITLE.toLowerCase();
 
-    return titleMatch || urlMatch;
-  });
+      return urlMatch || titleMatch;
+    }) || null
+  );
+};
+
+// Rebuilds the (possibly nested) items tree via mapExistingMenuItem,
+// retitling only the one item matching targetId — everything else,
+// including nested submenus, is preserved untouched.
+const mapAndMaybeRenameItem = (item, targetId, newTitle) => {
+  const mapped = mapExistingMenuItem(item);
+  if (item.id === targetId) {
+    mapped.title = newTitle;
+  }
+  if (Array.isArray(item.items) && item.items.length) {
+    mapped.items = item.items.map((child) =>
+      mapAndMaybeRenameItem(child, targetId, newTitle),
+    );
+  }
+  return mapped;
 };
 
 const setupStorefrontMenu = async (shop, accessToken) => {
@@ -181,10 +209,41 @@ const setupStorefrontMenu = async (shop, accessToken) => {
     }
 
     const existingItems = mainMenu.items || [];
+    const existingConsultantItem = findConsultantMenuItem(existingItems, shopDomain);
 
-    if (hasConsultantLoginItem(existingItems, shopDomain)) {
-      console.log(`${logPrefix} Already configured — skipping`);
-      return { ok: true, reason: "already_configured" };
+    if (existingConsultantItem) {
+      if (existingConsultantItem.title === BECOME_A_CONSULTANT_TITLE) {
+        console.log(`${logPrefix} Already configured — skipping`);
+        return { ok: true, reason: "already_configured" };
+      }
+
+      console.log(
+        `${logPrefix} Migrating consultant menu item title from "${existingConsultantItem.title}" to "${BECOME_A_CONSULTANT_TITLE}"`,
+      );
+      const migratedItems = existingItems.map((item) =>
+        mapAndMaybeRenameItem(item, existingConsultantItem.id, BECOME_A_CONSULTANT_TITLE),
+      );
+
+      const renameMutationData = await shopifyGraphql(
+        shopDomain,
+        accessToken,
+        MENU_UPDATE_MUTATION,
+        {
+          id: mainMenu.id,
+          title: mainMenu.title,
+          handle: mainMenu.handle,
+          items: migratedItems,
+        },
+      );
+
+      const renameUserErrors = renameMutationData?.menuUpdate?.userErrors || [];
+      if (renameUserErrors.length) {
+        console.error(`${logPrefix} menuUpdate userErrors (rename):`, renameUserErrors);
+        return { ok: false, reason: "user_errors", userErrors: renameUserErrors };
+      }
+
+      console.log(`${logPrefix} ✅ Consultant menu item migrated to "${BECOME_A_CONSULTANT_TITLE}"`);
+      return { ok: true, reason: "menu_migrated", shop: shopDomain };
     }
 
     const preservedItems = existingItems.map(mapExistingMenuItem);

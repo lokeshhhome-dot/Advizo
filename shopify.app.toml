@@ -56,7 +56,7 @@ uri = "/api/webhooks/theme/webhooks"
 
 [[webhooks.subscriptions]]
 topics = ["app/uninstalled"]
-uri = "/api/webhooks/app-uninstalled"
+uri = "https://consultly-backend.onrender.com/api/webhooks/app-uninstalled"
 
 # -------------------------------
 # GDPR Compliance
@@ -68,7 +68,7 @@ compliance_topics = [
   "customers/redact",
   "shop/redact"
 ]
-uri = "/api/webhooks/webhooks"
+uri = "https://consultly-backend.onrender.com/api/webhooks/webhooks"
 
 [access_scopes]
 scopes ="read_customers,write_customers,write_draft_orders,read_online_store_navigation,write_online_store_navigation,read_online_store_pages,write_online_store_pages,read_orders,write_orders,read_themes"
