@@ -778,7 +778,7 @@ const proxyConsultantsJson = async (req, res) => {
     // Anonymous shoppers are a valid case here (the listing is public) —
     // resolveStorefrontCustomer returns null rather than rejecting them.
     const userResult = await resolveStorefrontCustomer(req, shop);
-    const token = userResult?.token; 
+    const token = userResult?.token;
 
     let shopDocId = userResult?.shop_id;
     if (!shopDocId) {
@@ -852,7 +852,7 @@ const proxyShopifyConsultantPage = async (req, res) => {
         client,
       ));
     }
-
+    console.log("consultant login ifram is wokring ....")
     const headHtml =
       extractedHead || `<head><meta charset="UTF-8"><title>App</title></head>`;
 
@@ -894,6 +894,8 @@ const proxyShopifyConsultantPage = async (req, res) => {
         </head>
       `
     );
+    // getTrustedConsultantAppUrl() || resolveFrontendUrl(req)
+
     const pageHtml = `
         <!DOCTYPE html>
         <html>
@@ -907,7 +909,7 @@ const proxyShopifyConsultantPage = async (req, res) => {
             <main style="position:relative;">
               <iframe
                 id="agora-iframe"
-                src="${getTrustedConsultantAppUrl() || resolveFrontendUrl(req)}/login?shop=${shop}"
+                src="${"https://untaxed-cattishly-renewal.ngrok-free.dev"}/login?shop=${shop}"
                 style="border:none;width:100%;min-height:200px;display:block;"
               ></iframe>
             </main>
