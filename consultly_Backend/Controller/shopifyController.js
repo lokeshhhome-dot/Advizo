@@ -821,18 +821,15 @@ const proxyConsultantsJson = async (req, res) => {
 const proxyShopifyConsultantPage = async (req, res) => {
   const shop = req.query.shop;
 
-  // Standalone consultant portal path — real top-level page, no iframe, no
-  // scraped Shopify header/footer. Only takes effect once CONSULTANT_APP_URL
-  // is explicitly configured; until then falls through to the existing
-  // iframe behavior below unchanged.
-  const consultantAppUrl = getTrustedConsultantAppUrl();
-  if (consultantAppUrl) {
-    const target = `${consultantAppUrl}/login?shop=${encodeURIComponent(shop || "")}`;
-    console.log(`[consultant-portal] /consultly/login -> 302 -> ${target}`);
-    res.set("Cache-Control", "no-store");
-    return res.redirect(302, target);
-  }
-
+  // Login intentionally STAYS inside the Shopify-shell iframe (Header/Footer
+  // visible) — unlike the dashboard below, this is not a redirect target.
+  // The only change from before: the iframe src prefers the explicit,
+  // trusted CONSULTANT_APP_URL when it's configured, instead of always
+  // using resolveFrontendUrl(req) — which in production resolves to this
+  // backend's own host (Shopify's App Proxy forwards with that Host
+  // header) and 404s there, since the SPA isn't served from this Express
+  // app. Falls back to the old resolveFrontendUrl(req) behavior when
+  // CONSULTANT_APP_URL isn't set, so nothing changes until it is.
   try {
     const themeId = req.query.theme_id;
     const cookieHeader = req.headers.cookie || "";
@@ -910,7 +907,7 @@ const proxyShopifyConsultantPage = async (req, res) => {
             <main style="position:relative;">
               <iframe
                 id="agora-iframe"
-                src="${resolveFrontendUrl(req)}/login?shop=${shop}"
+                src="${getTrustedConsultantAppUrl() || resolveFrontendUrl(req)}/login?shop=${shop}"
                 style="border:none;width:100%;min-height:200px;display:block;"
               ></iframe>
             </main>
@@ -942,9 +939,12 @@ const proxyShopifyConsultantPage = async (req, res) => {
 const proxyShopifyConsultantLoginPage = (req, res) => {
   const shop = req.query.shop;
 
-  // Same gated redirect as proxyShopifyConsultantPage above — see that
-  // function's comment for why this reads CONSULTANT_APP_URL and not
-  // resolveFrontendUrl(req).
+  // Unlike proxyShopifyConsultantPage (login) above, the dashboard IS a
+  // redirect target — it must be a standalone top-level page with no
+  // Shopify Header/Footer/iframe. Only takes effect once CONSULTANT_APP_URL
+  // is explicitly configured (never derived from the request); until then
+  // falls through to the existing iframe-shell rendering below so nothing
+  // breaks in the interim.
   const consultantAppUrl = getTrustedConsultantAppUrl();
   if (consultantAppUrl) {
     const target = `${consultantAppUrl}/consultant-dashboard?shop=${encodeURIComponent(shop || "")}`;
