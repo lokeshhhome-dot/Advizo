@@ -830,6 +830,19 @@ const proxyShopifyConsultantPage = async (req, res) => {
   // header) and 404s there, since the SPA isn't served from this Express
   // app. Falls back to the old resolveFrontendUrl(req) behavior when
   // CONSULTANT_APP_URL isn't set, so nothing changes until it is.
+
+  // TEMPORARY diagnostics — tracing the reported admin.shopify.com redirect
+  // bug. Safe to log: shop domain, this app's own env var, and the request's
+  // own query keys/host are not credentials. Remove once resolved.
+  console.log(`[Consultly] CONSULTANT_APP_URL (raw env) = ${process.env.CONSULTANT_APP_URL || "(unset)"}`);
+  console.log(`[Consultly] request host = ${req.get("host")}`);
+  console.log(
+    `[Consultly] request query = ${JSON.stringify({ ...req.query, signature: req.query.signature ? "[present]" : undefined })}`,
+  );
+  console.log(
+    `[Consultly] consultant login redirect target = ${getTrustedConsultantAppUrl() || resolveFrontendUrl(req)}/login?shop=${shop}`,
+  );
+
   try {
     const themeId = req.query.theme_id;
     const cookieHeader = req.headers.cookie || "";
@@ -947,9 +960,18 @@ const proxyShopifyConsultantLoginPage = (req, res) => {
   // is explicitly configured (never derived from the request); until then
   // falls through to the existing iframe-shell rendering below so nothing
   // breaks in the interim.
+  // TEMPORARY diagnostics — tracing the reported admin.shopify.com redirect
+  // bug. Remove once resolved.
+  console.log(`[Consultly] CONSULTANT_APP_URL (raw env) = ${process.env.CONSULTANT_APP_URL || "(unset)"}`);
+  console.log(`[Consultly] request host = ${req.get("host")}`);
+  console.log(
+    `[Consultly] request query = ${JSON.stringify({ ...req.query, signature: req.query.signature ? "[present]" : undefined })}`,
+  );
+
   const consultantAppUrl = getTrustedConsultantAppUrl();
   if (consultantAppUrl) {
-    const target = `${"https://untaxed-cattishly-renewal.ngrok-free.dev"}/consultant-dashboard?shop=${encodeURIComponent(shop || "")}`;
+    const target = `${consultantAppUrl}/consultant-dashboard?shop=${encodeURIComponent(shop || "")}`;
+    console.log(`[Consultly] dashboard redirect URL = ${target}`);
     console.log(`[consultant-portal] /consultly/consultant-dashboard -> 302 -> ${target}`);
     res.set("Cache-Control", "no-store");
     return res.redirect(302, target);
