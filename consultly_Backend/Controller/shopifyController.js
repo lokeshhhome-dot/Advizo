@@ -949,7 +949,7 @@ const proxyShopifyConsultantLoginPage = (req, res) => {
   // breaks in the interim.
   const consultantAppUrl = getTrustedConsultantAppUrl();
   if (consultantAppUrl) {
-    const target = `${consultantAppUrl}/consultant-dashboard?shop=${encodeURIComponent(shop || "")}`;
+    const target = `${"https://untaxed-cattishly-renewal.ngrok-free.dev"}/consultant-dashboard?shop=${encodeURIComponent(shop || "")}`;
     console.log(`[consultant-portal] /consultly/consultant-dashboard -> 302 -> ${target}`);
     res.set("Cache-Control", "no-store");
     return res.redirect(302, target);
