@@ -22,6 +22,13 @@ const ConsultantPublicRoute = ({ children }) => {
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
+      // TEMPORARY diagnostic — tracing the login<->dashboard loop. This is
+      // the "other half": /login auto-forwarding to the dashboard because a
+      // fresh verify-token succeeded here, which is exactly what produces an
+      // oscillation if the dashboard's OWN verify-token then fails.
+      console.log(
+        `[Consultly Auth] login page auto-redirecting to dashboard because = isAuthenticated is true here (verify-token succeeded on THIS page load)`,
+      );
       redirectToConsultantDashboard();
     }
   }, [loading, isAuthenticated]);

@@ -23,6 +23,10 @@ export const verifyToken = createAsyncThunk(
     if (!token) {
       return rejectWithValue({ reason: "no-token", hardFailure: true });
     }
+    // TEMPORARY diagnostics — tracing the login<->dashboard loop. Never logs
+    // the token value itself.
+    console.log(`[Consultly Auth] protected route pathname = ${window.location.pathname}`);
+    console.log(`[Consultly Auth] token exists on dashboard load = ${Boolean(token)}`);
     try {
       const res = await axios.get(
         `${process.env.REACT_APP_BACKEND_HOST}/api-consultant/verify-token`,
@@ -32,13 +36,16 @@ export const verifyToken = createAsyncThunk(
           },
         },
       );
+      console.log(`[Consultly Auth] verify-token status = ${res.status}`);
       // Safety net: only a consultant identity may authenticate this surface.
       // A customer JWT living under the same "token" key must be rejected,
       // otherwise login ↔ dashboard redirect-loop.
       const user = res.data.user;
       if (user?.role && user.role !== "consultant") {
+        console.log(`[Consultly Auth] verify-token success = false (role = ${user.role})`);
         return rejectWithValue({ reason: "not-consultant", hardFailure: true });
       }
+      console.log(`[Consultly Auth] verify-token success = true`);
       return user;
     } catch (err) {
       // Distinguish "the server says this token is invalid" from "the request
@@ -46,6 +53,8 @@ export const verifyToken = createAsyncThunk(
       // 5xx cold start is NOT proof of a bad session and must never be allowed
       // to destroy a working login.
       const status = err?.response?.status;
+      console.log(`[Consultly Auth] verify-token status = ${status || "(no response — network/CORS/timeout)"}`);
+      console.log(`[Consultly Auth] verify-token success = false`);
       return rejectWithValue({
         reason: status ? `http-${status}` : "network",
         hardFailure: status === 401 || status === 403,

@@ -96,6 +96,12 @@ const LoginForm = () => {
 
             const { userData, token } = response?.data;
 
+            // TEMPORARY diagnostics — tracing the login<->dashboard loop. No
+            // token/password/secret values are logged, only booleans/status.
+            console.log(`[Consultly Auth] login response status = ${response.status}`);
+            console.log(`[Consultly Auth] login success = ${response.status === 200 && Boolean(userData?._id)}`);
+            console.log(`[Consultly Auth] window.location.origin (login page) = ${window.location.origin}`);
+
             if (response.status === 200 && userData?._id) {
                 const params = new URLSearchParams(window.location.search);
                 const shopDomain = params.get("shop");
@@ -107,6 +113,8 @@ const LoginForm = () => {
                     localStorage.setItem("shop", shopDomain);
                 }
                 localStorage.setItem("token", token);
+                console.log(`[Consultly Auth] token exists after login = ${Boolean(localStorage.getItem("token"))}`);
+                console.log(`[Consultly Auth] token storage key exists = ${localStorage.getItem("token") !== null}`);
 
                 await dispatch(verifyToken()).unwrap();
                 connectAndRegisterSocket();
@@ -116,6 +124,7 @@ const LoginForm = () => {
                 setFormError("Invalid email or password");
             }
         } catch (err) {
+            console.log(`[Consultly Auth] login flow threw = ${err?.message || "unknown"} | http status = ${err?.response?.status}`);
             setFormError(err.response?.data?.message || "Login failed. Please try again.");
         } finally {
             setIsLoading(false);
