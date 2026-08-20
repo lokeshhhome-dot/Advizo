@@ -954,33 +954,24 @@ const proxyShopifyConsultantPage = async (req, res) => {
 const proxyShopifyConsultantLoginPage = (req, res) => {
   const shop = req.query.shop;
 
-  // Unlike proxyShopifyConsultantPage (login) above, the dashboard IS a
-  // redirect target — it must be a standalone top-level page with no
-  // Shopify Header/Footer/iframe. Only takes effect once CONSULTANT_APP_URL
-  // is explicitly configured (never derived from the request); until then
-  // falls through to the existing iframe-shell rendering below so nothing
-  // breaks in the interim.
-  // TEMPORARY diagnostics — tracing the reported admin.shopify.com redirect
-  // bug. Remove once resolved.
-  console.log(`[Consultly] CONSULTANT_APP_URL (raw env) = ${process.env.CONSULTANT_APP_URL || "(unset)"}`);
-  console.log(`[Consultly] request host = ${req.get("host")}`);
-  console.log(
-    `[Consultly] request query = ${JSON.stringify({ ...req.query, signature: req.query.signature ? "[present]" : undefined })}`,
-  );
-
-  const consultantAppUrl = getTrustedConsultantAppUrl();
-  if (consultantAppUrl) {
-    const target = `${consultantAppUrl}/consultant-dashboard?shop=${encodeURIComponent(shop || "")}`;
-    console.log(`[Consultly] dashboard redirect URL = ${target}`);
-    console.log(`[consultant-portal] /consultly/consultant-dashboard -> 302 -> ${target}`);
-    res.set("Cache-Control", "no-store");
-    return res.redirect(302, target);
-  }
+  // Dashboard STAYS inside the Shopify-shell iframe — same pattern as
+  // proxyShopifyConsultantPage (login) above. A top-level 302 here broke
+  // the JWT/localStorage handoff: the login form runs inside an iframe at
+  // CONSULTANT_APP_URL's origin, so a 302 that took the DASHBOARD to a
+  // different top-level origin than that iframe meant the dashboard could
+  // never see the token the login iframe had just written — every fresh
+  // load re-verified from scratch and inconsistently bounced back to
+  // login, producing an infinite login<->dashboard loop (confirmed via
+  // Render logs). Keeping both login and dashboard as iframes under the
+  // SAME CONSULTANT_APP_URL origin keeps localStorage consistent between
+  // them, with no code change to the auth/token logic itself.
+  const target = `${getTrustedConsultantAppUrl() || resolveFrontendUrl(req)}/consultant-dashboard?shop=${shop}`;
+  console.log(`[consultant-portal] /consultly/consultant-dashboard -> iframe src -> ${target}`);
 
   return renderShopifyPage(
     req,
     res,
-    `${resolveFrontendUrl(req)}/consultant-dashboard?shop=${shop}`,
+    target,
     (chat = "chatSection"),
     {
       title: "Consultant App",
