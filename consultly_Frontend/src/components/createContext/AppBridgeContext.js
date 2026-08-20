@@ -78,6 +78,13 @@ export const AppBridgeProvider = ({ children }) => {
     }
   }, [host, apiKey, app]);
 
+  // shopify-api-key meta + app-bridge.js are loaded conditionally in
+  // public/index.html itself (synchronous inline script, gated on the
+  // `host` param) — not here. A React effect runs after mount, which is
+  // too late for Shopify Admin's parent frame to pick up the meta tag for
+  // TopBar/navigation negotiation, and caused degraded plain-link nav.
+  // See public/index.html for the actual injection.
+
   return (
     <AppBridgeContext.Provider value={app}>
       {children}

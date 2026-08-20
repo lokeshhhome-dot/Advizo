@@ -11,8 +11,29 @@
   <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
 
 
-  <meta name="shopify-api-key" content="7836ff4ee618db510c5ac4c20b75049f" />
-  <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
+  <!-- shopify-api-key meta + app-bridge.js load ONLY when this document was
+       opened with Shopify's embedded-app `host` param (i.e. genuinely
+       inside Shopify Admin). This same index.html is served for every
+       route, including the standalone consultant portal (/login,
+       /consultant-dashboard), which must never trigger Shopify's App
+       Bridge CDN script — it auto-redirects any top-level, non-embedded
+       page to admin.shopify.com the moment it finds the meta tag, with no
+       dependency on `host` itself. Written synchronously via
+       document.write, during initial HTML parsing — same timing as a
+       static tag would have — because Shopify Admin's parent frame
+       negotiates TopBar/navigation UI by reading this meta tag very early;
+       injecting it later (e.g. from a React effect, after mount) misses
+       that window and Admin falls back to degraded plain-link navigation.
+       Do not move this into React. -->
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      if (params.has("host")) {
+        document.write('<meta name="shopify-api-key" content="%REACT_APP_SHOPIFY_API_KEY%">');
+        document.write('<script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"><\/script>');
+      }
+    })();
+  </script>
   <script src="https://cdn.shopify.com/shopifycloud/polaris.js"></script>
 
   <title>Consultant App</title>

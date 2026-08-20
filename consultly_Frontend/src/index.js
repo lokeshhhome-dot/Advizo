@@ -31,6 +31,22 @@ const isShopifyAdmin = () => {
   return params.has("host");
 };
 
+// TEMPORARY diagnostics — tracing the admin.shopify.com redirect bug on the
+// standalone consultant portal. Safe to log: no tokens/passwords/secrets.
+// Remove once the fix (moving app-bridge.js out of public/index.html into
+// AppBridgeContext.js's conditional injection) is confirmed working.
+if (typeof window !== "undefined") {
+  const params = new URLSearchParams(window.location.search);
+  const admin = isShopifyAdmin();
+  console.log(`[Consultly Frontend] pathname = ${window.location.pathname}`);
+  console.log(`[Consultly Frontend] search = ${window.location.search}`);
+  console.log(`[Consultly Frontend] host param present = ${params.has("host")}`);
+  console.log(`[Consultly Frontend] shop param = ${params.get("shop")}`);
+  console.log(`[Consultly Frontend] isShopifyAdmin = ${admin}`);
+  console.log(`[Consultly Frontend] AppBridge enabled = ${admin}`);
+  console.log(`[Consultly Frontend] current href = ${window.location.href}`);
+}
+
 const AppWrapper = ({ children }) => {
   if (isShopifyAdmin()) {
     return <AppBridgeProvider>{children}</AppBridgeProvider>;
