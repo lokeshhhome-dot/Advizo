@@ -476,12 +476,47 @@
               <script src="https://cdnjs.cloudflare.com/ajax/libs/iframe-resizer/4.3.6/iframeResizer.min.js"></script>
               <script>
                     window.addEventListener("message", (event) => {
-                
+
                         if (event.data.type === "SHOW_TOAST") {
                             console.log("Received postMessage:",  event.data);
                             console.log("Received postMessage:",  event.data.message);
 
                           showToast(event.data.message);
+                        }
+
+                        // ConsultantChatModal (inside the #agora-iframe iframe, e.g.
+                        // on the view-profile page) posts these when the customer
+                        // opens/closes the Chat modal. CSS inside that iframe's own
+                        // document can never cover THIS page's real Shopify
+                        // header/footer, so this parent document resizes the
+                        // <iframe> ELEMENT itself to fullscreen instead — only
+                        // these two exact message types are handled.
+                        if (event.data.type === "CONSULTLY_CHAT_OPEN") {
+                          var chatIframe = document.getElementById("agora-iframe");
+                          if (chatIframe) {
+                            chatIframe.dataset.consultlyChatOpen = "true";
+                            chatIframe.style.position = "fixed";
+                            chatIframe.style.top = "0";
+                            chatIframe.style.left = "0";
+                            chatIframe.style.width = "100vw";
+                            chatIframe.style.height = "100vh";
+                            chatIframe.style.maxWidth = "100vw";
+                            chatIframe.style.zIndex = "999999999";
+                          }
+                        }
+
+                        if (event.data.type === "CONSULTLY_CHAT_CLOSE") {
+                          var chatIframeClose = document.getElementById("agora-iframe");
+                          if (chatIframeClose) {
+                            chatIframeClose.dataset.consultlyChatOpen = "false";
+                            chatIframeClose.style.position = "";
+                            chatIframeClose.style.top = "";
+                            chatIframeClose.style.left = "";
+                            chatIframeClose.style.width = "";
+                            chatIframeClose.style.height = "";
+                            chatIframeClose.style.maxWidth = "";
+                            chatIframeClose.style.zIndex = "";
+                          }
                         }
                       });
 

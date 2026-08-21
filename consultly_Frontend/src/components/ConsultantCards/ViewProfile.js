@@ -138,45 +138,11 @@ function ViewProfile() {
     );
   };
 
-  const startChat = async (consultantView) => {
-    if (communicationDisabled) {
-      toastCtx?.showToast?.(COMM_DISABLED_TOAST, true);
-      return;
-    }
-    if (!userId) {
-      redirectToLogin();
-      return;
-    }
-    const chatAuthToken = authTokenParam || localStorage.getItem("token") || "";
-    const balance = await checkUserBalance({
-      userId,
-      consultantId: consultantView,
-      type: "chat",
-      shop,
-      authToken: chatAuthToken,
-    });
-    if (!balance) {
-      toastCtx?.showToast?.(
-        "You do not have enough balance to chat with this consultant.",
-        true,
-      );
-      goToStorefront("/apps/consultly/profile");
-      return;
-    }
-
-    const chatParams = new URLSearchParams({
-      consultantId: consultantView,
-    });
-    if (userId) chatParams.set("customerId", userId);
-    if (effectiveShopId) chatParams.set("shopid", effectiveShopId);
-    if (chatAuthToken) chatParams.set("authToken", chatAuthToken);
-    goToStorefront(`/apps/consultly/chats-c?${chatParams.toString()}`);
-  };
-
   // TODO(auth): testing-only entry point — intentionally skips the
-  // communicationDisabled/userId/balance checks startChat above does, so
-  // the Chat button opens the modal even for an anonymous visitor. Restore
-  // an equivalent gate here before this ships for real users.
+  // communicationDisabled/userId/balance checks the old chats-c navigation
+  // flow used to do, so the Chat button opens the modal even for an
+  // anonymous visitor. Restore an equivalent gate here before this ships
+  // for real users.
   const openChatModal = () => {
     setChatOpen(true);
   };

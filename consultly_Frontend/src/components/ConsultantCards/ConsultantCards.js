@@ -261,43 +261,11 @@ function ConsultantCards() {
     window.top.location.href = `https://${shop}/apps/consultly/view-profile?consultantId=${consultant_id}&shopId=${effectiveShopId}${hostQuery}`;
   };
 
-  const viewChatsPage = async (consultantView) => {
-    if (communicationDisabled) {
-      toastCtx?.showToast?.(COMM_DISABLED_TOAST, true);
-      return;
-    }
-    if (!userId) {
-      redirectToLogin();
-      return;
-    }
-    const balance = await checkUserBalance({
-      userId,
-      consultantId: consultantView,
-      type: "chat",
-      shop,
-    });
-    if (!balance || !balance.userBalance) {
-      alert("You have insufficient balance to chat with this consultant");
-      const hostQuery = "";
-      window.top.location.href = `https://${shop}/apps/consultly/profile${hostQuery}`;
-      return;
-    }
-
-    const hostQuery = "";
-    const authToken = localStorage.getItem("token") || "";
-    const chatParams = new URLSearchParams({
-      consultantId: consultantView,
-    });
-    if (userId) chatParams.set("customerId", userId);
-    if (effectiveShopId) chatParams.set("shopid", effectiveShopId);
-    if (authToken) chatParams.set("authToken", authToken);
-    window.top.location.href = `https://${shop}/apps/consultly/chats-c?${chatParams.toString()}${hostQuery}`;
-  };
-
   // TODO(auth): testing-only entry point — intentionally skips the
-  // communicationDisabled/userId/balance checks viewChatsPage above does,
-  // so the Chat button opens the modal even for an anonymous visitor.
-  // Restore an equivalent gate here before this ships for real users.
+  // communicationDisabled/userId/balance checks the old chats-c navigation
+  // flow used to do, so the Chat button opens the modal even for an
+  // anonymous visitor. Restore an equivalent gate here before this ships
+  // for real users.
   const openChatModal = (consultant) => {
     setChatConsultant(consultant);
     setChatOpen(true);

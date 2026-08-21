@@ -2,9 +2,34 @@
  * Sizing/chrome only — UserChat renders its own header, message list, and
  * input, so this deliberately does NOT add a Modal.Header/Modal.Body
  * wrapper (that would duplicate UserChat's existing header UI). react-
- * bootstrap's Modal already supplies the overlay/backdrop and
- * click-outside/Escape-to-close behavior.
+ * bootstrap's Modal already supplies the overlay/backdrop, full-viewport
+ * position:fixed sizing, and body-scroll-lock/restore on open/close (all
+ * three confirmed against the installed bootstrap.css / react-bootstrap
+ * source, not assumed) — none of that is reimplemented here.
+ *
+ * The two rules below only raise Bootstrap's own --bs-modal-zindex /
+ * --bs-backdrop-zindex custom properties (default 1055 / 1050) well above
+ * what this storefront theme is confirmed to use elsewhere (a
+ * `z-index:999999!important` on its mobile menu-drawer, see
+ * proxyShopifyConsultantPage's injected CSS) — deliberately not the CSS
+ * max value, just comfortably past the theme's known high-water mark.
+ *
+ * IMPORTANT CAVEAT — see chat report: this only matters when
+ * ConsultantCards/ViewProfile render as a TOP-LEVEL page. Both are
+ * currently still reachable via App Proxy routes that wrap them in an
+ * iframe (/apps/consultly, /apps/consultly/view-profile); document.body
+ * inside that iframe is a different document than the parent page holding
+ * the real Shopify Header/Footer, and no z-index value — this or any other
+ * — can make iframed content paint outside the iframe's own box. That is a
+ * separate, structural fact this CSS change cannot address.
  */
+.chatModalRoot {
+  --bs-modal-zindex: 999999999;
+}
+
+.chatModalBackdrop {
+  --bs-backdrop-zindex: 999999998;
+}
 
 .chatModalDialog {
   max-width: 420px;

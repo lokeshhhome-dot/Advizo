@@ -144,6 +144,23 @@ export default function App() {
           body: JSON.stringify(event.data),
         }).catch(console.error);
       }
+
+      // CONSULTLY_CHAT_OPEN / CONSULTLY_CHAT_CLOSE are sent BY this app
+      // (ConsultantChatModal.js) via window.parent.postMessage — they
+      // target the PARENT document (this iframe's parent window), not
+      // this iframe itself, so this listener (bound to this iframe's own
+      // `window`) never actually receives them back. The real handling —
+      // resizing the <iframe> element to fullscreen — lives in the parent
+      // document's own listener: proxyThemeAssetsController and
+      // renderShopifyPage in the backend, not here. These two branches are
+      // intentional no-ops, kept only so both message types are documented
+      // in the one place this app's postMessage contract is dispatched.
+      if (
+        event.data.type === "CONSULTLY_CHAT_OPEN" ||
+        event.data.type === "CONSULTLY_CHAT_CLOSE"
+      ) {
+        // No-op here by design — see comment above.
+      }
     };
 
     window.addEventListener("message", handleMessage);

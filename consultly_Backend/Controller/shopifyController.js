@@ -636,6 +636,46 @@ const proxyThemeAssetsController = async (req, res) => {
                   minHeight: 200,
                 }, "#agora-frame");
               </script>
+              <!-- ConsultantChatModal (inside the #agora-frame iframe) posts these
+                   two message types when the customer opens/closes the Chat
+                   modal. CSS inside that iframe's own document can never cover
+                   THIS page's real Shopify header/footer, so instead this parent
+                   document resizes the <iframe> ELEMENT itself to fullscreen —
+                   everything already correctly stacked inside the iframe (the
+                   modal over the card list) then visually covers the whole
+                   viewport. Only these two exact message types are handled. -->
+              <script>
+                window.addEventListener("message", function (event) {
+                  if (!event.data || !event.data.type) return;
+
+                  var iframe = document.getElementById("agora-frame");
+                  if (!iframe) return;
+
+                  if (event.data.type === "CONSULTLY_CHAT_OPEN") {
+                    iframe.dataset.consultlyChatOpen = "true";
+
+                    iframe.style.position = "fixed";
+                    iframe.style.top = "0";
+                    iframe.style.left = "0";
+                    iframe.style.width = "100vw";
+                    iframe.style.height = "100vh";
+                    iframe.style.maxWidth = "100vw";
+                    iframe.style.zIndex = "999999999";
+                  }
+
+                  if (event.data.type === "CONSULTLY_CHAT_CLOSE") {
+                    iframe.dataset.consultlyChatOpen = "false";
+
+                    iframe.style.position = "";
+                    iframe.style.top = "";
+                    iframe.style.left = "";
+                    iframe.style.width = "";
+                    iframe.style.height = "";
+                    iframe.style.maxWidth = "";
+                    iframe.style.zIndex = "";
+                  }
+                });
+              </script>
             </body>
           </html>
           `;
