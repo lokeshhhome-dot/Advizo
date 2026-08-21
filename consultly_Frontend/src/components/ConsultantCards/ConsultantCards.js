@@ -10,6 +10,7 @@ import { useAppStatus } from "../ProtectRoute/AppStatusProvider";
 import { usePolarisToast } from "../AlertModel/PolariesTostContext";
 import MoneyValue from "../Helper/MoneyValue";
 import { EmptyState } from "@shopify/polaris";
+import ConsultantChatModal from "./ConsultantChatModal";
 
 const COMM_DISABLED_TOOLTIP =
   "Communication unavailable. The store has exhausted its communication minutes.";
@@ -66,6 +67,8 @@ function ConsultantCards() {
   const user_id = params.get("customerId");
   const authToken = params.get("authToken");
   const [initialLoading, setInitialLoading] = useState(true);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatConsultant, setChatConsultant] = useState(null);
 
   const effectiveShopId =
     contextShopId ||
@@ -291,6 +294,15 @@ function ConsultantCards() {
     window.top.location.href = `https://${shop}/apps/consultly/chats-c?${chatParams.toString()}${hostQuery}`;
   };
 
+  // TODO(auth): testing-only entry point — intentionally skips the
+  // communicationDisabled/userId/balance checks viewChatsPage above does,
+  // so the Chat button opens the modal even for an anonymous visitor.
+  // Restore an equivalent gate here before this ships for real users.
+  const openChatModal = (consultant) => {
+    setChatConsultant(consultant);
+    setChatOpen(true);
+  };
+
   return (
     <>
       <div
@@ -410,7 +422,7 @@ function ConsultantCards() {
                             }
                             onClick={(e) => {
                               e.stopPropagation();
-                              viewChatsPage(consultant.id);
+                              openChatModal(consultant);
                             }}
                           >
                             <span className="calling-option-icon">
@@ -541,6 +553,13 @@ function ConsultantCards() {
           )}
         </div>
       </div>
+
+      <ConsultantChatModal
+        show={chatOpen}
+        onClose={() => setChatOpen(false)}
+        consultant={chatConsultant}
+        shop={shop}
+      />
     </>
   );
 }

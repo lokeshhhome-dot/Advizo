@@ -10,7 +10,6 @@ const { installShopifyApp,
     proxyShopifyConsultantLoginPage,
     proxySHopifyConsultantChat,
     proxyShopifyViewProfile,
-    proxyShopifyChatSection,
     proxyCustomerProfileJson,
     proxyShopifyCallAccepted
 } = require('../Controller/shopifyController');
@@ -44,7 +43,9 @@ shopifyRoute.get('/consultly/login', verifyAppProxy, proxyShopifyConsultantPage)
 shopifyRoute.get('/consultly/consultant-dashboard', verifyAppProxy, proxyShopifyConsultantLoginPage);
 shopifyRoute.get('/consultly/consultant-chats-section', verifyAppProxy, proxySHopifyConsultantChat);
 shopifyRoute.get('/consultly/view-profile', verifyAppProxy, proxyShopifyViewProfile);
-shopifyRoute.get('/consultly/chats-c', verifyAppProxy, proxyShopifyChatSection);
+// /consultly/chats-c (proxyShopifyChatSection) removed — the storefront
+// Chat button now opens ConsultantChatModal/UserChat as an in-page React
+// modal, no App Proxy iframe route needed for it anymore.
 // JSON endpoint for the Theme App Extension's My Profile block —
 // /apps/consultly/customer/me, rendered on /pages/my-profile. Replaces the
 // old /consultly/profile iframe launcher (proxyProfileSection, removed).

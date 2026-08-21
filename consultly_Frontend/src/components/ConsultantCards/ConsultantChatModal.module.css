@@ -1,0 +1,34 @@
+/*
+ * Sizing/chrome only — UserChat renders its own header, message list, and
+ * input, so this deliberately does NOT add a Modal.Header/Modal.Body
+ * wrapper (that would duplicate UserChat's existing header UI). react-
+ * bootstrap's Modal already supplies the overlay/backdrop and
+ * click-outside/Escape-to-close behavior.
+ */
+
+.chatModalDialog {
+  max-width: 420px;
+  width: 100%;
+  margin: 24px auto;
+}
+
+.chatModalContent {
+  border: none;
+  border-radius: 16px;
+  overflow: hidden;
+  height: min(720px, 85vh);
+  box-shadow: 0 12px 32px rgba(16, 24, 40, 0.18);
+}
+
+@media (max-width: 480px) {
+  .chatModalDialog {
+    max-width: 100%;
+    margin: 0;
+    height: 100%;
+  }
+
+  .chatModalContent {
+    height: 100dvh;
+    border-radius: 0;
+  }
+}

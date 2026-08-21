@@ -10,6 +10,7 @@ import defaultImage from "../../assets/avatar-or-person-sign-profile-picture-por
 import { useAppStatus } from "../ProtectRoute/AppStatusProvider";
 import { usePolarisToast } from "../AlertModel/PolariesTostContext";
 import MoneyValue from "../Helper/MoneyValue";
+import ConsultantChatModal from "./ConsultantChatModal";
 
 const COMM_DISABLED_TOOLTIP =
   "Communication unavailable. The store has exhausted its communication minutes.";
@@ -37,6 +38,7 @@ function ViewProfile() {
   // "logged out" is what redirected the customer to Shopify accounts.
   const customerIdParam = params.get("customerId");
   const authTokenParam = params.get("authToken");
+  const [chatOpen, setChatOpen] = useState(false);
   useEffect(() => {
     setUserId(customerIdParam || localStorage.getItem("client_u_Identity"));
   }, [customerIdParam]);
@@ -170,6 +172,15 @@ function ViewProfile() {
     if (chatAuthToken) chatParams.set("authToken", chatAuthToken);
     goToStorefront(`/apps/consultly/chats-c?${chatParams.toString()}`);
   };
+
+  // TODO(auth): testing-only entry point — intentionally skips the
+  // communicationDisabled/userId/balance checks startChat above does, so
+  // the Chat button opens the modal even for an anonymous visitor. Restore
+  // an equivalent gate here before this ships for real users.
+  const openChatModal = () => {
+    setChatOpen(true);
+  };
+
   const backToHome = () => {
     goToStorefront("/apps/consultly/");
   };
@@ -261,7 +272,7 @@ function ViewProfile() {
                   title={communicationDisabled ? COMM_DISABLED_TOOLTIP : undefined}
                   onClick={(e) => {
                     e.stopPropagation();
-                    startChat(consultantView?._id);
+                    openChatModal();
                   }}
                 >
                   <span className="calling-option-icon">
@@ -432,7 +443,7 @@ function ViewProfile() {
                     className="calling-option-btn chat-btn"
                     disabled={communicationDisabled}
                     title={communicationDisabled ? COMM_DISABLED_TOOLTIP : undefined}
-                    onClick={() => startChat(consultantView?._id)}
+                    onClick={() => openChatModal()}
                   >
                     <svg
                       width="24"
@@ -516,6 +527,13 @@ function ViewProfile() {
           </div>
         </div>
       </div>
+
+      <ConsultantChatModal
+        show={chatOpen}
+        onClose={() => setChatOpen(false)}
+        consultant={consultantView}
+        shop={shop}
+      />
     </div>
   );
 }

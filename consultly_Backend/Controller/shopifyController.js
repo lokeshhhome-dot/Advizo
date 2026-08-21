@@ -104,12 +104,8 @@ const resolveStorefrontCustomer = async (req, shop) => {
   return null;
 };
 
-/**
- * Storefront login URL that comes BACK to where the shopper was. Without
- * return_to they land on their account page and have to find the app again.
- */
-const storefrontLoginUrl = (shop, returnPath = "/apps/consultly") =>
-  `https://${shop}/account/login?return_to=${encodeURIComponent(returnPath)}`;
+// storefrontLoginUrl removed — its only caller was proxyShopifyChatSection
+// (deleted above). Confirmed via repo-wide grep it had no other callers.
 
 let axios, wrapper, CookieJar;
 try {
@@ -1026,60 +1022,13 @@ const proxyShopifyViewProfile = async (req, res) => {
   });
 };
 
-const proxyShopifyChatSection = async (req, res) => {
-  const shop = req.query.shop;
-  const consultantId = req.query.consultantId || "";
-
-  const [result, assets, shopDoc] = await Promise.all([
-    resolveStorefrontCustomer(req, shop),
-    resolvePageAssets(req),
-    shop ? getCachedShopDoc(shop) : Promise.resolve(null),
-  ]);
-
-  if (assets?.error === "password") {
-    return res.status(401).send("Storefront locked. Provide password.");
-  }
-
-  // Only a genuinely anonymous visitor is sent to log in — and with return_to,
-  // so they come back to the chat instead of being stranded on their account.
-  if (!result?.userId) {
-    console.warn("[chats-c] anonymous visitor — redirecting to storefront login");
-    return res.redirect(
-      storefrontLoginUrl(
-        shop,
-        `/apps/consultly/chats-c?consultantId=${encodeURIComponent(consultantId)}`,
-      ),
-    );
-  }
-
-  const authToken = result?.token || "";
-  const mongoUserId = result?.userId ? String(result.userId) : "";
-  const shopDocId = shopDoc?._id ? String(shopDoc._id) : "";
-
-  // Pass customerId + shopid + authToken into the iframe so UserChat/socket can connect.
-  const iframeUrl =
-    `${resolveFrontendUrl(req)}/chats?consultantId=${encodeURIComponent(consultantId)}` +
-    `&shop=${encodeURIComponent(shop || "")}` +
-    `&customerId=${encodeURIComponent(mongoUserId)}` +
-    `&shopid=${encodeURIComponent(shopDocId)}` +
-    `&authToken=${encodeURIComponent(authToken)}`;
-
-  if (authToken) {
-    res.cookie("token", authToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "None",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-  }
-
-  // Chat is ALWAYS full viewport height with internal scrolling.
-  return renderShopifyPage(req, res, iframeUrl, "chatSection", {
-    title: "Chat Section",
-    preloadedAssets: assets,
-    fixedHeight: true,
-  });
-};
+// proxyShopifyChatSection (old /consultly/chats-c App Proxy iframe launcher)
+// removed — the storefront Chat button now opens ConsultantChatModal/
+// UserChat as a normal in-page React modal (ConsultantCards.js,
+// ViewProfile.js), which talks to the existing chat API/Socket.IO directly.
+// Confirmed unused before removal: grepped the whole repo for "chats-c" and
+// "proxyShopifyChatSection" — the only remaining callers were the frontend
+// navigation functions this same change replaced.
 
 /**
  * JSON App Proxy endpoint for the Theme App Extension's My Profile block
@@ -1256,7 +1205,6 @@ module.exports = {
   proxyShopifyConsultantLoginPage,
   proxySHopifyConsultantChat,
   proxyShopifyViewProfile,
-  proxyShopifyChatSection,
   proxyCustomerProfileJson,
   proxyShopifyCallAccepted,
 };

@@ -23,7 +23,21 @@ import {
 } from "../../utils/getProfileImageUrl";
 import { prepareSessionLogin, SESSION_TYPES } from "../../utils/browserSession";
 
-const UserChat = () => {
+/**
+ * Props are ALL optional and only override the URL-param reads below when
+ * given — the existing routed `/chats` page (App Proxy iframe, no props
+ * passed) behaves exactly as before. `onClose`, when provided, means this
+ * instance is embedded as a modal (ConsultantChatModal) rather than a
+ * standalone routed/iframed page — see backToViewProfile/closeOrGoBack.
+ */
+const UserChat = ({
+  consultantId: consultantIdProp,
+  shop: shopProp,
+  customerId: customerIdProp,
+  shopId: shopIdProp,
+  authToken: authTokenProp,
+  onClose,
+} = {}) => {
   const [text, setText] = useState();
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -32,11 +46,17 @@ const UserChat = () => {
   const [show, setShow] = useState(false);
   const [refreshed, setRefreshed] = useState(false);
   const parms = new URLSearchParams(window.location.search);
-  const consultantId = parms.get("consultantId");
-  const shop = parms.get("shop");
-  const authTokenFromUrl = (parms.get("authToken") || "").trim();
-  const customerIdFromUrl = parms.get("customerId") || parms.get("userId");
-  const shopIdFromUrl = parms.get("shopid") || parms.get("shopId");
+  const consultantId = consultantIdProp || parms.get("consultantId");
+  const shop = shopProp || parms.get("shop");
+  const authTokenFromUrl = (
+    authTokenProp ||
+    parms.get("authToken") ||
+    ""
+  ).trim();
+  const customerIdFromUrl =
+    customerIdProp || parms.get("customerId") || parms.get("userId");
+  const shopIdFromUrl =
+    shopIdProp || parms.get("shopid") || parms.get("shopId");
 
   useEffect(() => {
     // Capture token BEFORE session switch — prepareSessionLogin(USER) clears
@@ -68,6 +88,13 @@ const UserChat = () => {
     setClientId(resolvedClientId || null);
     setShopId(resolvedShopId || null);
 
+    // TODO(auth): the modal flow (ConsultantChatModal, opened from
+    // ConsultantCards/ViewProfile) intentionally opens for an anonymous
+    // visitor for now — no login/balance gate before this component mounts.
+    // This branch already degrades gracefully (warns, doesn't crash/redirect)
+    // when resolvedClientId/resolvedToken are missing, which is what makes
+    // that possible; restore a real auth/balance check before the Chat
+    // button opens this modal once testing is done.
     if (resolvedClientId && resolvedToken) {
       notifySocketUserReady();
       ensureSocketConnected(resolvedClientId, null, 8000, resolvedToken).catch(
@@ -509,7 +536,22 @@ const UserChat = () => {
       receiverId: clientId,
     });
   }, [clientId, consultantId]);
+  // Embedded-modal instances (onClose passed) close in place — leaving the
+  // host page's own URL/history untouched. Routed/iframed instances (no
+  // onClose) keep their exact prior navigation behavior.
+  const closeOrGoBack = () => {
+    if (onClose) {
+      onClose();
+      return;
+    }
+    navigate(-1);
+  };
+
   const backToViewProfile = () => {
+    if (onClose) {
+      onClose();
+      return;
+    }
     const targetShop = shop;
     const hostQuery = "";
     // window.top.location.href = `https://${targetShop}/apps/consultly/view-profile?consultantId=${consultantId}&shopId=${shopId}${hostQuery}`;
@@ -550,7 +592,7 @@ const UserChat = () => {
     setShowChatEndToast(false);
     setShowChatLock((prev) => !prev);
     localStorage.removeItem("chatTimer");
-    navigate(-1);
+    closeOrGoBack();
   };
 
   useEffect(() => {
@@ -568,7 +610,7 @@ const UserChat = () => {
       setRefreshed((prev) => !prev);
       setShowChatEndToast(true);
       setShowChatLock((prev) => !prev);
-      navigate(-1);
+      closeOrGoBack();
     }
   }, [autoChatEnded]);
 
@@ -577,7 +619,7 @@ const UserChat = () => {
       setShowChatEndToast(true);
       seIsLock(false);
       setWaitingForAccept(false);
-      navigate(-1);
+      closeOrGoBack();
     }
     prevIsRunningRef.current = chatTimer.isRunning;
   }, [chatTimer.isRunning]);
