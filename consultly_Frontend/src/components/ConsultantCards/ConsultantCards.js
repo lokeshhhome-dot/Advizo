@@ -233,6 +233,8 @@ function ConsultantCards() {
       return;
     }
     if (!userId) {
+      // TEMPORARY debug — remove once the redirect-on-click report is resolved.
+      console.log("[Consultly Chat] redirect attempt =", "/account/login (via redirectToLogin, from startCall — the Call handler, not Chat)");
       alert("user id not found redirect wrong url ")
       redirectToLogin();
       return;
@@ -267,6 +269,12 @@ function ConsultantCards() {
   // anonymous visitor. Restore an equivalent gate here before this ships
   // for real users.
   const openChatModal = (consultant) => {
+    // TEMPORARY debug — remove once the redirect-on-click report is resolved.
+    console.log("[CONSULTLY TEST] opening ConsultantChatModal");
+    console.log("[CONSULTLY Chat] consultantId =", consultant?.id || consultant?._id);
+    console.log("[CONSULTLY Chat] shop =", shop);
+    console.log("[CONSULTLY Chat] customerId =", userId);
+    console.log("[CONSULTLY Chat] authToken exists =", Boolean(authToken || localStorage.getItem("token")));
     setChatConsultant(consultant);
     setChatOpen(true);
   };
@@ -389,6 +397,11 @@ function ConsultantCards() {
                                 : undefined
                             }
                             onClick={(e) => {
+                              // TEMPORARY debug — remove once the redirect-on-click
+                              // report is resolved. See ConsultantChatModal.js.
+                              console.log("[CONSULTLY TEST] CHAT BUTTON CLICKED");
+                              console.log("[CONSULTLY TEST] Chat event target =", e.target);
+                              console.log("[CONSULTLY TEST] Chat currentTarget =", e.currentTarget);
                               e.stopPropagation();
                               openChatModal(consultant);
                             }}
@@ -429,6 +442,9 @@ function ConsultantCards() {
                                 : undefined
                             }
                             onClick={(e) => {
+                              // TEMPORARY debug — remove once the redirect-on-click
+                              // report is resolved.
+                              console.log("[CONSULTLY TEST] CALL BUTTON CLICKED (voice)");
                               e.stopPropagation();
                               startCall({
                                 receiverId: consultant.id,
@@ -471,6 +487,9 @@ function ConsultantCards() {
                                 : undefined
                             }
                             onClick={(e) => {
+                              // TEMPORARY debug — remove once the redirect-on-click
+                              // report is resolved.
+                              console.log("[CONSULTLY TEST] CALL BUTTON CLICKED (video)");
                               e.stopPropagation();
                               startCall({
                                 receiverId: consultant.id,

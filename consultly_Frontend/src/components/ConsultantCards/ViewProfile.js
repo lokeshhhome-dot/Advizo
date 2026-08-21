@@ -101,6 +101,8 @@ function ViewProfile() {
       return;
     }
     if (!userId) {
+      // TEMPORARY debug — remove once the redirect-on-click report is resolved.
+      console.log("[Consultly Chat] redirect attempt =", "/account/login (via redirectToLogin, from startCall — the Call handler, not Chat)");
       redirectToLogin();
       return;
     }
@@ -144,6 +146,15 @@ function ViewProfile() {
   // anonymous visitor. Restore an equivalent gate here before this ships
   // for real users.
   const openChatModal = () => {
+    // TEMPORARY debug — remove once the redirect-on-click report is resolved.
+    console.log("[CONSULTLY TEST] opening ConsultantChatModal");
+    console.log("[CONSULTLY Chat] consultantId =", consultantView?._id);
+    console.log("[CONSULTLY Chat] shop =", shop);
+    console.log("[CONSULTLY Chat] customerId =", userId);
+    console.log(
+      "[CONSULTLY Chat] authToken exists =",
+      Boolean(authTokenParam || localStorage.getItem("token")),
+    );
     setChatOpen(true);
   };
 
@@ -237,6 +248,11 @@ function ViewProfile() {
                   disabled={communicationDisabled}
                   title={communicationDisabled ? COMM_DISABLED_TOOLTIP : undefined}
                   onClick={(e) => {
+                    // TEMPORARY debug — remove once the redirect-on-click
+                    // report is resolved.
+                    console.log("[CONSULTLY TEST] CHAT BUTTON CLICKED (main)");
+                    console.log("[CONSULTLY TEST] Chat event target =", e.target);
+                    console.log("[CONSULTLY TEST] Chat currentTarget =", e.currentTarget);
                     e.stopPropagation();
                     openChatModal();
                   }}
@@ -272,6 +288,8 @@ function ViewProfile() {
                   disabled={communicationDisabled}
                   title={communicationDisabled ? COMM_DISABLED_TOOLTIP : undefined}
                   onClick={(e) => {
+                    // TEMPORARY debug — remove once the redirect-on-click report is resolved.
+                    console.log("[CONSULTLY TEST] CALL BUTTON CLICKED (voice, main)");
                     startCall({
                       receiverId: consultantView?._id,
                       type: "voice",
@@ -308,6 +326,8 @@ function ViewProfile() {
                   disabled={communicationDisabled}
                   title={communicationDisabled ? COMM_DISABLED_TOOLTIP : undefined}
                   onClick={(e) => {
+                    // TEMPORARY debug — remove once the redirect-on-click report is resolved.
+                    console.log("[CONSULTLY TEST] CALL BUTTON CLICKED (video, main)");
                     startCall({
                       receiverId: consultantView?._id,
                       type: "video",
@@ -409,7 +429,14 @@ function ViewProfile() {
                     className="calling-option-btn chat-btn"
                     disabled={communicationDisabled}
                     title={communicationDisabled ? COMM_DISABLED_TOOLTIP : undefined}
-                    onClick={() => openChatModal()}
+                    onClick={(e) => {
+                      // TEMPORARY debug — remove once the redirect-on-click
+                      // report is resolved.
+                      console.log("[CONSULTLY TEST] CHAT BUTTON CLICKED (sidebar)");
+                      console.log("[CONSULTLY TEST] Chat event target =", e.target);
+                      console.log("[CONSULTLY TEST] Chat currentTarget =", e.currentTarget);
+                      openChatModal();
+                    }}
                   >
                     <svg
                       width="24"
@@ -431,12 +458,14 @@ function ViewProfile() {
                     className="calling-option-btn audio-btn"
                     disabled={communicationDisabled}
                     title={communicationDisabled ? COMM_DISABLED_TOOLTIP : undefined}
-                    onClick={() =>
+                    onClick={() => {
+                      // TEMPORARY debug — remove once the redirect-on-click report is resolved.
+                      console.log("[CONSULTLY TEST] CALL BUTTON CLICKED (voice, sidebar)");
                       startCall({
                         receiverId: consultantView?._id,
                         type: "voice",
-                      })
-                    }
+                      });
+                    }}
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -457,12 +486,14 @@ function ViewProfile() {
                     className="calling-option-btn video-btn"
                     disabled={communicationDisabled}
                     title={communicationDisabled ? COMM_DISABLED_TOOLTIP : undefined}
-                    onClick={() =>
+                    onClick={() => {
+                      // TEMPORARY debug — remove once the redirect-on-click report is resolved.
+                      console.log("[CONSULTLY TEST] CALL BUTTON CLICKED (video, sidebar)");
                       startCall({
                         receiverId: consultantView?._id,
                         type: "video",
-                      })
-                    }
+                      });
+                    }}
                   >
                     <svg
                       width="24"

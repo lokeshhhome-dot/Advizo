@@ -620,7 +620,7 @@ const proxyThemeAssetsController = async (req, res) => {
                  
                   <iframe
                     id="agora-frame"
-                    src="${resolveFrontendUrl(req)}/consultant-cards?customerId=${userResult?.userId || ""}&shopid=${shopDocId || ""}&shop=${shop}&authToken=${encodeURIComponent(token || "")}"
+                    src="${getTrustedConsultantAppUrl() || resolveFrontendUrl(req)}/consultant-cards?customerId=${userResult?.userId || ""}&shopid=${shopDocId || ""}&shop=${shop}&authToken=${encodeURIComponent(token || "")}"
                     style="border:none;width:100%;min-height:200px;display:block;"
                   ></iframe>
                   ${footerHtml}
@@ -1055,7 +1055,7 @@ const proxyShopifyViewProfile = async (req, res) => {
       `&authToken=${encodeURIComponent(customerSession.token || "")}`;
   }
 
-  const iframeUrl = `${resolveFrontendUrl(req)}/view-profile?consultantId=${consultantId}&shopId=${shopId}&shop=${shop}${customerParams}`;
+  const iframeUrl = `${getTrustedConsultantAppUrl() || resolveFrontendUrl(req)}/view-profile?consultantId=${consultantId}&shopId=${shopId}&shop=${shop}${customerParams}`;
 
   return renderShopifyPage(req, res, iframeUrl, {
     title: "Consultant Profile",
