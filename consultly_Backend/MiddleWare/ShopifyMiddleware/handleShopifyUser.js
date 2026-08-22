@@ -473,20 +473,42 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
       chatLock: true,
     });
 
-    await newUser.save();
+    // Two near-simultaneous first-ever requests from the same brand-new
+    // Shopify customer can both pass the findOne() check above and both
+    // reach here — the userSchema partial unique index on
+    // {shopifyCustomerId, shop_id} guarantees only one insert wins; this
+    // catch reconciles the loser to that winner instead of failing its
+    // request (and instead of ever producing a second User document).
+    let createdUser = newUser;
+    try {
+      await newUser.save();
+    } catch (saveErr) {
+      if (saveErr?.code === 11000) {
+        const winner = await User.findOne({
+          shopifyCustomerId: String(customerId),
+          shop_id: shopDoc._id,
+        }).select("_id shop_id");
+        if (!winner) throw saveErr; // genuinely unexpected — surface it
+        createdUser = winner;
+      } else {
+        throw saveErr;
+      }
+    }
 
-    const token = getOrCreateUserToken(newUser._id);
+    const token = getOrCreateUserToken(createdUser._id);
 
-    console.log("[SHOPIFY CUSTOMER DEBUG] DB user created =", true);
+    console.log("[SHOPIFY CUSTOMER DEBUG] DB user created =", createdUser === newUser);
     console.log("[SHOPIFY CUSTOMER DEBUG] identity resolved =", true);
 
     return cacheSession(
       shop,
       customerId,
       buildSessionResult(
-        newUser,
+        createdUser,
         token,
-        "Customer created successfully"
+        createdUser === newUser
+          ? "Customer created successfully"
+          : "Customer already exists"
       )
     );
   } catch (error) {

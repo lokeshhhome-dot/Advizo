@@ -181,6 +181,27 @@ const registerUserSchema = new mongoose.Schema(
 
 registerUserSchema.index({ shop_id: 1, userType: 1 });
 
+// Enforces "one User per (Shopify customer, shop)" at the database level —
+// closes the race where two near-simultaneous first-ever requests from the
+// same brand-new Shopify customer could otherwise both pass a findOne()
+// check and both insert (see manageShopifyUser in handleShopifyUser.js,
+// which now catches the resulting E11000 and reconciles to the winner).
+// PARTIAL, not sparse: consultants/admins/manually-created users have no
+// shopifyCustomerId at all, and a plain sparse compound index would still
+// collide two such documents sharing the same shop_id (sparse only skips a
+// document that's missing ALL indexed fields, not just one). The partial
+// filter scopes this constraint to actual Shopify-customer documents only,
+// so it can never affect any existing non-Shopify user record.
+registerUserSchema.index(
+    { shopifyCustomerId: 1, shop_id: 1 },
+    {
+        unique: true,
+        partialFilterExpression: {
+            shopifyCustomerId: { $exists: true, $type: "string", $ne: "" },
+        },
+    },
+);
+
 // Model already exists check karo - duplicate model name se bachne ke liye
 const User = mongoose.models.ragisterUser || mongoose.model("ragisterUser", registerUserSchema);
 
