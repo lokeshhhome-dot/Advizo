@@ -112,9 +112,59 @@ const getShopDoc = async (shop) =>
     shopModel.findOne({ shop }).lean(),
   );
 
+// 2024-10 (the version this file used previously) is long past Shopify's
+// ~9-12 month API version support window as of now — matching
+// shopifyDraftOrderController.js, the one call site in this codebase that
+// was already kept current, rather than guessing a version.
+const SHOPIFY_ADMIN_API_VERSION = "2026-07";
+
+const runShopifyCustomerQuery = async (shop, accessToken, query) => {
+  const response = await axios.post(
+    `https://${shop}/admin/api/${SHOPIFY_ADMIN_API_VERSION}/graphql.json`,
+    { query },
+    {
+      headers: {
+        "Content-Type": "application/json",
+        "X-Shopify-Access-Token": accessToken,
+      },
+    },
+  );
+
+  // Safe only — error message/code, never the customer payload itself.
+  if (Array.isArray(response.data?.errors) && response.data.errors.length) {
+    console.warn(
+      "[SHOPIFY CUSTOMER DEBUG] GraphQL customer query returned errors:",
+      response.data.errors.map((e) => ({
+        message: e.message,
+        code: e.extensions?.code,
+      })),
+    );
+  }
+
+  return response.data?.data?.customer || null;
+};
+
+/**
+ * name/email/firstName/lastName are Shopify "protected customer data" —
+ * querying them requires the app to have completed Shopify's separate
+ * Protected Customer Data approval (a Partner Dashboard review, independent
+ * of the read_customers/write_customers OAuth scopes already granted). An
+ * app without that approval gets an ACCESS_DENIED-style GraphQL error on
+ * this field set specifically, with `customer` coming back null — which
+ * previously surfaced here as an indistinguishable "Customer not found in
+ * Shopify", even though the id was completely valid and the customer is
+ * genuinely logged in. id/createdAt/numberOfOrders are NOT protected fields,
+ * so the fallback query below still succeeds in that case; fullname/email
+ * simply fall back to their existing "Shopify Customer" placeholder
+ * (unchanged behavior already present in manageShopifyUser for that case).
+ */
 const fetchShopifyCustomer = async (shop, accessToken, customerId) => {
-  const graphqlQuery = {
-    query: `{
+  console.log("[SHOPIFY CUSTOMER DEBUG] customer lookup attempted =", true);
+
+  const full = await runShopifyCustomerQuery(
+    shop,
+    accessToken,
+    `{
       customer(id: "gid://shopify/Customer/${customerId}") {
         id
         firstName
@@ -124,20 +174,27 @@ const fetchShopifyCustomer = async (shop, accessToken, customerId) => {
         numberOfOrders
       }
     }`,
-  };
+  );
+  if (full) return full;
 
-  const response = await axios.post(
-    `https://${shop}/admin/api/2024-10/graphql.json`,
-    graphqlQuery,
-    {
-      headers: {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": accessToken,
-      },
-    },
+  console.warn(
+    "[SHOPIFY CUSTOMER DEBUG] full customer query returned null — retrying with non-protected fields only (id/createdAt/numberOfOrders)",
   );
 
-  return response.data?.data?.customer || null;
+  const minimal = await runShopifyCustomerQuery(
+    shop,
+    accessToken,
+    `{
+      customer(id: "gid://shopify/Customer/${customerId}") {
+        id
+        createdAt
+        numberOfOrders
+      }
+    }`,
+  );
+
+  console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", Boolean(minimal));
+  return minimal;
 };
 
 // const manageShopifyUser = async (shop, customerId, options = {}) => {
@@ -253,6 +310,9 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
       };
     }
 
+    // TEMPORARY debug — booleans/ids only, never email/name/tokens.
+    console.log("[SHOPIFY CUSTOMER DEBUG] logged_in_customer_id present =", Boolean(customerId));
+
     // 3. Check existing user
     const existingUser = await User.findOne({
       shopifyCustomerId: String(customerId),
@@ -260,6 +320,8 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
     })
       .select("_id shop_id shopifyCustomerId fullname email")
       .lean();
+
+    console.log("[SHOPIFY CUSTOMER DEBUG] DB user found =", Boolean(existingUser));
 
     // ======================================================
     // EXISTING USER
@@ -302,6 +364,9 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
 
       const token = getOrCreateUserToken(existingUser._id);
 
+      console.log("[SHOPIFY CUSTOMER DEBUG] DB user created =", false);
+      console.log("[SHOPIFY CUSTOMER DEBUG] identity resolved =", true);
+
       return cacheSession(
         shop,
         customerId,
@@ -319,7 +384,10 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
       customerId
     );
 
+    console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", Boolean(customer));
+
     if (!customer) {
+      console.log("[SHOPIFY CUSTOMER DEBUG] identity resolved =", false);
       return {
         success: false,
         message: "Customer not found in Shopify",
@@ -334,12 +402,23 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
         .join(" ")
         .trim() || "Shopify Customer";
 
+    // The userSchema `email` field is required+unique. When the Admin API
+    // couldn't return the real email (fetchShopifyCustomer's protected-data
+    // fallback — see that function's comment), a real email is genuinely
+    // unavailable, not just unset — falling back to a shared placeholder
+    // would collide on the schema's unique index for the second such
+    // customer. This synthetic address is unique per (shop, Shopify
+    // customer id) and is never used for actual communication.
+    const email =
+      customer.email ||
+      `shopify-customer-${shopifyCustomerId}@${shop}.consultly-placeholder`;
+
     const newUser = new User({
       shopifyCustomerId,
       shop_id: shopDoc._id,
       userType: "customer",
       walletBalance: 0,
-      email: customer.email,
+      email,
       fullname,
       isChatAccepted: "request",
       createdAt: customer.createdAt,
@@ -350,6 +429,9 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
     await newUser.save();
 
     const token = getOrCreateUserToken(newUser._id);
+
+    console.log("[SHOPIFY CUSTOMER DEBUG] DB user created =", true);
+    console.log("[SHOPIFY CUSTOMER DEBUG] identity resolved =", true);
 
     return cacheSession(
       shop,
@@ -365,6 +447,7 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
       "Error fetching customer:",
       error.response?.data || error.message
     );
+    console.log("[SHOPIFY CUSTOMER DEBUG] identity resolved =", false);
 
     return {
       success: false,

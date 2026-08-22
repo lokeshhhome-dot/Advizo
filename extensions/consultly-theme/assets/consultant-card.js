@@ -470,10 +470,8 @@
         // Shopify actually appended logged_in_customer_id on that request is
         // logged server-side (proxyConsultantsJson) instead, since this
         // bundle never sees that raw query param itself.
-        console.log("[THEME AUTH DEBUG] shop =", shop);
-        console.log("[THEME AUTH DEBUG] Shopify customer available =", Boolean(data.authenticated));
-        console.log("[THEME AUTH DEBUG] Shopify identity verified =", Boolean(data.authenticated));
-        console.log("[THEME AUTH DEBUG] DB user synced =", Boolean(data.customerId));
+        console.log("[THEME AUTH DEBUG] authenticated =", Boolean(data.authenticated));
+        console.log("[THEME AUTH DEBUG] DB user available =", Boolean(data.customerId));
       })
       .catch(function (err) {
         console.error("[consultly] failed to load consultants:", err);
