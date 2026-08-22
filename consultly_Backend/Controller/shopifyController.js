@@ -826,6 +826,10 @@ const proxyConsultantsJson = async (req, res) => {
       Boolean(req.query.logged_in_customer_id),
     );
     console.log(
+      "[THEME AUTH DEBUG] logged_in_customer_id present =",
+      req.query.logged_in_customer_id
+    );
+    console.log(
       "[THEME AUTH DEBUG] app session cookie present =",
       Boolean(req.cookies?.token),
     );
