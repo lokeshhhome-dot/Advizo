@@ -5,6 +5,7 @@ const { shopModel } = require("../Modal/shopify");
 const {
   manageShopifyUser,
   resolveUserFromAppToken,
+  getOrCreateUserToken,
 } = require("../MiddleWare/ShopifyMiddleware/handleShopifyUser");
 const {
   renderShopifyPage,
@@ -40,7 +41,7 @@ const {
   buildExpiringFields,
   rememberFreshInstallTokens,
 } = require("../Utils/shopifyToken");
-const { shopDocCache } = require("../Utils/ttlCache");
+const { shopDocCache, chatExchangeCache } = require("../Utils/ttlCache");
 
 // Same key + shape as getShopDoc in handleShopifyUser, so both share entries.
 const SHOP_DOC_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -845,11 +846,6 @@ const proxyConsultantsJson = async (req, res) => {
       shopId: String(shopDocId),
       findConsultant: consultants,
       communicationDisabled,
-      // TEMP (Chat modal UI test): lets the Theme Extension's vanilla JS
-      // open the existing React chat modal (/chats route) in an on-page
-      // iframe without navigating away. Same trusted-URL helper already
-      // used for the App Proxy iframe src elsewhere in this file.
-      chatAppUrl: getTrustedConsultantAppUrl() || null,
     });
   } catch (err) {
     console.error("[app-proxy] /consultly/consultants error:", err);
@@ -1075,6 +1071,155 @@ const proxyShopifyViewProfile = async (req, res) => {
 // "proxyShopifyChatSection" — the only remaining callers were the frontend
 // navigation functions this same change replaced.
 
+const CHAT_EXCHANGE_TTL_MS = 60 * 1000; // one minute — the iframe redirect
+// following it happens client-side within milliseconds; a full minute is
+// generous headroom, not a window meant to be sat on.
+
+/**
+ * TEMP (Chat modal UI test): App Proxy launcher for the Theme App Extension
+ * card's dynamically-injected chat overlay iframe (see openChatOverlay in
+ * consultant-card.js). Deliberately NOT the old proxyShopifyChatSection
+ * pattern (renderShopifyPage) — that scrapes and re-renders the theme's own
+ * header/footer around the iframe, which is right for a full-page App Proxy
+ * destination but would show a second storefront header/footer INSIDE this
+ * overlay. Instead: resolve identity the exact same way every other proxy
+ * handler in this file does (resolveStorefrontCustomer — logged_in_customer_id
+ * first, app-JWT-cookie fallback), then 302 to the React app's own /chats
+ * route carrying only a short-lived, single-use, server-generated exchange
+ * code — never the DB user id and never the JWT (see exchangeChatSession
+ * below, which is what actually redeems it for a real session). The request
+ * reaching this handler at all already proves Shopify's App Proxy HMAC
+ * (verifyAppProxy) validated it — a real signed hit, not something the
+ * browser/theme JS forged.
+ */
+const proxyShopifyStorefrontChat = async (req, res) => {
+  const shop = req.query.shop;
+  const consultantId = req.query.consultantId || "";
+
+  const customerSession = await resolveStorefrontCustomer(req, shop);
+
+  // TEMPORARY debug — Theme Extension identity-sync test. No token/secret
+  // values are logged, only booleans and the DB user id.
+  console.log(
+    "[THEME AUTH TEST] Shopify customer detected =",
+    Boolean(req.query.logged_in_customer_id),
+  );
+  console.log("[THEME AUTH TEST] authenticated =", Boolean(customerSession?.userId));
+  console.log(
+    "[THEME AUTH TEST] app userId =",
+    customerSession?.userId ? String(customerSession.userId) : null,
+  );
+  console.log(
+    "[THEME AUTH TEST] DB user synced =",
+    Boolean(customerSession?.userId),
+  );
+
+  // The httpOnly app session cookie is reused here exactly as every other
+  // proxy handler in this file reuses it — set/refreshed on this App Proxy
+  // request (same-origin-to-the-shop, so it works), which is what
+  // resolveStorefrontCustomer above already read to resolve identity. It is
+  // NOT forwarded into the redirect below: it's scoped to the shop's own
+  // domain, and the redirect target is the React app's OWN origin
+  // (getTrustedConsultantAppUrl(), a different domain) — a same-origin
+  // cookie can't cross that boundary. Neither is the raw JWT or the DB user
+  // id put in the URL — only an opaque, single-use exchange code, redeemed
+  // by exchangeChatSession below over a direct HTTPS call from the React
+  // app, never logged or persisted anywhere past its one redemption.
+  //
+  // TODO(auth): logged-out shoppers currently still reach the chat overlay
+  // (no exchange param at all — UserChat degrades gracefully with no
+  // customerId/authToken, see its bootstrap effect) for UI testing. Restore
+  // a real "must be a resolved Shopify customer" gate here before
+  // production.
+  let exchangeParam = "";
+  if (customerSession?.userId) {
+    setAppSessionCookie(res, customerSession.token);
+    const code = crypto.randomBytes(32).toString("hex");
+    chatExchangeCache.set(
+      `chat-exchange:${code}`,
+      {
+        shop,
+        userId: String(customerSession.userId),
+        consultantId,
+        used: false,
+      },
+      CHAT_EXCHANGE_TTL_MS,
+    );
+    exchangeParam = `&exchange=${encodeURIComponent(code)}`;
+  }
+
+  const target =
+    `${getTrustedConsultantAppUrl() || resolveFrontendUrl(req)}/chats?embedded=1` +
+    `&consultantId=${encodeURIComponent(consultantId)}` +
+    `&shop=${encodeURIComponent(shop || "")}${exchangeParam}`;
+
+  res.set("Cache-Control", "no-store");
+  return res.redirect(302, target);
+};
+
+/**
+ * TEMP (Chat modal UI test): redeems the one-time exchange code minted by
+ * proxyShopifyStorefrontChat above. Called directly by the React app
+ * (UserChat.js bootstrap, over plain HTTPS — NOT through Shopify's App
+ * Proxy, since the code is itself the credential and needs no App Proxy
+ * HMAC) with { exchange, shop, consultantId }. On success mints/reuses a
+ * session the exact same way every other customer-facing page in this file
+ * already does — getOrCreateUserToken(userId), the identical JWT
+ * (JWT_SECRET_KEY, 7d expiry, cached) manageShopifyUser already hands back
+ * everywhere else — no new token format, no new secret.
+ *
+ * Single-use: the cache entry is deleted the instant it's read, whether or
+ * not the rest of validation passes, so a code can never be redeemed twice
+ * even by two near-simultaneous requests racing the same key.
+ */
+const exchangeChatSession = async (req, res) => {
+  try {
+    const { exchange, shop, consultantId } = req.body || {};
+
+    if (!exchange || typeof exchange !== "string") {
+      return res.status(400).json({ success: false, message: "Missing exchange code" });
+    }
+
+    const key = `chat-exchange:${exchange}`;
+    const entry = chatExchangeCache.get(key);
+    chatExchangeCache.delete(key); // single-use regardless of outcome below
+
+    if (!entry || entry.used) {
+      return res.status(401).json({ success: false, message: "Invalid or expired exchange code" });
+    }
+    if (shop && entry.shop && String(shop) !== String(entry.shop)) {
+      return res.status(401).json({ success: false, message: "Shop mismatch" });
+    }
+    if (
+      consultantId &&
+      entry.consultantId &&
+      String(consultantId) !== String(entry.consultantId)
+    ) {
+      return res.status(401).json({ success: false, message: "Consultant mismatch" });
+    }
+
+    const user = await User.findById(entry.userId).select("_id shop_id");
+    if (!user) {
+      return res.status(401).json({ success: false, message: "User not found" });
+    }
+
+    const token = getOrCreateUserToken(user._id);
+
+    console.log("[THEME AUTH TEST] chat session exchange redeemed for userId =", String(user._id));
+
+    res.set("Cache-Control", "no-store");
+    return res.status(200).json({
+      success: true,
+      userId: String(user._id),
+      shopId: String(user.shop_id),
+      token,
+    });
+  } catch (err) {
+    console.error("[chat-session-exchange] error:", err.message);
+    return res.status(500).json({ success: false, message: "Exchange failed" });
+  }
+};
+
 /**
  * JSON App Proxy endpoint for the Theme App Extension's My Profile block
  * (my-profile.liquid / my-profile.js, rendered on /pages/my-profile).
@@ -1252,4 +1397,6 @@ module.exports = {
   proxyShopifyViewProfile,
   proxyCustomerProfileJson,
   proxyShopifyCallAccepted,
+  proxyShopifyStorefrontChat,
+  exchangeChatSession,
 };

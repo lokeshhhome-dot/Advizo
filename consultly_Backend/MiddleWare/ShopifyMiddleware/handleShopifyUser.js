@@ -376,4 +376,5 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
 module.exports = {
   manageShopifyUser,
   resolveUserFromAppToken,
+  getOrCreateUserToken,
 };

@@ -11,7 +11,9 @@ const { installShopifyApp,
     proxySHopifyConsultantChat,
     proxyShopifyViewProfile,
     proxyCustomerProfileJson,
-    proxyShopifyCallAccepted
+    proxyShopifyCallAccepted,
+    proxyShopifyStorefrontChat,
+    exchangeChatSession
 } = require('../Controller/shopifyController');
 
 const { verifyShopifyToken } = require('../MiddleWare/ShopifyMiddleware/verifyShopifyToken');
@@ -46,10 +48,25 @@ shopifyRoute.get('/consultly/view-profile', verifyAppProxy, proxyShopifyViewProf
 // /consultly/chats-c (proxyShopifyChatSection) removed — the storefront
 // Chat button now opens ConsultantChatModal/UserChat as an in-page React
 // modal, no App Proxy iframe route needed for it anymore.
+// TEMP (Chat modal UI test): launcher for the Theme Extension card's
+// dynamically-injected chat overlay iframe — resolves Shopify customer ->
+// DB user the same way every other proxy route here does, then redirects
+// into the React app's /chats route carrying only a short-lived, single-use
+// exchange code (never the DB user id, never the JWT). See
+// proxyShopifyStorefrontChat in shopifyController.js.
+shopifyRoute.get('/consultly/chats', verifyAppProxy, proxyShopifyStorefrontChat);
 // JSON endpoint for the Theme App Extension's My Profile block —
 // /apps/consultly/customer/me, rendered on /pages/my-profile. Replaces the
 // old /consultly/profile iframe launcher (proxyProfileSection, removed).
 shopifyRoute.get('/consultly/customer/me', verifyAppProxy, proxyCustomerProfileJson);
 shopifyRoute.get('/consultly/video-calling-page', verifyAppProxy, proxyShopifyCallAccepted);
+
+// NOT an App Proxy route — called directly by the React app (UserChat.js)
+// over plain HTTPS, from the CONSULTANT_APP_URL origin, not from a Shopify
+// storefront page. verifyAppProxy would reject it (no Shopify HMAC signature
+// on a direct browser->backend call). Its own security is the exchange code
+// itself: short-lived, single-use, minted only inside proxyShopifyStorefrontChat
+// above after a real verifyAppProxy-gated hit. See exchangeChatSession.
+shopifyRoute.post('/consultly/chat-session/exchange', exchangeChatSession);
 
 module.exports = shopifyRoute;

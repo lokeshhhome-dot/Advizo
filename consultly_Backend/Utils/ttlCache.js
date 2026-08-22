@@ -53,6 +53,12 @@ const shopDocCache = new TtlCache({ maxEntries: 200 });
 const storefrontSessionCache = new TtlCache({ maxEntries: 1000 });
 const storefrontSectionCache = new TtlCache({ maxEntries: 300 });
 const userTokenCache = new TtlCache({ maxEntries: 1000 });
+// One-time exchange codes for the Theme Extension chat overlay — see
+// proxyShopifyStorefrontChat / exchangeChatSession in shopifyController.js.
+// Short-lived (minted with a TTL well under its own maxEntries turnover) and
+// deleted the moment they're redeemed, same get/set/delete this file already
+// provides for every other short-lived server-side value.
+const chatExchangeCache = new TtlCache({ maxEntries: 2000 });
 
 module.exports = {
   TtlCache,
@@ -60,4 +66,5 @@ module.exports = {
   storefrontSessionCache,
   storefrontSectionCache,
   userTokenCache,
+  chatExchangeCache,
 };

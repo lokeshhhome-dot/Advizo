@@ -129,6 +129,23 @@
     return "/pages/consultant-profile?id=" + encodeURIComponent(consultantId);
   }
 
+  // TEMP (Chat modal UI test): App-Proxy-relative on purpose — Shopify's own
+  // edge intercepts this and forwards it to our backend WITH
+  // logged_in_customer_id + a verified signature attached, and the browser
+  // also carries the session cookie the /apps/consultly/consultants fetch
+  // already set (same shop origin). That's how the identity sync in
+  // Step 1/2 actually reaches the chat overlay — see
+  // proxyShopifyStorefrontChat in shopifyController.js. A direct cross-origin
+  // request to the React app's own host would skip all of that.
+  function buildChatOverlayUrl(shop, consultantId) {
+    return (
+      "https://" +
+      shop +
+      "/apps/consultly/chats?consultantId=" +
+      encodeURIComponent(consultantId)
+    );
+  }
+
   function priceMarkup(currencySymbol, amount) {
     return (
       '<span class="consultly-consultant-card__action-price">' +
@@ -263,24 +280,19 @@
     });
   }
 
-  function openChatOverlay(chatAppUrl, consultantId, shop, customerId, shopId) {
-    if (!chatAppUrl) {
-      console.error(
-        "[THEME CHAT TEST] chatAppUrl missing from /apps/consultly/consultants response — cannot open chat overlay",
-      );
+  function openChatOverlay(consultantId, shop) {
+    if (!shop) {
+      console.error("[THEME CHAT TEST] shop missing — cannot open chat overlay");
       return;
     }
     ensureChatOverlayCloseListener();
     closeChatOverlay();
 
-    var src =
-      chatAppUrl +
-      "/chats?embedded=1&consultantId=" +
-      encodeURIComponent(consultantId) +
-      "&shop=" +
-      encodeURIComponent(shop || "") +
-      (customerId ? "&customerId=" + encodeURIComponent(customerId) : "") +
-      (shopId ? "&shopId=" + encodeURIComponent(shopId) : "");
+    // App-Proxy-relative — see buildChatOverlayUrl. The backend resolves the
+    // Shopify customer -> DB user itself (resolveStorefrontCustomer) and
+    // 302s into the React app with that identity already attached; this
+    // bundle never needs to know or pass the DB user id itself.
+    var src = buildChatOverlayUrl(shop, consultantId);
 
     console.log("[THEME CHAT TEST] opening chat overlay iframe:", src);
 
@@ -363,7 +375,7 @@
           }
 
           if (action === "chat") {
-            openChatOverlay(ctx.chatAppUrl, consultantId, ctx.shop, ctx.customerId, ctx.shopId);
+            openChatOverlay(consultantId, ctx.shop);
             return;
           }
 
@@ -414,10 +426,20 @@
           authenticated: Boolean(data.authenticated),
           communicationDisabled: Boolean(data.communicationDisabled),
           shopCurrency: data.shopCurrency,
-          // TEMP (Chat modal UI test) — see openChatOverlay above.
-          chatAppUrl: data.chatAppUrl || null,
+          // TEMP (Theme Extension identity-sync test) — the app DB user id
+          // for this shopper, already resolved server-side (see
+          // proxyConsultantsJson / resolveStorefrontCustomer). Not used to
+          // build any URL here — the chat overlay's own App Proxy request
+          // resolves identity itself — this is only for the debug logs
+          // below and any future Theme JS that needs it directly.
           customerId: data.customerId || null,
         });
+
+        // TEMPORARY debug — Theme Extension identity-sync test.
+        console.log("[THEME AUTH TEST] authenticated =", Boolean(data.authenticated));
+        console.log("[THEME AUTH TEST] Shopify customer detected =", Boolean(data.authenticated));
+        console.log("[THEME AUTH TEST] app userId =", data.customerId || null);
+        console.log("[THEME AUTH TEST] DB user synced =", Boolean(data.customerId));
       })
       .catch(function (err) {
         console.error("[consultly] failed to load consultants:", err);

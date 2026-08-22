@@ -1,5 +1,6 @@
 import React, { Fragment, useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import axios from "axios";
 import styles from "./UserChat.module.css";
 import {
   socket,
@@ -61,63 +62,106 @@ const UserChat = ({
     customerIdProp || parms.get("customerId") || parms.get("userId");
   const shopIdFromUrl =
     shopIdProp || parms.get("shopid") || parms.get("shopId");
+  // TEMP (Chat modal identity-sync): the Theme Extension overlay's only
+  // safe way to hand this page a real session — see proxyShopifyStorefrontChat
+  // / exchangeChatSession in shopifyController.js. Never used when a prop or
+  // an authToken/customerId URL param is already present (those already
+  // establish identity directly; this is strictly a fallback for the
+  // App-Proxy-launched overlay, which deliberately gets neither in its URL).
+  const exchangeCode = parms.get("exchange");
 
   useEffect(() => {
-    // Capture token BEFORE session switch — prepareSessionLogin(USER) clears
-    // consultant keys and used to wipe `token` before we could restore it.
-    const priorToken = (localStorage.getItem("token") || "").trim();
-    const urlToken = authTokenFromUrl;
+    let cancelled = false;
 
-    prepareSessionLogin(SESSION_TYPES.USER);
+    async function bootstrap() {
+      // Capture token BEFORE session switch — prepareSessionLogin(USER)
+      // clears consultant keys and used to wipe `token` before we could
+      // restore it.
+      const priorToken = (localStorage.getItem("token") || "").trim();
+      const urlToken = authTokenFromUrl;
 
-    const resolvedClientId =
-      customerIdFromUrl || localStorage.getItem("client_u_Identity");
-    const resolvedShopId =
-      shopIdFromUrl || localStorage.getItem("shop_o_Identity");
-    const resolvedToken = urlToken || priorToken;
+      prepareSessionLogin(SESSION_TYPES.USER);
 
-    if (resolvedClientId) {
-      localStorage.setItem("client_u_Identity", resolvedClientId);
-    }
-    if (resolvedShopId) {
-      localStorage.setItem("shop_o_Identity", resolvedShopId);
-    }
-    if (resolvedToken) {
-      localStorage.setItem("token", resolvedToken);
-    }
-    if (shop) {
-      localStorage.setItem("shop", shop);
-    }
+      let resolvedClientId =
+        customerIdFromUrl || localStorage.getItem("client_u_Identity");
+      let resolvedShopId =
+        shopIdFromUrl || localStorage.getItem("shop_o_Identity");
+      let resolvedToken = urlToken || priorToken;
 
-    setClientId(resolvedClientId || null);
-    setShopId(resolvedShopId || null);
-
-    // TODO(auth): the modal flow (ConsultantChatModal, opened from
-    // ConsultantCards/ViewProfile) intentionally opens for an anonymous
-    // visitor for now — no login/balance gate before this component mounts.
-    // This branch already degrades gracefully (warns, doesn't crash/redirect)
-    // when resolvedClientId/resolvedToken are missing, which is what makes
-    // that possible; restore a real auth/balance check before the Chat
-    // button opens this modal once testing is done.
-    if (resolvedClientId && resolvedToken) {
-      notifySocketUserReady();
-      ensureSocketConnected(resolvedClientId, null, 8000, resolvedToken).catch(
-        (error) => {
-          console.error(
-            "UserChat socket connect failed:",
-            error?.message || error,
+      // Only redeem the exchange code when nothing stronger already
+      // resolved identity — same "props/URL first" precedence the rest of
+      // this bootstrap already follows.
+      if (exchangeCode && !resolvedClientId && !resolvedToken) {
+        try {
+          const { data } = await axios.post(
+            `${process.env.REACT_APP_BACKEND_HOST}/app/consultly/chat-session/exchange`,
+            { exchange: exchangeCode, shop, consultantId },
           );
-        },
-      );
-    } else {
-      console.warn("UserChat bootstrap missing auth fields:", {
-        hasClientId: Boolean(resolvedClientId),
-        hasToken: Boolean(resolvedToken),
-        hasUrlToken: Boolean(urlToken),
-        shopId: resolvedShopId,
-      });
+          if (data?.success && data?.userId && data?.token) {
+            resolvedClientId = data.userId;
+            resolvedShopId = resolvedShopId || data.shopId;
+            resolvedToken = data.token;
+          } else {
+            console.warn("UserChat chat-session exchange failed:", data?.message);
+          }
+        } catch (error) {
+          console.error(
+            "UserChat chat-session exchange request failed:",
+            error?.response?.data?.message || error?.message,
+          );
+        }
+      }
+
+      if (cancelled) return;
+
+      if (resolvedClientId) {
+        localStorage.setItem("client_u_Identity", resolvedClientId);
+      }
+      if (resolvedShopId) {
+        localStorage.setItem("shop_o_Identity", resolvedShopId);
+      }
+      if (resolvedToken) {
+        localStorage.setItem("token", resolvedToken);
+      }
+      if (shop) {
+        localStorage.setItem("shop", shop);
+      }
+
+      setClientId(resolvedClientId || null);
+      setShopId(resolvedShopId || null);
+
+      // TODO(auth): the modal flow (ConsultantChatModal, opened from
+      // ConsultantCards/ViewProfile) intentionally opens for an anonymous
+      // visitor for now — no login/balance gate before this component mounts.
+      // This branch already degrades gracefully (warns, doesn't crash/redirect)
+      // when resolvedClientId/resolvedToken are missing, which is what makes
+      // that possible; restore a real auth/balance check before the Chat
+      // button opens this modal once testing is done.
+      if (resolvedClientId && resolvedToken) {
+        notifySocketUserReady();
+        ensureSocketConnected(resolvedClientId, null, 8000, resolvedToken).catch(
+          (error) => {
+            console.error(
+              "UserChat socket connect failed:",
+              error?.message || error,
+            );
+          },
+        );
+      } else {
+        console.warn("UserChat bootstrap missing auth fields:", {
+          hasClientId: Boolean(resolvedClientId),
+          hasToken: Boolean(resolvedToken),
+          hasUrlToken: Boolean(urlToken),
+          shopId: resolvedShopId,
+        });
+      }
     }
-  }, [authTokenFromUrl, customerIdFromUrl, shopIdFromUrl, shop]);
+
+    bootstrap();
+    return () => {
+      cancelled = true;
+    };
+  }, [authTokenFromUrl, customerIdFromUrl, shopIdFromUrl, shop, exchangeCode, consultantId]);
 
   const token = localStorage.getItem("token") || authTokenFromUrl;
 
