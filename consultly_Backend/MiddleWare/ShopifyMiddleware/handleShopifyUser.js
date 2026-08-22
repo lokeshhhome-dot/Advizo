@@ -118,30 +118,57 @@ const getShopDoc = async (shop) =>
 // was already kept current, rather than guessing a version.
 const SHOPIFY_ADMIN_API_VERSION = "2026-07";
 
+/**
+ * Distinguishes three genuinely different failure modes that a naive
+ * "customer is null so not found" check collapses into one:
+ *   1. The HTTP request itself failed (bad/expired token, network error,
+ *      shop unreachable) — never reaches Shopify's GraphQL layer at all.
+ *   2. Shopify accepted the request but the GraphQL response carries
+ *      `errors` (e.g. Protected Customer Data access denied) — customer
+ *      may well exist, we're just not allowed to read these fields.
+ *   3. A clean response with `data.customer: null` — Shopify genuinely has
+ *      no customer with this id (wrong id, wrong shop, deleted customer).
+ * Only case 3 should ever be treated as "not found".
+ */
 const runShopifyCustomerQuery = async (shop, accessToken, query) => {
-  const response = await axios.post(
-    `https://${shop}/admin/api/${SHOPIFY_ADMIN_API_VERSION}/graphql.json`,
-    { query },
-    {
-      headers: {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": accessToken,
+  let response;
+  try {
+    response = await axios.post(
+      `https://${shop}/admin/api/${SHOPIFY_ADMIN_API_VERSION}/graphql.json`,
+      { query },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "X-Shopify-Access-Token": accessToken,
+        },
       },
-    },
-  );
-
-  // Safe only — error message/code, never the customer payload itself.
-  if (Array.isArray(response.data?.errors) && response.data.errors.length) {
-    console.warn(
-      "[SHOPIFY CUSTOMER DEBUG] GraphQL customer query returned errors:",
-      response.data.errors.map((e) => ({
-        message: e.message,
-        code: e.extensions?.code,
-      })),
     );
+  } catch (err) {
+    // Safe only — HTTP status/shop, never the access token or full body.
+    console.log("[SHOPIFY CUSTOMER DEBUG] API request success =", false);
+    console.log(
+      "[SHOPIFY CUSTOMER DEBUG] HTTP status =",
+      err.response?.status || null,
+    );
+    return { customer: null, httpFailed: true, graphqlErrors: false };
   }
 
-  return response.data?.data?.customer || null;
+  console.log("[SHOPIFY CUSTOMER DEBUG] API request success =", true);
+
+  const errors = Array.isArray(response.data?.errors) ? response.data.errors : [];
+  console.log("[SHOPIFY CUSTOMER DEBUG] GraphQL error present =", errors.length > 0);
+  if (errors.length) {
+    // Safe only — error message/code, never the customer payload itself.
+    errors.forEach((e) => {
+      console.log("[SHOPIFY CUSTOMER DEBUG] GraphQL error code =", e.extensions?.code || "UNKNOWN");
+    });
+  }
+
+  return {
+    customer: response.data?.data?.customer || null,
+    httpFailed: false,
+    graphqlErrors: errors.length > 0,
+  };
 };
 
 /**
@@ -175,10 +202,30 @@ const fetchShopifyCustomer = async (shop, accessToken, customerId) => {
       }
     }`,
   );
-  if (full) return full;
+
+  if (full.customer) {
+    console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", true);
+    return full.customer;
+  }
+
+  // HTTP-level failure (bad/expired token, network, shop unreachable) would
+  // fail identically on a retry with different fields — no point trying
+  // again, and doing so would just double-charge Shopify's rate limit for
+  // no benefit.
+  if (full.httpFailed) {
+    console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", false);
+    return null;
+  }
+
+  // A clean response with no GraphQL errors and no customer really does
+  // mean "no such customer" — retrying with fewer fields can't change that.
+  if (!full.graphqlErrors) {
+    console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", false);
+    return null;
+  }
 
   console.warn(
-    "[SHOPIFY CUSTOMER DEBUG] full customer query returned null — retrying with non-protected fields only (id/createdAt/numberOfOrders)",
+    "[SHOPIFY CUSTOMER DEBUG] full customer query returned GraphQL errors — retrying with non-protected fields only (id/createdAt/numberOfOrders)",
   );
 
   const minimal = await runShopifyCustomerQuery(
@@ -193,8 +240,8 @@ const fetchShopifyCustomer = async (shop, accessToken, customerId) => {
     }`,
   );
 
-  console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", Boolean(minimal));
-  return minimal;
+  console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", Boolean(minimal.customer));
+  return minimal.customer;
 };
 
 // const manageShopifyUser = async (shop, customerId, options = {}) => {
