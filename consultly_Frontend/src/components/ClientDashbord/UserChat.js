@@ -38,6 +38,9 @@ const UserChat = ({
   authToken: authTokenProp,
   onClose,
 } = {}) => {
+  // TEMPORARY debug — remove once the redirect-on-click report is resolved.
+  console.log("[CHAT TEST] USER CHAT RENDERED");
+
   const [text, setText] = useState();
   const navigate = useNavigate();
   const dispatch = useDispatch();

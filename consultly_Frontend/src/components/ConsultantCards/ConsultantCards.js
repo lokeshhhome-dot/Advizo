@@ -270,6 +270,7 @@ function ConsultantCards() {
   // for real users.
   const openChatModal = (consultant) => {
     // TEMPORARY debug — remove once the redirect-on-click report is resolved.
+    console.log("[CHAT TEST] OPENING CHAT MODAL");
     console.log("[CONSULTLY TEST] opening ConsultantChatModal");
     console.log("[CONSULTLY Chat] consultantId =", consultant?.id || consultant?._id);
     console.log("[CONSULTLY Chat] shop =", shop);
@@ -396,12 +397,15 @@ function ConsultantCards() {
                                 ? COMM_DISABLED_TOOLTIP
                                 : undefined
                             }
+                            type="button"
                             onClick={(e) => {
                               // TEMPORARY debug — remove once the redirect-on-click
                               // report is resolved. See ConsultantChatModal.js.
+                              console.log("[CHAT TEST] CHAT BUTTON CLICKED");
                               console.log("[CONSULTLY TEST] CHAT BUTTON CLICKED");
                               console.log("[CONSULTLY TEST] Chat event target =", e.target);
                               console.log("[CONSULTLY TEST] Chat currentTarget =", e.currentTarget);
+                              e.preventDefault();
                               e.stopPropagation();
                               openChatModal(consultant);
                             }}
