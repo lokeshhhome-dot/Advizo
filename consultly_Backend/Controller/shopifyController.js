@@ -817,6 +817,22 @@ const proxyConsultantsJson = async (req, res) => {
     const userResult = await resolveStorefrontCustomer(req, shop);
     const token = userResult?.token;
 
+    // TEMPORARY debug (Theme Extension identity-sync test) — safe fields
+    // only: booleans and the shop domain. Never the cookie/token values
+    // themselves, never customer id/email/name.
+    console.log("[THEME AUTH DEBUG] shop =", shop);
+    console.log(
+      "[THEME AUTH DEBUG] logged_in_customer_id present =",
+      Boolean(req.query.logged_in_customer_id),
+    );
+    console.log(
+      "[THEME AUTH DEBUG] app session cookie present =",
+      Boolean(req.cookies?.token),
+    );
+    console.log("[THEME AUTH DEBUG] Shopify customer available =", Boolean(userResult?.userId));
+    console.log("[THEME AUTH DEBUG] Shopify identity verified =", Boolean(userResult?.userId));
+    console.log("[THEME AUTH DEBUG] DB user synced =", Boolean(userResult?.userId));
+
     let shopDocId = userResult?.shop_id;
     if (!shopDocId) {
       shopDocId = (await getCachedShopDoc(shop))?._id;
@@ -1098,21 +1114,20 @@ const proxyShopifyStorefrontChat = async (req, res) => {
 
   const customerSession = await resolveStorefrontCustomer(req, shop);
 
-  // TEMPORARY debug — Theme Extension identity-sync test. No token/secret
-  // values are logged, only booleans and the DB user id.
+  // TEMPORARY debug (Theme Extension identity-sync test) — booleans and the
+  // shop domain only, never the DB id value, JWT, or cookie itself.
+  console.log("[THEME AUTH DEBUG] shop =", shop);
   console.log(
-    "[THEME AUTH TEST] Shopify customer detected =",
+    "[THEME AUTH DEBUG] logged_in_customer_id present =",
     Boolean(req.query.logged_in_customer_id),
   );
-  console.log("[THEME AUTH TEST] authenticated =", Boolean(customerSession?.userId));
   console.log(
-    "[THEME AUTH TEST] app userId =",
-    customerSession?.userId ? String(customerSession.userId) : null,
+    "[THEME AUTH DEBUG] app session cookie present =",
+    Boolean(req.cookies?.token),
   );
-  console.log(
-    "[THEME AUTH TEST] DB user synced =",
-    Boolean(customerSession?.userId),
-  );
+  console.log("[THEME AUTH DEBUG] Shopify customer available =", Boolean(customerSession?.userId));
+  console.log("[THEME AUTH DEBUG] Shopify identity verified =", Boolean(customerSession?.userId));
+  console.log("[THEME AUTH DEBUG] DB user synced =", Boolean(customerSession?.userId));
 
   // The httpOnly app session cookie is reused here exactly as every other
   // proxy handler in this file reuses it — set/refreshed on this App Proxy
@@ -1185,9 +1200,11 @@ const exchangeChatSession = async (req, res) => {
     chatExchangeCache.delete(key); // single-use regardless of outcome below
 
     if (!entry || entry.used) {
+      console.log("[THEME AUTH DEBUG] Chat session established =", false);
       return res.status(401).json({ success: false, message: "Invalid or expired exchange code" });
     }
     if (shop && entry.shop && String(shop) !== String(entry.shop)) {
+      console.log("[THEME AUTH DEBUG] Chat session established =", false);
       return res.status(401).json({ success: false, message: "Shop mismatch" });
     }
     if (
@@ -1195,17 +1212,20 @@ const exchangeChatSession = async (req, res) => {
       entry.consultantId &&
       String(consultantId) !== String(entry.consultantId)
     ) {
+      console.log("[THEME AUTH DEBUG] Chat session established =", false);
       return res.status(401).json({ success: false, message: "Consultant mismatch" });
     }
 
     const user = await User.findById(entry.userId).select("_id shop_id");
     if (!user) {
+      console.log("[THEME AUTH DEBUG] Chat session established =", false);
       return res.status(401).json({ success: false, message: "User not found" });
     }
 
     const token = getOrCreateUserToken(user._id);
 
-    console.log("[THEME AUTH TEST] chat session exchange redeemed for userId =", String(user._id));
+    // TEMPORARY debug — boolean only, never the DB id or token value.
+    console.log("[THEME AUTH DEBUG] Chat session established =", true);
 
     res.set("Cache-Control", "no-store");
     return res.status(200).json({

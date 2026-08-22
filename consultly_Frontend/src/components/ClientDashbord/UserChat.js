@@ -104,11 +104,17 @@ const UserChat = ({
           } else {
             console.warn("UserChat chat-session exchange failed:", data?.message);
           }
+          // TEMPORARY debug — booleans only, never the token/id values.
+          console.log(
+            "[THEME AUTH DEBUG] Chat session established =",
+            Boolean(data?.success && data?.userId && data?.token),
+          );
         } catch (error) {
           console.error(
             "UserChat chat-session exchange request failed:",
             error?.response?.data?.message || error?.message,
           );
+          console.log("[THEME AUTH DEBUG] Chat session established =", false);
         }
       }
 
@@ -137,6 +143,12 @@ const UserChat = ({
       // when resolvedClientId/resolvedToken are missing, which is what makes
       // that possible; restore a real auth/balance check before the Chat
       // button opens this modal once testing is done.
+      // TEMPORARY debug — boolean only, never the id/token values.
+      console.log(
+        "[THEME AUTH DEBUG] Socket identity available =",
+        Boolean(resolvedClientId && resolvedToken),
+      );
+
       if (resolvedClientId && resolvedToken) {
         notifySocketUserReady();
         ensureSocketConnected(resolvedClientId, null, 8000, resolvedToken).catch(

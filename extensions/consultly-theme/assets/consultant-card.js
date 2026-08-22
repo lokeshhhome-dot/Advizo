@@ -404,14 +404,43 @@
       return;
     }
 
-    fetch(apiUrl, { credentials: "same-origin", headers: { Accept: "application/json" } })
-      .then(function (res) {
-        if (!res.ok) throw new Error("Request failed with status " + res.status);
-        return res.json();
+    // "include" (not "same-origin") so the shopper's Shopify session cookies
+    // are attached even in edge cases where the browser doesn't treat this
+    // App-Proxy-forwarded request as strictly same-origin (some browsers'
+    // cookie-partitioning heuristics can differ from a plain URL-origin
+    // check) — this is the identity signal logged_in_customer_id depends on.
+    function fetchConsultants() {
+      return fetch(apiUrl, { credentials: "include", headers: { Accept: "application/json" } })
+        .then(function (res) {
+          if (!res.ok) throw new Error("Request failed with status " + res.status);
+          return res.json();
+        })
+        .then(function (data) {
+          if (!data || data.success !== true) throw new Error("Unexpected response shape");
+          return data;
+        });
+    }
+
+    // TEMP (New Customer Accounts identity-sync): a shopper who just
+    // completed a Shop/New-Customer-Accounts login redirect back to the
+    // storefront can hit this page before Shopify's edge has finished
+    // propagating logged_in_customer_id for App Proxy purposes — a real
+    // timing gap, not a code bug (see the identity-mechanism report). One
+    // short, one-time retry gives that propagation a chance to catch up
+    // before falling back to rendering as anonymous. Never retried more than
+    // once, and never blocks anonymous visitors from seeing the cards.
+    fetchConsultants()
+      .then(function (data) {
+        if (data.authenticated) return data;
+        return new Promise(function (resolve) {
+          setTimeout(function () {
+            fetchConsultants().then(resolve).catch(function () {
+              resolve(data); // retry failed — proceed with the first result
+            });
+          }, 700);
+        });
       })
       .then(function (data) {
-        if (!data || data.success !== true) throw new Error("Unexpected response shape");
-
         var mapped = (Array.isArray(data.findConsultant) ? data.findConsultant : [])
           .map(mapConsultant)
           .filter(function (c) {
@@ -435,11 +464,16 @@
           customerId: data.customerId || null,
         });
 
-        // TEMPORARY debug — Theme Extension identity-sync test.
-        console.log("[THEME AUTH TEST] authenticated =", Boolean(data.authenticated));
-        console.log("[THEME AUTH TEST] Shopify customer detected =", Boolean(data.authenticated));
-        console.log("[THEME AUTH TEST] app userId =", data.customerId || null);
-        console.log("[THEME AUTH TEST] DB user synced =", Boolean(data.customerId));
+        // TEMPORARY debug (Theme Extension identity-sync test) — booleans
+        // only, never the DB id value itself. This is the browser seeing
+        // only what /apps/consultly/consultants decided server-side; whether
+        // Shopify actually appended logged_in_customer_id on that request is
+        // logged server-side (proxyConsultantsJson) instead, since this
+        // bundle never sees that raw query param itself.
+        console.log("[THEME AUTH DEBUG] shop =", shop);
+        console.log("[THEME AUTH DEBUG] Shopify customer available =", Boolean(data.authenticated));
+        console.log("[THEME AUTH DEBUG] Shopify identity verified =", Boolean(data.authenticated));
+        console.log("[THEME AUTH DEBUG] DB user synced =", Boolean(data.customerId));
       })
       .catch(function (err) {
         console.error("[consultly] failed to load consultants:", err);
