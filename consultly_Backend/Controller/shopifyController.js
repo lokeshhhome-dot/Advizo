@@ -845,6 +845,11 @@ const proxyConsultantsJson = async (req, res) => {
       shopId: String(shopDocId),
       findConsultant: consultants,
       communicationDisabled,
+      // TEMP (Chat modal UI test): lets the Theme Extension's vanilla JS
+      // open the existing React chat modal (/chats route) in an on-page
+      // iframe without navigating away. Same trusted-URL helper already
+      // used for the App Proxy iframe src elsewhere in this file.
+      chatAppUrl: getTrustedConsultantAppUrl() || null,
     });
   } catch (err) {
     console.error("[app-proxy] /consultly/consultants error:", err);

@@ -54,6 +54,7 @@ const ConsultantChatModal = ({ show, onClose, consultant, shop }) => {
   if (!show || !consultant) return null;
 
   // TEMPORARY debug — remove once the redirect-on-click report is resolved.
+  console.log("[CHAT TEST] MODAL MOUNTED");
   console.log("[CHAT TEST] CONSULTANT CHAT MODAL MOUNTED");
 
   const consultantId = consultant.id || consultant._id;

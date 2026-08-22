@@ -270,6 +270,7 @@ function ConsultantCards() {
   // for real users.
   const openChatModal = (consultant) => {
     // TEMPORARY debug — remove once the redirect-on-click report is resolved.
+    console.log("[CHAT TEST] OPEN CHAT MODAL");
     console.log("[CHAT TEST] OPENING CHAT MODAL");
     console.log("[CONSULTLY TEST] opening ConsultantChatModal");
     console.log("[CONSULTLY Chat] consultantId =", consultant?.id || consultant?._id);
@@ -323,7 +324,14 @@ function ConsultantCards() {
                   <div
                     className="card shadow-sm border-0 consultant-card"
                     // onClick={() => navigate(`/view-profile/${shop_id}/${consultant_id}`)}
-                    onClick={() => viewProfile(consultant_id)}
+                    onClick={(e) => {
+                      // TEMP: belt-and-suspenders guard for the redirect-on-click
+                      // report — the Chat/Call buttons already call
+                      // e.stopPropagation(), this is a second layer in case that
+                      // isn't reliably blocking this card-level navigation.
+                      if (e.target.closest(".calling-options")) return;
+                      viewProfile(consultant_id);
+                    }}
                     style={{ cursor: "pointer" }}
                   >
                     <div className="card-body">
@@ -401,6 +409,7 @@ function ConsultantCards() {
                             onClick={(e) => {
                               // TEMPORARY debug — remove once the redirect-on-click
                               // report is resolved. See ConsultantChatModal.js.
+                              console.log("[CHAT TEST] REAL CONSULTANT CARD CHAT CLICKED");
                               console.log("[CHAT TEST] CHAT BUTTON CLICKED");
                               console.log("[CONSULTLY TEST] CHAT BUTTON CLICKED");
                               console.log("[CONSULTLY TEST] Chat event target =", e.target);

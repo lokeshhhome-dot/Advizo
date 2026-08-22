@@ -147,6 +147,7 @@ function ViewProfile() {
   // for real users.
   const openChatModal = () => {
     // TEMPORARY debug — remove once the redirect-on-click report is resolved.
+    console.log("[CHAT TEST] OPEN CHAT MODAL");
     console.log("[CHAT TEST] OPENING CHAT MODAL");
     console.log("[CONSULTLY TEST] opening ConsultantChatModal");
     console.log("[CONSULTLY Chat] consultantId =", consultantView?._id);
@@ -252,6 +253,7 @@ function ViewProfile() {
                   onClick={(e) => {
                     // TEMPORARY debug — remove once the redirect-on-click
                     // report is resolved.
+                    console.log("[CHAT TEST] REAL CONSULTANT CARD CHAT CLICKED");
                     console.log("[CHAT TEST] CHAT BUTTON CLICKED");
                     console.log("[CONSULTLY TEST] CHAT BUTTON CLICKED (main)");
                     console.log("[CONSULTLY TEST] Chat event target =", e.target);
@@ -437,6 +439,7 @@ function ViewProfile() {
                     onClick={(e) => {
                       // TEMPORARY debug — remove once the redirect-on-click
                       // report is resolved.
+                      console.log("[CHAT TEST] REAL CONSULTANT CARD CHAT CLICKED");
                       console.log("[CHAT TEST] CHAT BUTTON CLICKED");
                       console.log("[CONSULTLY TEST] CHAT BUTTON CLICKED (sidebar)");
                       console.log("[CONSULTLY TEST] Chat event target =", e.target);

@@ -233,6 +233,69 @@
       "</div>";
   }
 
+  // TEMP (Chat modal UI test): no Consultly React iframe exists anywhere on
+  // this storefront page (this card block is plain Liquid/vanilla JS, not
+  // React) — so opening the EXISTING React chat modal (UserChat, normally
+  // reached via ConsultantChatModal inside the CRA app) without navigating
+  // this page away means creating that iframe on demand, right here, the
+  // first time Chat is clicked. Reuses the CRA app's own /chats route (same
+  // UserChat component ConsultantChatModal already wraps) — not a second
+  // chat UI. ?embedded=1 tells UserChat.js to postMessage
+  // CONSULTLY_CHAT_CLOSE instead of navigating when its own close/back
+  // button is used — see UserChat.js closeOrGoBack/backToViewProfile.
+  var chatOverlayIframe = null;
+  var chatOverlayCloseListenerBound = false;
+
+  function closeChatOverlay() {
+    if (chatOverlayIframe && chatOverlayIframe.parentNode) {
+      chatOverlayIframe.parentNode.removeChild(chatOverlayIframe);
+    }
+    chatOverlayIframe = null;
+  }
+
+  function ensureChatOverlayCloseListener() {
+    if (chatOverlayCloseListenerBound) return;
+    chatOverlayCloseListenerBound = true;
+    window.addEventListener("message", function (event) {
+      if (!event.data || event.data.type !== "CONSULTLY_CHAT_CLOSE") return;
+      console.log("[THEME CHAT TEST] CONSULTLY_CHAT_CLOSE received — closing overlay");
+      closeChatOverlay();
+    });
+  }
+
+  function openChatOverlay(chatAppUrl, consultantId, shop, customerId, shopId) {
+    if (!chatAppUrl) {
+      console.error(
+        "[THEME CHAT TEST] chatAppUrl missing from /apps/consultly/consultants response — cannot open chat overlay",
+      );
+      return;
+    }
+    ensureChatOverlayCloseListener();
+    closeChatOverlay();
+
+    var src =
+      chatAppUrl +
+      "/chats?embedded=1&consultantId=" +
+      encodeURIComponent(consultantId) +
+      "&shop=" +
+      encodeURIComponent(shop || "") +
+      (customerId ? "&customerId=" + encodeURIComponent(customerId) : "") +
+      (shopId ? "&shopId=" + encodeURIComponent(shopId) : "");
+
+    console.log("[THEME CHAT TEST] opening chat overlay iframe:", src);
+
+    var iframe = document.createElement("iframe");
+    iframe.src = src;
+    iframe.setAttribute(
+      "style",
+      "position:fixed;top:0;left:0;width:100vw;height:100vh;" +
+        "border:0;z-index:2147483000;background:#fff;",
+    );
+    iframe.setAttribute("allow", "microphone; camera");
+    document.body.appendChild(iframe);
+    chatOverlayIframe = iframe;
+  }
+
   function renderConsultants(container, root, consultants, ctx) {
     if (!consultants.length) {
       renderEmpty(root);
@@ -277,17 +340,36 @@
         btn.addEventListener("click", function (evt) {
           evt.stopPropagation();
 
+          var action = btn.getAttribute("data-action");
+
+          if (action === "chat") {
+            console.log("[THEME CHAT TEST] REAL THEME EXTENSION CHAT CLICKED");
+          }
+
           if (ctx.communicationDisabled) {
             showToast(container, COMM_DISABLED_TOAST);
             return;
           }
-          if (!ctx.authenticated) {
+
+          // TODO(auth): Chat-modal UI test only — the "!ctx.authenticated"
+          // redirect below is intentionally skipped for the "chat" action so
+          // the existing React chat modal opens for an anonymous/unresolved
+          // visitor too. Voice/video are NOT touched (do not touch calling)
+          // and still redirect to login exactly as before. Restore an
+          // equivalent gate for chat before this ships for real users.
+          if (action !== "chat" && !ctx.authenticated) {
             window.location.href = buildLoginUrl(ctx.shop);
             return;
           }
-          // Actually starting the chat/call still happens on the profile
-          // page (it holds the same temporary auth-bridge — see that
-          // block's consultant-profile.js comments).
+
+          if (action === "chat") {
+            openChatOverlay(ctx.chatAppUrl, consultantId, ctx.shop, ctx.customerId, ctx.shopId);
+            return;
+          }
+
+          // Voice/video: unchanged — actually starting the call still
+          // happens on the profile page (it holds the same temporary
+          // auth-bridge — see that block's consultant-profile.js comments).
           window.location.href = buildProfileUrl(consultantId);
         });
       });
@@ -332,6 +414,9 @@
           authenticated: Boolean(data.authenticated),
           communicationDisabled: Boolean(data.communicationDisabled),
           shopCurrency: data.shopCurrency,
+          // TEMP (Chat modal UI test) — see openChatOverlay above.
+          chatAppUrl: data.chatAppUrl || null,
+          customerId: data.customerId || null,
         });
       })
       .catch(function (err) {

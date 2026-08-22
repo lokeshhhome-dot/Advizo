@@ -39,6 +39,7 @@ const UserChat = ({
   onClose,
 } = {}) => {
   // TEMPORARY debug — remove once the redirect-on-click report is resolved.
+  console.log("[CHAT TEST] USERCHAT MOUNTED");
   console.log("[CHAT TEST] USER CHAT RENDERED");
 
   const [text, setText] = useState();
@@ -541,10 +542,20 @@ const UserChat = ({
   }, [clientId, consultantId]);
   // Embedded-modal instances (onClose passed) close in place — leaving the
   // host page's own URL/history untouched. Routed/iframed instances (no
-  // onClose) keep their exact prior navigation behavior.
+  // onClose) keep their exact prior navigation behavior, UNLESS ?embedded=1
+  // is set — that marks this as the Theme Extension's dynamically-injected
+  // fullscreen iframe (no ConsultantChatModal wrapper, so no onClose prop is
+  // possible), which instead posts CONSULTLY_CHAT_CLOSE so the Theme JS that
+  // created the iframe can remove it, mirroring what ConsultantChatModal
+  // itself does for the ConsultantCards/ViewProfile embedding.
+  const isEmbeddedIframe = parms.get("embedded") === "1";
   const closeOrGoBack = () => {
     if (onClose) {
       onClose();
+      return;
+    }
+    if (isEmbeddedIframe) {
+      window.parent.postMessage({ type: "CONSULTLY_CHAT_CLOSE" }, "*");
       return;
     }
     navigate(-1);
@@ -553,6 +564,10 @@ const UserChat = ({
   const backToViewProfile = () => {
     if (onClose) {
       onClose();
+      return;
+    }
+    if (isEmbeddedIframe) {
+      window.parent.postMessage({ type: "CONSULTLY_CHAT_CLOSE" }, "*");
       return;
     }
     const targetShop = shop;
