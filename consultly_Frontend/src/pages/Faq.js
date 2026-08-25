@@ -51,7 +51,7 @@ function Faq() {
         <BlockStack gap="300">
           <Text variant="bodyMd" as="p">
             Navigate to the{" "}
-            <span className="Polaris-Text--bold">Consultant List</span> page and
+            <span className="Polaris-Text--bold">Consultants</span> page and
             click on the{" "}
             <span className="Polaris-Text--bold">Add Consultant</span> button.
             Fill in all the required details including name, email, contact
@@ -314,7 +314,7 @@ function Faq() {
   ];
 
   return (
-    <Page title="Faq">
+    <Page title="FAQ">
       <Layout>
         <Layout.Section>
           <Card padding="0">

@@ -51,7 +51,7 @@ export default function AccountInformation() {
 
   return (
     <Page
-      title="Account Information"
+      title="Billing"
       primaryAction={{
         content: "View Pricing",
         disabled: !displayDomain,

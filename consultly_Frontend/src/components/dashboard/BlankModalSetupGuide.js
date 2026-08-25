@@ -30,7 +30,7 @@ const STEPS = [
   {
     title: "Add Your First Consultant",
     description:
-      "Go to Consultant List and click 'Add Consultant'.",
+      "Go to Consultants and click 'Add Consultant'.",
     image:
       "https://via.placeholder.com/800x400?text=Add+Consultant+Form+Screen",
   },

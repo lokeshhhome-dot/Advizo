@@ -141,7 +141,7 @@ function WithdrawalRequest() {
                 <div className={styles.page}>
                     <div className={styles.header}>
                         <div className={styles.headerLeft}>
-                            <h1 className={styles.title}>Withdrawal Request</h1>
+                            <h1 className={styles.title}>Withdrawal Requests</h1>
                             <p className={styles.subtitle}>
                                 Consultant payout requests waiting for approval.
                             </p>

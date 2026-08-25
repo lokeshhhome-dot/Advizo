@@ -694,7 +694,7 @@ function Dashboard() {
   const helpItems = [
     {
       icon: NoteIcon,
-      title: "Documentation",
+      title: "FAQ",
       desc: "Read guides and learn",
       bg: "#E3F2FD",
       iconColor: "#1565C0",
@@ -775,7 +775,7 @@ function Dashboard() {
                 Refresh
               </Button>
               <Button onClick={() => navigateTo("/faq")}>
-                Documentation
+                FAQ
               </Button>
             </div>
           </div>
