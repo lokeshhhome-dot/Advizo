@@ -16,7 +16,6 @@ import {
   CashDollarIcon,
   CreditCardIcon,
   CartDiscountIcon,
-  PlusIcon,
   PhoneIcon,
   CameraIcon,
   WorkIcon,
@@ -421,18 +420,6 @@ function Dashboard() {
     }
   }, [dispatch, adminIdLocal, app, enabled]);
 
-  const [justActivated, setJustActivated] = useState(false);
-  const prevEnabledRef = useRef(enabled);
-  useEffect(() => {
-    const prev = prevEnabledRef.current;
-    prevEnabledRef.current = enabled;
-    if (prev === false && enabled === true) {
-      setJustActivated(true);
-      const timer = setTimeout(() => setJustActivated(false), 1600);
-      return () => clearTimeout(timer);
-    }
-  }, [enabled]);
-
   const handleRefresh = useCallback(async () => {
     if (!adminIdLocal || isRefreshing) return;
     setIsRefreshing(true);
@@ -683,52 +670,6 @@ function Dashboard() {
     },
   ];
 
-  const quickActions = [
-    {
-      icon: PlusIcon,
-      title: "Add consultant",
-      desc: "Create a new consultant profile",
-      path: "/consultant-list/add-consultant",
-      bg: "#E8F5E9",
-      iconColor: "#2E7D32",
-    },
-
-    {
-      icon: CartDiscountIcon,
-      title: "Create voucher",
-      desc: "Offer credits to users",
-      path: "/voucher-management",
-      bg: "#FCE4EC",
-      iconColor: "#C2185B",
-    },
-    {
-      icon: CreditCardIcon,
-      title: "Manage wallet",
-      desc: "View wallet transactions",
-      path: "/wallet-management",
-      bg: "#E0F7FA",
-      iconColor: "#00838F",
-    },
-    {
-      icon: ChartVerticalIcon,
-      title: "View revenue",
-      desc: "Check earnings & reports",
-      path: "/revenue-management",
-      bg: "#FFF8E1",
-      iconColor: "#F9A825",
-    },
-    {
-      icon: ExternalIcon,
-      title: "Configure menus",
-      desc: menusComplete
-        ? "Storefront navigation links are set"
-        : "Add navigation links to your storefront",
-      onClick: handleOpenMenus,
-      bg: "#F1F5FF",
-      iconColor: "#4338CA",
-    },
-  ];
-
   const openSupportEmail = useCallback(() => {
     const subject = encodeURIComponent(
       `Consultly support — ${shopDomain || "my store"}`,
@@ -797,38 +738,34 @@ function Dashboard() {
               </p>
             </div>
             <div className={styles.greetingActions}>
-              <button
-                type="button"
-                className={[
-                  styles.statusPill,
-                  enabled ? styles.statusPillActive : styles.statusPillInactive,
-                  isTogglingApp && styles.statusPillLoading,
-                  justActivated && styles.statusPillPop,
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                onClick={
-                  !enabled && !isTogglingApp ? handleToggle : undefined
-                }
-                disabled={isTogglingApp}
-                title={
-                  enabled
-                    ? "Consultly is live on your storefront"
-                    : "Click to activate Consultly on your storefront"
-                }
-              >
-                <span className={styles.statusDot}>
-                  {!enabled && !isTogglingApp && (
-                    <span className={styles.statusDotPing} />
-                  )}
-                  <span className={styles.statusDotCore} />
-                </span>
-                {isTogglingApp
-                  ? "Activating…"
-                  : enabled
-                    ? "App active"
-                    : "Inactive · Activate app"}
-              </button>
+              {isTogglingApp ? (
+                <Button size="slim" loading disabled>
+                  {enabled ? "Deactivating…" : "Activating…"}
+                </Button>
+              ) : enabled ? (
+                <>
+                  <Badge tone="success">Active</Badge>
+                  <Button
+                    size="slim"
+                    tone="critical"
+                    onClick={handleToggle}
+                    accessibilityLabel="Deactivate Consultly on your storefront"
+                  >
+                    Deactivate
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Badge tone="attention">Inactive</Badge>
+                  <Button
+                    size="slim"
+                    onClick={handleToggle}
+                    accessibilityLabel="Activate Consultly on your storefront"
+                  >
+                    Activate app
+                  </Button>
+                </>
+              )}
               <Button
                 icon={RefreshIcon}
                 onClick={handleRefresh}
@@ -898,10 +835,7 @@ function Dashboard() {
             ))}
           </div>
 
-            {/* Overview & trends — kept from the existing dashboard, unchanged */}
-          <div className={styles.overviewHeader}>
-            <h2 className={styles.overviewTitle}>Overview</h2>
-          </div>
+          {/* Overview & trends */}
           <div className={styles.trendsCard}>
             <div className={styles.trendsCardHeader}>
               <p className={styles.trendsLabel}>Overview &amp; trends</p>
@@ -1072,6 +1006,36 @@ function Dashboard() {
             </div>
           )}
 
+          {/* Store navigation */}
+          <div className={styles.homeCard}>
+            <div className={styles.storeNavRow}>
+              <div className={styles.storeNavIconBox}>
+                <Icon source={ExternalIcon} tone="base" />
+              </div>
+              <div className={styles.storeNavLeft}>
+                <div className={styles.storeNavTitleRow}>
+                  <h3 className={styles.storeNavTitle}>Store navigation</h3>
+                  <span
+                    className={[
+                      styles.storeNavStatus,
+                      menusComplete
+                        ? styles.storeNavStatusOn
+                        : styles.storeNavStatusOff,
+                    ].join(" ")}
+                  >
+                    {menusComplete ? "On" : "Off"}
+                  </span>
+                </div>
+                <p className={styles.storeNavText}>
+                  {menusComplete
+                    ? "Your app menus are configured and visible on the storefront."
+                    : "Some app menus still need to be added to your storefront navigation."}
+                </p>
+              </div>
+              <Button onClick={handleOpenMenus}>Configure menus →</Button>
+            </div>
+          </div>
+
           {/* Recent activity */}
           <div className={styles.homeCard}>
               <div className={styles.homeCardHeader}>
@@ -1140,53 +1104,6 @@ function Dashboard() {
                 </div>
               )}
           </div>
-
-          {/* Quick actions */}
-          <div className={styles.homeCard}>
-            <Text variant="headingMd" as="h3">
-              Quick actions
-            </Text>
-            <div className={styles.quickGrid}>
-              {quickActions.map((action) => {
-                const handleActivate = () =>
-                  action.onClick ? action.onClick() : navigateTo(action.path);
-                return (
-                  <div
-                    key={action.title}
-                    role="button"
-                    tabIndex={0}
-                    onClick={handleActivate}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") handleActivate();
-                    }}
-                    className={styles.quickItem}
-                  >
-                    <div className={styles.quickItemLeft}>
-                      <div
-                        className={styles.quickIconBox}
-                        style={{
-                          background: action.bg,
-                          color: action.iconColor,
-                        }}
-                      >
-                        <Icon source={action.icon} tone="base" />
-                      </div>
-                      <div className={styles.quickItemText}>
-                        <Text variant="bodySm" fontWeight="semibold" as="p">
-                          {action.title}
-                        </Text>
-                        <Text variant="bodySm" tone="subdued" as="p">
-                          {action.desc}
-                        </Text>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-        
         </div>
       </Page>
     </>

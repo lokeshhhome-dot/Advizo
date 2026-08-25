@@ -1,0 +1,375 @@
+
+> my-consultant-app@0.1.0 build
+> react-scripts build
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+Creating an optimized production build...
+Browserslist: browsers data (caniuse-lite) is 9 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+Browserslist: browsers data (caniuse-lite) is 9 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Browserslist: browsers data (caniuse-lite) is 9 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Browserslist: browsers data (caniuse-lite) is 9 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Browserslist: browsers data (caniuse-lite) is 9 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Browserslist: browsers data (caniuse-lite) is 9 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Browserslist: browsers data (caniuse-lite) is 9 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Browserslist: browsers data (caniuse-lite) is 9 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Compiled with warnings.
+
+[eslint] 
+src\App.js
+  Line 20:10:  'BillingProtectedRoute' is defined but never used                                                                      no-unused-vars
+  Line 196:6:  React Hook useEffect has a missing dependency: 'sendHeightToParent'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src\components\AlertModel\IncommingCallAlert.js
+  Line 25:6:  React Hook useEffect has missing dependencies: 'handleReject' and 'incomingCall'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+src\components\AlertModel\InsuffientBalance.js
+  Line 1:10:  'useSelector' is defined but never used  no-unused-vars
+  Line 1:23:  'useDispatch' is defined but never used  no-unused-vars
+  Line 2:10:  'useEffect' is defined but never used    no-unused-vars
+  Line 2:21:  'useState' is defined but never used     no-unused-vars
+
+src\components\AlertModel\MessageNotificationAlert.js
+  Line 1:17:  'useEffect' is defined but never used  no-unused-vars
+
+src\components\AlertModel\PushCallIncoming.js
+  Line 25:9:  'handleReject' is assigned a value but never used  no-unused-vars
+
+src\components\AlertModel\UserAlert.js
+  Line 1:10:  'Button' is defined but never used       no-unused-vars
+  Line 1:18:  'Frame' is defined but never used        no-unused-vars
+  Line 2:10:  'useState' is defined but never used     no-unused-vars
+  Line 2:20:  'useCallback' is defined but never used  no-unused-vars
+
+src\components\AlertModel\WidthrwalRequestApprove.js
+  Line 7:5:    'Button' is defined but never used                                                                                                                                                                                                                                                                            no-unused-vars
+  Line 13:31:  'shop_Id' is assigned a value but never used                                                                                                                                                                                                                                                                  no-unused-vars
+  Line 13:48:  'status' is assigned a value but never used                                                                                                                                                                                                                                                                   no-unused-vars
+  Line 14:12:  'user' is assigned a value but never used                                                                                                                                                                                                                                                                     no-unused-vars
+  Line 26:8:   React Hook useEffect has missing dependencies: 'amount', 'description', 'fullname', 'id', 'setUpdateFormData', and 'userId'. Either include them or remove the dependency array. If 'setUpdateFormData' changes too often, find the parent component that defines it and wrap that definition in useCallback  react-hooks/exhaustive-deps
+
+src\components\ClientDashbord\ProfileSection.js
+  Line 29:23:  'setVoucherData' is assigned a value but never used  no-unused-vars
+
+src\components\ClientDashbord\UserChat.js
+  Line 2:23:    'useParams' is defined but never used                                                                                                                                                                                                            no-unused-vars
+  Line 16:3:    'updateUserRequestById' is defined but never used                                                                                                                                                                                                no-unused-vars
+  Line 265:6:   React Hook useEffect has a missing dependency: 'dispatch'. Either include it or remove the dependency array                                                                                                                                      react-hooks/exhaustive-deps
+  Line 276:6:   React Hook useEffect has missing dependencies: 'dispatch', 'shop', and 'token'. Either include them or remove the dependency array                                                                                                               react-hooks/exhaustive-deps
+  Line 393:11:  'payload' is assigned a value but never used                                                                                                                                                                                                     no-unused-vars
+  Line 598:6:   React Hook useEffect has a missing dependency: 'chatMessagesData.length'. Either include it or remove the dependency array                                                                                                                       react-hooks/exhaustive-deps
+  Line 630:11:  'hostQuery' is assigned a value but never used                                                                                                                                                                                                   no-unused-vars
+  Line 689:6:   React Hook useEffect has missing dependencies: 'chatTimer.isRunning', 'chatTimer.shopId', 'chatTimer.startTime', 'chatTimer.transactionId', 'clientId', 'closeOrGoBack', and 'consultantId'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  Line 699:6:   React Hook useEffect has a missing dependency: 'closeOrGoBack'. Either include it or remove the dependency array                                                                                                                                 react-hooks/exhaustive-deps
+
+src\components\ClientDashbord\UserSupport.js
+  Line 13:11:  'userId' is assigned a value but never used  no-unused-vars
+
+src\components\ConsultantCards\ConsultantCards.js
+  Line 6:10:   'checkUserBalance' is defined but never used                                                                  no-unused-vars
+  Line 116:6:  React Hook useEffect has a missing dependency: 'authToken'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src\components\ConsultantCards\ViewProfile.js
+  Line 2:23:   'useParams' is defined but never used             no-unused-vars
+  Line 7:10:   'checkUserBalance' is defined but never used      no-unused-vars
+  Line 20:9:   'navigate' is assigned a value but never used     no-unused-vars
+  Line 46:31:  'loading' is assigned a value but never used      no-unused-vars
+  Line 121:9:  'renderStars' is assigned a value but never used  no-unused-vars
+
+src\components\ConsultantDashboard\ChatsPage.js
+  Line 2:10:    'useNavigate' is defined but never used                                                                                                                                                                                           no-unused-vars
+  Line 16:10:   'toast' is defined but never used                                                                                                                                                                                                 no-unused-vars
+  Line 37:10:   'showNotification' is assigned a value but never used                                                                                                                                                                             no-unused-vars
+  Line 38:10:   'notificationMessage' is assigned a value but never used                                                                                                                                                                          no-unused-vars
+  Line 75:6:    React Hook useEffect has a missing dependency: 'chatTimer.userId'. Either include it or remove the dependency array                                                                                                               react-hooks/exhaustive-deps
+  Line 160:6:   React Hook useEffect has a missing dependency: 'chatList'. Either include it or remove the dependency array                                                                                                                       react-hooks/exhaustive-deps
+  Line 229:17:  'firstChat' is assigned a value but never used                                                                                                                                                                                    no-unused-vars
+  Line 245:6:   React Hook useEffect has a missing dependency: 'getChatList'. Either include it or remove the dependency array                                                                                                                    react-hooks/exhaustive-deps
+  Line 290:9:   'isCurrentChatMessage' is assigned a value but never used                                                                                                                                                                         no-unused-vars
+  Line 408:6:   React Hook useEffect has a missing dependency: 'handleChatSelect'. Either include it or remove the dependency array                                                                                                               react-hooks/exhaustive-deps
+  Line 448:6:   React Hook useEffect has an unnecessary dependency: 'socket'. Either exclude it or remove the dependency array. Outer scope values like 'socket' aren't valid dependencies because mutating them doesn't re-render the component  react-hooks/exhaustive-deps
+  Line 531:6:   React Hook useEffect has a missing dependency: 'getChatList'. Either include it or remove the dependency array                                                                                                                    react-hooks/exhaustive-deps
+  Line 537:6:   React Hook useEffect has a missing dependency: 'chatTimer'. Either include it or remove the dependency array                                                                                                                      react-hooks/exhaustive-deps
+  Line 782:29:  'isChatAccepted' is assigned a value but never used                                                                                                                                                                               no-unused-vars
+
+src\components\ConsultantDashboard\DashboardPage.js
+  Line 258:9:  'profileImage' is assigned a value but never used  no-unused-vars
+
+src\components\ConsultantDashboard\TabNavigation.js
+  Line 79:6:   React Hook useEffect has a missing dependency: 'dispatch'. Either include it or remove the dependency array                            react-hooks/exhaustive-deps
+  Line 171:6:  React Hook useEffect has a missing dependency: 'dispatch'. Either include it or remove the dependency array                            react-hooks/exhaustive-deps
+  Line 281:6:  React Hook useEffect has missing dependencies: 'location.pathname' and 'navigate'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+src\components\ConsultantDashboard\TopHeader.js
+  Line 76:12:  'searchValue' is assigned a value but never used     no-unused-vars
+  Line 76:25:  'setSearchValue' is assigned a value but never used  no-unused-vars
+
+src\components\ConsultantDashboard\VideoCallingPage.js
+  Line 16:21:    'socket' is defined but never used                                                                                                                                                                 no-unused-vars
+  Line 39:9:     'location' is assigned a value but never used                                                                                                                                                      no-unused-vars
+  Line 45:10:    'callSession' is assigned a value but never used                                                                                                                                                   no-unused-vars
+  Line 71:10:    'callAccepted' is assigned a value but never used                                                                                                                                                  no-unused-vars
+  Line 73:19:    'channel' is assigned a value but never used                                                                                                                                                       no-unused-vars
+  Line 78:10:    'bothUserJoined' is assigned a value but never used                                                                                                                                                no-unused-vars
+  Line 86:10:    'isCallActive' is assigned a value but never used                                                                                                                                                  no-unused-vars
+  Line 312:6:    React Hook useEffect has missing dependencies: 'activeCallContext', 'getElapsedCallSeconds', and 'getStoredCallSession'. Either include them or remove the dependency array                        react-hooks/exhaustive-deps
+  Line 438:6:    React Hook useEffect has missing dependencies: 'getCallSession', 'handleEndCall', 'markBillingActive', and 'startTimer'. Either include them or remove the dependency array                        react-hooks/exhaustive-deps
+  Line 498:6:    React Hook useEffect has a missing dependency: 'activeCallContext'. Either include it or remove the dependency array                                                                               react-hooks/exhaustive-deps
+  Line 520:6:    React Hook useEffect has missing dependencies: 'cleanupCallUI' and 'leaveCallPage'. Either include them or remove the dependency array                                                             react-hooks/exhaustive-deps
+  Line 526:6:    React Hook useEffect has a missing dependency: 'handleEndCall'. Either include it or remove the dependency array                                                                                   react-hooks/exhaustive-deps
+  Line 577:6:    React Hook useEffect has a missing dependency: 'emitUserIsOn'. Either include it or remove the dependency array                                                                                    react-hooks/exhaustive-deps
+  Line 633:6:    React Hook useEffect has missing dependencies: 'markBillingActive' and 'startTimer'. Either include them or remove the dependency array                                                            react-hooks/exhaustive-deps
+  Line 649:6:    React Hook useEffect has a missing dependency: 'handleEndCall'. Either include it or remove the dependency array                                                                                   react-hooks/exhaustive-deps
+  Line 668:6:    React Hook useEffect has a missing dependency: 'handleEndCall'. Either include it or remove the dependency array                                                                                   react-hooks/exhaustive-deps
+  Line 710:6:    React Hook useEffect has missing dependencies: 'callType', 'callerIdParam', 'channelNameParam', 'emitMediaConnected', and 'receiverId'. Either include them or remove the dependency array         react-hooks/exhaustive-deps
+  Line 744:6:    React Hook useEffect has missing dependencies: 'callType', 'callerIdParam', 'channelNameParam', 'receiverId', 'transactionId', and 'userType'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  Line 761:6:    React Hook useEffect has a missing dependency: 'startTimer'. Either include it or remove the dependency array                                                                                      react-hooks/exhaustive-deps
+  Line 852:6:    React Hook useEffect has a missing dependency: 'userType'. Either include it or remove the dependency array                                                                                        react-hooks/exhaustive-deps
+  Line 1061:6:   React Hook useEffect has a missing dependency: 'getCallingUser'. Either include it or remove the dependency array                                                                                  react-hooks/exhaustive-deps
+  Line 1222:11:  'result' is assigned a value but never used                                                                                                                                                        no-unused-vars
+  Line 1260:6:   React Hook useEffect has missing dependencies: 'buildCallEndPayload', 'dispatch', 'getElapsedCallSeconds', and 'leaveCallPage'. Either include them or remove the dependency array                 react-hooks/exhaustive-deps
+  Line 1276:6:   React Hook useEffect has a missing dependency: 'handleEndCall'. Either include it or remove the dependency array                                                                                   react-hooks/exhaustive-deps
+  Line 1290:6:   React Hook useEffect has a missing dependency: 'handleEndCall'. Either include it or remove the dependency array                                                                                   react-hooks/exhaustive-deps
+  Line 1344:6:   React Hook useEffect has a missing dependency: 'emitMediaConnected'. Either include it or remove the dependency array                                                                              react-hooks/exhaustive-deps
+
+src\components\ConsultantDashboard\WithdrawalRequestForm.js
+  Line 13:10:  'formatAmountHelper' is defined but never used  no-unused-vars
+
+src\components\Redux\slices\callSlice.js
+  Line 359:19:  'publishedTracks' is assigned a value but never used  no-unused-vars
+
+src\components\loading\PageSkeletons.js
+  Line 6:3:  'Page' is defined but never used  no-unused-vars
+
+src\components\middle-ware\OpenCallingPage.js
+  Line 2:10:    'openCallWindow' is defined but never used         no-unused-vars
+  Line 2:26:    'CALL_WINDOW_NAME' is defined but never used       no-unused-vars
+  Line 138:11:  'tokenEncoded' is assigned a value but never used  no-unused-vars
+
+src\pages\AccountInformation.js
+  Line 4:3:    'Button' is defined but never used                                                                                       no-unused-vars
+  Line 21:35:  'adminDetailsLoading' is assigned a value but never used                                                                 no-unused-vars
+  Line 50:6:   React Hook useEffect has missing dependencies: 'app' and 'dispatch'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+src\pages\AddConsultant.js
+  Line 101:10:  'submitError' is assigned a value but never used                                                                                                                                  no-unused-vars
+  Line 102:10:  'submitSuccess' is assigned a value but never used                                                                                                                                no-unused-vars
+  Line 105:10:  'profileImagePreview' is assigned a value but never used                                                                                                                          no-unused-vars
+  Line 344:6:   React Hook useCallback has missing dependencies: 'adminIdLocal', 'app', 'goToAddConsultant', 'showToast', and 'validateForm'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  Line 482:6:   React Hook useEffect has a missing dependency: 'getConsultantById'. Either include it or remove the dependency array                                                              react-hooks/exhaustive-deps
+
+src\pages\AdminPercentage.js
+  Line 37:6:  React Hook useEffect has missing dependencies: 'app' and 'dispatch'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+src\pages\CallChatLogs.js
+  Line 67:6:  React Hook useEffect has a missing dependency: 'dispatch'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src\pages\ConsultantList.js
+  Line 93:6:  React Hook useEffect has a missing dependency: 'dispatch'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src\pages\Dashboard.js
+  Line 46:8:    'WelcomeModal' is defined but never used                                                                          no-unused-vars
+  Line 186:10:  'SetupCompleteCard' is defined but never used                                                                     no-unused-vars
+  Line 264:10:  'welcomeModalOpen' is assigned a value but never used                                                             no-unused-vars
+  Line 347:6:   React Hook useMemo has a missing dependency: 'setupGuideProps'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  Line 355:9:   'allSetupSteps' is assigned a value but never used                                                                no-unused-vars
+  Line 358:6:   React Hook useMemo has a missing dependency: 'setupGuideProps'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src\pages\Faq.js
+  Line 20:35:  'adminDetailsLoading' is assigned a value but never used                                                no-unused-vars
+  Line 31:6:   React Hook useEffect has a missing dependency: 'app'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src\pages\History.js
+  Line 41:6:  React Hook useEffect has a missing dependency: 'dispatch'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src\pages\LayoutFrame.js
+  Line 2:5:     'Frame' is defined but never used                     no-unused-vars
+  Line 45:12:   'mobileNavActive' is assigned a value but never used  no-unused-vars
+  Line 170:11:  'topBarMarkup' is assigned a value but never used     no-unused-vars
+
+src\pages\ManualDebetCreditBlance.js
+  Line 20:12:  'toastActive' is assigned a value but never used                                                        no-unused-vars
+  Line 47:8:   React Hook useEffect has a missing dependency: 'app'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src\pages\RevenuManagement.js
+  Line 33:8:  React Hook useEffect has a missing dependency: 'app'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src\pages\UpdateUserDetailsModal.js
+  Line 7:5:    'Button' is defined but never used           no-unused-vars
+  Line 13:13:  'userId' is assigned a value but never used  no-unused-vars
+  Line 14:12:  'user' is assigned a value but never used    no-unused-vars
+
+src\pages\UserTransHistory.js
+  Line 33:8:  React Hook useEffect has a missing dependency: 'app'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  Line 38:8:  React Hook useEffect has a missing dependency: 'app'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src\pages\Voucher.js
+  Line 4:10:   'redirect' is defined but never used                                                                         no-unused-vars
+  Line 4:20:   'useOutletContext' is defined but never used                                                                 no-unused-vars
+  Line 20:24:  'loading' is assigned a value but never used                                                                 no-unused-vars
+  Line 25:11:  'shop' is assigned a value but never used                                                                    no-unused-vars
+  Line 73:6:   React Hook useEffect has a missing dependency: 'dispatch'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src\pages\WithdrawalRequest.js
+  Line 51:8:  React Hook useEffect has a missing dependency: 'app'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src\utils\browserSession.js
+  Line 183:7:  'redirectForSession' is assigned a value but never used  no-unused-vars
+
+static/css/main.ee0fa44f.css from Css Minimizer plugin
+postcss-calc:: Lexical error on line 1: Unrecognized text.
+
+  Erroneous area:
+1: auto + var(--pc-choice-space-0) + var(--pc-choice-space-0)
+^..^ webpack://./node_modules/@shopify/polaris/build/esm/styles.css:3644:2
+
+static/css/main.ee0fa44f.css from Css Minimizer plugin
+postcss-calc:: Lexical error on line 1: Unrecognized text.
+
+  Erroneous area:
+1: auto + var(--pc-choice-space-0) + var(--pc-choice-space-0)
+^..^ webpack://./node_modules/@shopify/polaris/build/esm/styles.css:3645:2
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+File sizes after gzip:
+
+  570.73 kB (+31 B)  build\static\js\main.d99226d1.js
+  91.37 kB           build\static\css\main.97d7cee7.css
+  26.2 kB            build\static\js\6136.61fa6a91.chunk.js
+  23.78 kB           build\static\js\856.29420718.chunk.js
+  14.82 kB           build\static\js\8529.89974627.chunk.js
+  14.66 kB           build\static\js\7446.cc2039c4.chunk.js
+  12.55 kB           build\static\js\3991.c0378a4b.chunk.js
+  10.38 kB           build\static\js\3401.ef73ae5e.chunk.js
+  10.18 kB           build\static\js\6293.f6157849.chunk.js
+  10.16 kB (-291 B)  build\static\js\1739.a03f6fc5.chunk.js
+  8.69 kB            build\static\js\7288.7cbec0fe.chunk.js
+  7.85 kB            build\static\js\4026.d64e3be2.chunk.js
+  7.69 kB            build\static\css\4101.63839755.chunk.css
+  7.67 kB            build\static\js\6697.670ef79b.chunk.js
+  7.65 kB            build\static\js\8862.1e299a8f.chunk.js
+  7.17 kB            build\static\js\8390.72482101.chunk.js
+  6.76 kB            build\static\js\7975.4b1dcc60.chunk.js
+  6.18 kB            build\static\js\1232.80ba1f6c.chunk.js
+  6.04 kB            build\static\css\7288.d6438c96.chunk.css
+  5.99 kB (+7 B)     build\static\js\1853.668f79dd.chunk.js
+  5.94 kB            build\static\js\8964.a5f699b8.chunk.js
+  5.71 kB            build\static\js\1647.29545113.chunk.js
+  5.67 kB            build\static\js\5719.442a846e.chunk.js
+  5.56 kB            build\static\js\4101.e9da8450.chunk.js
+  5.49 kB            build\static\js\2285.73465dd2.chunk.js
+  5.34 kB            build\static\js\7898.f34e2291.chunk.js
+  5.22 kB            build\static\js\6527.496a1304.chunk.js
+  5.01 kB            build\static\js\6040.4c1872f3.chunk.js
+  4.73 kB            build\static\js\4206.6d663d0f.chunk.js
+  4.66 kB            build\static\js\4444.7e241b48.chunk.js
+  4.63 kB            build\static\js\2587.d098ef66.chunk.js
+  4.62 kB            build\static\js\9866.77bbbe86.chunk.js
+  4.33 kB            build\static\js\629.a08bc94f.chunk.js
+  4 kB               build\static\js\4614.13eb1876.chunk.js
+  3.77 kB            build\static\js\6769.7821a809.chunk.js
+  3.76 kB            build\static\css\8862.94a969b9.chunk.css
+  3.67 kB            build\static\css\1999.82c5e687.chunk.css
+  3.67 kB            build\static\css\4380.82c5e687.chunk.css
+  3.55 kB            build\static\js\2233.16bd33b6.chunk.js
+  3.32 kB            build\static\js\779.e058e136.chunk.js
+  3.32 kB            build\static\js\3160.5ab101e4.chunk.js
+  3.32 kB            build\static\js\7962.3062fe53.chunk.js
+  3.24 kB            build\static\css\5226.5af56a87.chunk.css
+  3.06 kB            build\static\js\7034.2b14af7f.chunk.js
+  3.03 kB            build\static\css\3401.7222d8eb.chunk.css
+  2.99 kB            build\static\js\6564.1afb7a39.chunk.js
+  2.88 kB            build\static\js\7590.a4af6d77.chunk.js
+  2.79 kB            build\static\css\8964.fd2deb40.chunk.css
+  2.78 kB            build\static\js\8173.ac4dadbe.chunk.js
+  2.63 kB            build\static\js\1018.d5c8952b.chunk.js
+  2.63 kB            build\static\js\8637.e3bebf40.chunk.js
+  2.61 kB            build\static\js\9689.db6c8917.chunk.js
+  2.61 kB            build\static\js\2070.a1a0d1ee.chunk.js
+  2.29 kB            build\static\js\7623.ee357619.chunk.js
+  2.28 kB            build\static\js\4.0454deba.chunk.js
+  2.26 kB            build\static\css\1853.19005ae5.chunk.css
+  2.24 kB            build\static\js\1750.f2162191.chunk.js
+  2.19 kB            build\static\js\9482.ec097934.chunk.js
+  2.12 kB            build\static\js\1603.7869c031.chunk.js
+  2.11 kB            build\static\js\4585.1a6ffea6.chunk.js
+  2.08 kB            build\static\js\6161.aa28fa9d.chunk.js
+  1.84 kB            build\static\css\9514.3d24c0c8.chunk.css
+  1.84 kB            build\static\css\8005.3d24c0c8.chunk.css
+  1.82 kB            build\static\css\5719.9781afd7.chunk.css
+  1.69 kB            build\static\js\872.ef1f0316.chunk.js
+  1.54 kB            build\static\css\2233.c6d04331.chunk.css
+  1.54 kB            build\static\css\4614.c6d04331.chunk.css
+  1.46 kB            build\static\css\1018.c86cde33.chunk.css
+  1.46 kB            build\static\css\1463.c86cde33.chunk.css
+  1.46 kB            build\static\css\2070.c86cde33.chunk.css
+  1.46 kB            build\static\css\3844.c86cde33.chunk.css
+  1.46 kB            build\static\css\4940.c86cde33.chunk.css
+  1.46 kB            build\static\css\7053.c86cde33.chunk.css
+  1.46 kB            build\static\css\8637.c86cde33.chunk.css
+  1.46 kB            build\static\css\9689.c86cde33.chunk.css
+  1.46 kB            build\static\css\4585.239abdf3.chunk.css
+  1.38 kB            build\static\css\1750.4d9c35c3.chunk.css
+  1.34 kB            build\static\css\1603.51020b44.chunk.css
+  1.34 kB            build\static\css\9482.51020b44.chunk.css
+  1.32 kB            build\static\js\2879.82508b78.chunk.js
+  1.31 kB            build\static\css\7034.f632c0bd.chunk.css
+  1.19 kB            build\static\css\8173.f5511c37.chunk.css
+  1.11 kB            build\static\js\8599.ff906b98.chunk.js
+  1.11 kB            build\static\js\980.02d352bb.chunk.js
+  1.11 kB            build\static\css\7623.961b1d8d.chunk.css
+  1.1 kB             build\static\css\4.961b1d8d.chunk.css
+  1.08 kB            build\static\js\7053.75cbc914.chunk.js
+  952 B              build\static\js\6424.1db38883.chunk.js
+  859 B              build\static\css\6527.07e33ed7.chunk.css
+  827 B              build\static\css\872.0a9bbd65.chunk.css
+  646 B              build\static\js\4940.bc33854e.chunk.js
+  617 B              build\static\js\25.cd5c39f1.chunk.js
+  609 B              build\static\js\9514.da5c36d9.chunk.js
+  537 B              build\static\css\9866.c1d40961.chunk.css
+  536 B              build\static\css\2587.c1d40961.chunk.css
+  535 B              build\static\css\4026.c1d40961.chunk.css
+  535 B              build\static\css\4206.c1d40961.chunk.css
+  359 B              build\static\js\1900.bf8ef6fd.chunk.js
+
+The bundle size is significantly larger than recommended.
+Consider reducing it with code splitting: https://goo.gl/9VhYWB
+You can also analyze the project dependencies: https://goo.gl/LeUzfb
+
+The project was built assuming it is hosted at /.
+You can control this with the homepage field in your package.json.
+
+The build folder is ready to be deployed.
+You may serve it with a static server:
+
+  npm install -g serve
+  serve -s build
+
+Find out more about deployment here:
+
+  https://cra.link/deployment
+

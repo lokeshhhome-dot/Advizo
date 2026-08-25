@@ -39,157 +39,6 @@
   flex-wrap: wrap;
 }
 
-.statusPill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 14px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.2;
-  border: 1px solid transparent;
-  cursor: default;
-  font-family: inherit;
-  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease,
-    box-shadow 0.2s ease, transform 0.15s ease;
-}
-
-.statusPillActive {
-  background: #e7f6ec;
-  color: #135430;
-  border-color: #b8e3c9;
-}
-
-/* Polaris "attention" tones — setup-incomplete, not an error state */
-.statusPillInactive {
-  background: #fff8db;
-  color: #5e4200;
-  border-color: #f5e39c;
-  cursor: pointer;
-  animation: statusPillNudge 2.4s ease-in-out infinite;
-}
-
-.statusPillInactive:hover {
-  background: #fff1c2;
-  border-color: #ebd377;
-  box-shadow: 0 2px 8px rgba(151, 111, 0, 0.15);
-  transform: translateY(-1px);
-}
-
-/* Polaris "info" tones while the toggle request is in flight */
-.statusPillLoading {
-  background: #eaf4ff;
-  color: #00527c;
-  border-color: #b4d8f0;
-  cursor: wait;
-}
-
-.statusPillLoading .statusDotCore {
-  background: #0070a3;
-  animation: statusDotBlink 0.9s ease-in-out infinite;
-}
-
-.statusPillPop {
-  animation: statusPillPop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.statusDot {
-  position: relative;
-  width: 8px;
-  height: 8px;
-  flex-shrink: 0;
-}
-
-.statusDotCore {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.statusPillActive .statusDotCore {
-  background: #29845a;
-  animation: statusDotGlow 2.2s ease-in-out infinite;
-}
-
-.statusPillInactive .statusDotCore {
-  background: #b98900;
-}
-
-.statusDotPing {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: #b98900;
-  animation: statusDotPing 1.4s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
-
-@keyframes statusDotPing {
-  0% {
-    transform: scale(1);
-    opacity: 0.7;
-  }
-  75%,
-  100% {
-    transform: scale(2.8);
-    opacity: 0;
-  }
-}
-
-@keyframes statusDotGlow {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(41, 132, 90, 0.4);
-  }
-  50% {
-    box-shadow: 0 0 0 4px rgba(41, 132, 90, 0);
-  }
-}
-
-@keyframes statusDotBlink {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.3;
-  }
-}
-
-@keyframes statusPillNudge {
-  0%,
-  86%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(185, 137, 0, 0);
-  }
-  93% {
-    box-shadow: 0 0 0 5px rgba(185, 137, 0, 0.15);
-  }
-}
-
-@keyframes statusPillPop {
-  0% {
-    transform: scale(0.85);
-  }
-  55% {
-    transform: scale(1.12);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .statusPillInactive,
-  .statusPillPop,
-  .statusDotPing,
-  .statusPillActive .statusDotCore,
-  .statusPillLoading .statusDotCore {
-    animation: none;
-  }
-}
-
 .tipBanner {
   display: flex;
   align-items: flex-start;
@@ -238,21 +87,6 @@
 
 .sectionGap {
   margin-bottom: 16px;
-}
-
-.overviewHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.overviewTitle {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 650;
-  color: #202223;
 }
 
 .trendsCard {
@@ -412,68 +246,6 @@
   transition: width 0.5s ease;
 }
 
-
-.quickGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
-  margin-top: 14px;
-}
-
-.quickItem {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 12px 14px;
-  border: 1px solid #e3e3e3;
-  border-radius: 10px;
-  cursor: pointer;
-  background: #fff;
-  transition: background 0.15s ease;
-}
-
-.quickItem:hover {
-  background: #f6f6f7;
-}
-
-.quickItemLeft {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  min-width: 0;
-  flex: 1;
-}
-
-.quickItemText {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.quickItemText p {
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  line-height: 1.35;
-}
-
-.quickIconBox {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.quickIconBox svg {
-  fill: currentColor !important;
-}
 
 .helpList {
   display: flex;
@@ -688,6 +460,74 @@
   gap: 0px;
 }
 
+/* ---- Store navigation ---- */
+
+.storeNavRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.storeNavIconBox {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #f1f5ff;
+  color: #4338ca;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.storeNavIconBox svg {
+  fill: currentColor !important;
+}
+
+.storeNavLeft {
+  flex: 1;
+  min-width: 200px;
+}
+
+.storeNavTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.storeNavTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+  color: #202223;
+}
+
+.storeNavStatus {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.storeNavStatusOn {
+  background: #e7f6ec;
+  color: #29845a;
+}
+
+.storeNavStatusOff {
+  background: #f1f1f2;
+  color: #6d7175;
+}
+
+.storeNavText {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #8c9196;
+}
+
 /* ---- Recent activity table ---- */
 
 .activityEmpty {
@@ -897,10 +737,6 @@
   .revenueMinutesRow {
     flex-direction: column;
   }
-
-  .quickGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
 
 @media (max-width: 600px) {
@@ -909,8 +745,7 @@
   }
 
   .trendsGrid,
-  .metricsGrid,
-  .quickGrid {
+  .metricsGrid {
     grid-template-columns: 1fr;
   }
 
@@ -929,5 +764,9 @@
 
   .revenueChart {
     height: 110px;
+  }
+
+  .storeNavRow {
+    align-items: flex-start;
   }
 }

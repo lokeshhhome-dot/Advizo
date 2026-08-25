@@ -1,40 +1,26 @@
-import React, { Fragment, useCallback, useEffect, useState } from 'react'
-import IndexTableList from '../components/consultant-list/IndexTableList'
-import { Page, Layout, SkeletonBodyText, Spinner } from '@shopify/polaris'
-import { PlusIcon } from '@shopify/polaris-icons'
-import { IndexTable, Text } from '@shopify/polaris'
-import { fetchActivityHistory,fetchAdminDetails } from '../components/Redux/slices/adminSlice'
+import React, { Fragment, useEffect, useState } from 'react'
+import { Page } from '@shopify/polaris'
+import { fetchActivityHistory, fetchAdminDetails } from '../components/Redux/slices/adminSlice'
 import { useDispatch, useSelector } from 'react-redux'
 import { useAppBridge } from '../components/createContext/AppBridgeContext'
-import { formatAmountHelper, formatNumber } from '../components/Helper/Helper'
+import { formatNumber } from '../components/Helper/Helper'
 import MoneyValue from '../components/Helper/MoneyValue'
+import styles from './AdminTable.module.css'
 
-
-
-const transactionHeadings = [
-    { title: 'Sr. No.', alignment: 'start' },
-    { title: 'User', alignment: 'center' },
-    { title: 'Consultant', alignment: 'center' },
-    { title: 'Type', alignment: 'center' },
-    { title: 'Duration', alignment: 'center' },
-    { title: 'Amount', alignment: 'center' },
-    { title: 'Consultant Share', alignment: 'center' },
-    { title: 'Admin Share', alignment: 'center' },
-    { title: 'Date', alignment: 'center' }
-]
-
-const transactionItemStrings = ['All', 'Chat', 'Voice Call', 'Video Call',]
+const typeTabs = ['All', 'Chat', 'Voice Call', 'Video Call']
 
 function RevenuManagement() {
     const app = useAppBridge();
     const { activityHistory, loading } = useSelector((state) => state.admin);
-    const { adminDetails_, loading: adminDetailsLoading } = useSelector((state) => state.admin);
+    const { adminDetails_ } = useSelector((state) => state.admin);
     const dispatch = useDispatch();
     const [adminIdLocal, setAdminIdLocal] = useState(null);
     const [searchQuery, setSearchQuery] = useState("");
+    const [queryValue, setQueryValue] = useState("");
     const [page, setPage] = useState(1);
     const [type, setType] = useState(0);
     const limit = 10;
+
     useEffect(() => {
         const id = localStorage.getItem('consultly');
         setAdminIdLocal(id);
@@ -42,11 +28,9 @@ function RevenuManagement() {
     useEffect(() => {
         if (adminIdLocal) {
             dispatch(fetchActivityHistory({ adminIdLocal, page, limit, type, app, searchQuery }));
-            dispatch(fetchAdminDetails({adminIdLocal,app}))
-
+            dispatch(fetchAdminDetails({ adminIdLocal, app }))
         }
     }, [dispatch, adminIdLocal, page, limit, type, searchQuery]);
-
 
     const formatDate = (iso) =>
         new Date(iso).toLocaleDateString();
@@ -63,134 +47,173 @@ function RevenuManagement() {
         const s = String(diff % 60).padStart(2, '0');
         return `${m}:${s}`;
     };
-    const onHandleCancel = () => {
+
+    const handleReset = () => {
         setPage(1);
         setSearchQuery("");
+        setQueryValue("");
         setType(0);
-        return true;
     };
 
+    const handleTabClick = (index) => {
+        setType(index);
+        setPage(1);
+    };
 
     const tableData = activityHistory?.data?.map((item) => ({
         id: item._id,
-        type: item.type?.toUpperCase(),
+        type: item.type?.toUpperCase() || '',
         date: formatDate(item.createdAt),
         time: formatTime(item.startTime),
         duration: getDuration(item.startTime, item.endTime),
-        user: item.senderId?.fullname,
-        consultant: item.receiverId?.fullname,
+        user: item.senderId?.fullname || '-',
+        consultant: item.receiverId?.fullname || '-',
         amount: `${item.amount}`,
-        status: item.status,
-        consultantAmount: `${item.consultantAmount}`,
-        adminAmount: `${item.adminAmount}`
+        consultantAmount: item.consultantAmount,
+        adminAmount: item.adminAmount,
     })) || [];
-    const renderTransactionRow = useCallback((transaction, index) => {
-        const { id, user, type, date, time, duration, consultantAmount, adminAmount, consultant, amount, } = transaction
-        const serialNumber = (page - 1) * limit + index + 1;
 
-        return (
-
-            <IndexTable.Row id={id} key={id} position={index}>
-                <IndexTable.Cell>
-                    <Text as="span" alignment="start" variant="bodyMd" fontWeight="bold" numeric>
-                        {serialNumber}
-                    </Text>
-                </IndexTable.Cell>
-                <IndexTable.Cell>
-                    <Text variant="bodyMd" as="span" alignment="center">
-                        {user}
-                    </Text>
-                </IndexTable.Cell>
-                <IndexTable.Cell>
-                    <Text variant="bodyMd" as="span" alignment="center">
-                        {consultant}
-                    </Text>
-                </IndexTable.Cell>
-                <IndexTable.Cell>
-                    <div style={{ textTransform: 'lowercase' }}>
-                        <Text variant="bodyMd" as="span" alignment="center">
-                            {type.charAt(0).toUpperCase() + type.slice(1)}
-                        </Text>
-                    </div>
-                </IndexTable.Cell>
-                <IndexTable.Cell>
-                    <Text variant="bodyMd" as="span" alignment="center">
-                        {duration}
-                    </Text>
-                </IndexTable.Cell>
-                <IndexTable.Cell>
-                    <Text as="span" alignment="center" numeric>
-                     <MoneyValue currency={adminDetails_?.currency} amount={amount} />
-                    </Text>
-                </IndexTable.Cell>
-                <IndexTable.Cell>
-                    <Text variant="bodyMd" as="span" alignment="center">
-                        {
-                            consultantAmount ? (
-                                <MoneyValue currency={adminDetails_?.currency}>
-                                    {formatNumber(consultantAmount)}
-                                </MoneyValue>
-                            ) : "-"
-                        }
-                    </Text>
-                </IndexTable.Cell>
-                <IndexTable.Cell>
-                    <Text variant="bodyMd" as="span" alignment="center">
-                        {adminAmount ? (
-                            <MoneyValue currency={adminDetails_?.currency}>
-                                {formatNumber(adminAmount)}
-                            </MoneyValue>
-                        ) : "-"}
-                    </Text>
-                </IndexTable.Cell>
-
-
-                <IndexTable.Cell>
-                    <Text variant="bodyMd" as="span" alignment="center">
-                        {date},{time}
-                    </Text>
-                </IndexTable.Cell>
-
-
-
-
-            </IndexTable.Row >
-        )
-    }, [page, limit,adminDetails_?.currency])
+    const totalItems = activityHistory?.totalItems || activityHistory?.data?.length || 0;
+    const totalPages = Math.max(1, Math.ceil(totalItems / limit));
 
     return (
         <Fragment>
+            <Page fullWidth>
+                <div className={styles.page}>
+                    <div className={styles.header}>
+                        <div className={styles.headerLeft}>
+                            <h1 className={styles.title}>Revenue Management</h1>
+                            <p className={styles.subtitle}>
+                                Every session's payout split between your consultants and your store.
+                            </p>
+                        </div>
+                    </div>
 
+                    <div className={styles.card}>
+                        <div className={styles.toolbar}>
+                            <div className={styles.toolbarLeft}>
+                                <div className={styles.searchWrap}>
+                                    <span className={styles.searchIcon}>🔍</span>
+                                    <input
+                                        className={styles.searchInput}
+                                        value={queryValue}
+                                        onChange={(e) => {
+                                            setQueryValue(e.target.value);
+                                            setSearchQuery(e.target.value);
+                                            setPage(1);
+                                        }}
+                                        placeholder="Search transactions"
+                                    />
+                                </div>
+                                <div className={styles.tabs}>
+                                    {typeTabs.map((tab, index) => (
+                                        <button
+                                            key={tab}
+                                            type="button"
+                                            className={`${styles.tabButton} ${type === index ? styles.tabButtonActive : ""}`}
+                                            onClick={() => handleTabClick(index)}
+                                        >
+                                            {tab}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <button type="button" className={styles.resetButton} onClick={handleReset}>
+                                Reset
+                            </button>
+                        </div>
 
-            <Page
-                title="Revenue Management"
-            >
-                <Layout>
-                    <Layout.Section>
-                        <IndexTableList
-                            itemStrings={transactionItemStrings}
-                            sortOptions={[]}
-                            data={tableData}
-                            headings={transactionHeadings}
-                            renderRow={renderTransactionRow}
-                            resourceName={{ singular: 'transaction', plural: 'transactions' }}
-                            queryPlaceholder="Search transactions"
-                            onTabChange={() => { }}
-                            onHandleCancel={onHandleCancel}
-                            onQueryChange={(value) => {
-                                setSearchQuery(value);
-                                setPage(1);
-                            }}
-                            onSortChange={() => { }}
-                            page={page}
-                            setPage={setPage}
-                            setType={setType}
-                            limit={limit}
-                            totalItems={activityHistory?.totalItems || activityHistory?.data?.length || 0}
-                            loading={loading}
-                        />
-                    </Layout.Section>
-                </Layout>
+                        <div className={styles.tableWrap}>
+                            <table className={styles.table}>
+                                <thead>
+                                    <tr>
+                                        <th>Sr. No.</th>
+                                        <th>User</th>
+                                        <th>Consultant</th>
+                                        <th>Type</th>
+                                        <th>Duration</th>
+                                        <th>Amount</th>
+                                        <th>Consultant share</th>
+                                        <th>Admin share</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {loading ? (
+                                        <tr>
+                                            <td colSpan={9}>
+                                                <div className={styles.loadingState}>Loading…</div>
+                                            </td>
+                                        </tr>
+                                    ) : tableData.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={9}>
+                                                <div className={styles.emptyState}>No revenue recorded yet.</div>
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        tableData.map((row, index) => {
+                                            const serialNumber = (page - 1) * limit + index + 1;
+                                            return (
+                                                <tr key={row.id}>
+                                                    <td>{serialNumber}</td>
+                                                    <td className={styles.cellPrimary}>{row.user}</td>
+                                                    <td>{row.consultant}</td>
+                                                    <td>{row.type.charAt(0) + row.type.slice(1).toLowerCase()}</td>
+                                                    <td className={styles.cellMuted}>{row.duration}</td>
+                                                    <td className={styles.amount}>
+                                                        <MoneyValue currency={adminDetails_?.currency} amount={row.amount} />
+                                                    </td>
+                                                    <td className={styles.amount}>
+                                                        {row.consultantAmount ? (
+                                                            <MoneyValue currency={adminDetails_?.currency}>
+                                                                {formatNumber(row.consultantAmount)}
+                                                            </MoneyValue>
+                                                        ) : "-"}
+                                                    </td>
+                                                    <td className={styles.amount}>
+                                                        {row.adminAmount ? (
+                                                            <MoneyValue currency={adminDetails_?.currency}>
+                                                                {formatNumber(row.adminAmount)}
+                                                            </MoneyValue>
+                                                        ) : "-"}
+                                                    </td>
+                                                    <td className={styles.cellMuted}>{row.date}, {row.time}</td>
+                                                </tr>
+                                            );
+                                        })
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className={styles.footer}>
+                            <span className={styles.footerText}>
+                                Showing {tableData.length} of {totalItems} transactions
+                            </span>
+                            {totalPages > 1 && (
+                                <div style={{ display: "flex", gap: 6 }}>
+                                    <button
+                                        type="button"
+                                        className={styles.pagerButton}
+                                        disabled={page <= 1}
+                                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                    >
+                                        ‹
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={styles.pagerButton}
+                                        disabled={page >= totalPages}
+                                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                                    >
+                                        ›
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
             </Page>
         </Fragment>
     )
