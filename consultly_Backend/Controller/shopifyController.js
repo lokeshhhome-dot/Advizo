@@ -85,6 +85,10 @@ const resolveStorefrontCustomer = async (req, shop) => {
   const customerId = req.query.logged_in_customer_id;
   const existingToken = req.cookies?.token;
 
+  console.log("[SHOPIFY IDENTITY] Shopify customer ID available =", Boolean(customerId));
+  console.log("[SHOPIFY IDENTITY] Shopify customer ID available =", customerId);
+
+
   if (shop && customerId) {
     const result = await manageShopifyUser(shop, customerId, { existingToken });
     if (result?.success) return result;

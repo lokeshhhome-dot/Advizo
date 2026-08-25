@@ -399,6 +399,24 @@
     var shop = container.getAttribute("data-shop");
     var limit = parseInt(container.getAttribute("data-limit"), 10) || 0;
 
+    // TEMP (Theme Extension customer-ID debug test): read-only, printed to
+    // the console for verification — not used for auth/DB/chat logic here.
+    // Sourced from the `data-shopify-customer-id` attribute the Liquid block
+    // renders from Shopify's own `customer` object (see that file's
+    // comment) — a server-rendered, Shopify-session-derived value, never a
+    // hardcoded or client-supplied one.
+    var shopifyCustomerIdRaw = container.getAttribute("data-shopify-customer-id");
+    var shopifyCustomerId = shopifyCustomerIdRaw ? Number(shopifyCustomerIdRaw) : null;
+
+    console.log(
+      "[THEME CUSTOMER DEBUG] Shopify logged-in customer ID =",
+      shopifyCustomerId || null,
+    );
+    console.log(
+      "[THEME CUSTOMER DEBUG] Shopify customer logged in =",
+      Boolean(shopifyCustomerId),
+    );
+
     if (!apiUrl) {
       renderError(root);
       return;
@@ -472,6 +490,33 @@
         // bundle never sees that raw query param itself.
         console.log("[THEME AUTH DEBUG] authenticated =", Boolean(data.authenticated));
         console.log("[THEME AUTH DEBUG] DB user available =", Boolean(data.customerId));
+
+        // TEMP (Shopify customer -> Mongo user -> socket identity flow):
+        // data.customerId is the Mongo User._id already resolved and
+        // Shopify-verified server-side (resolveStorefrontCustomer ->
+        // manageShopifyUser -> fetchShopifyCustomer's GraphQL check) — never
+        // a raw Shopify customer id, never client-computed. "client_u_Identity"
+        // is the SAME key consultly_Frontend/src/utils/browserSession.js's
+        // getSocketUserIdForActiveSession() already reads for Socket.IO, and
+        // the same key ConsultantCards.js already writes on its own
+        // (React-hosted) storefront pages — this only fills that in for the
+        // vanilla Theme Extension entry point too. Only ever SET, never
+        // cleared, on purpose: this mirrors ConsultantCards.js's own
+        // behavior, since browserSession.js's activateSession/session-role
+        // system (not this bundle) is what's responsible for clearing
+        // identity keys on a genuine role switch — duplicating that here
+        // risks wiping an unrelated active session sharing this browser
+        // (e.g. a consultant also browsing their own storefront). This
+        // localStorage value is a client-side hint only; nothing here
+        // treats it as authentication — the JWT/socket-auth check server
+        // side is unchanged and is what actually gates any privileged
+        // action.
+        if (data.authenticated && data.customerId) {
+          localStorage.setItem("client_u_Identity", String(data.customerId));
+          console.log("[SHOPIFY IDENTITY] Socket identity stored =", true);
+        } else {
+          console.log("[SHOPIFY IDENTITY] Socket identity stored =", false);
+        }
       })
       .catch(function (err) {
         console.error("[consultly] failed to load consultants:", err);

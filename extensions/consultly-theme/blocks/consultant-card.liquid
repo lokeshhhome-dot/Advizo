@@ -17,6 +17,15 @@
   data-shop="{{ shop.permanent_domain }}"
   data-api-url="/apps/consultly/consultants"
   data-limit="{{ block.settings.consultant_limit }}"
+  {%- comment -%}
+    TEMP (Theme Extension customer-ID debug test): `customer` is a standard
+    Liquid global populated by Shopify itself from the shopper's storefront
+    login session — the same session that App Proxy requests see as
+    `logged_in_customer_id`. Server-rendered, so it can't be spoofed from the
+    browser. Emits nothing (not even "null") when no customer is logged in.
+    Numeric ID only — never customer.email/name/etc.
+  {%- endcomment -%}
+  data-shopify-customer-id="{% if customer %}{{ customer.id }}{% endif %}"
   {{ block.shopify_attributes }}
 >
   {%- if block.settings.heading != blank -%}

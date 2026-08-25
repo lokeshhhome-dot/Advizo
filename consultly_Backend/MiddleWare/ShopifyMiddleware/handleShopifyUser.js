@@ -240,90 +240,40 @@ const fetchShopifyCustomer = async (shop, accessToken, customerId) => {
     }`,
   );
 
-  console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", Boolean(minimal.customer));
-  return minimal.customer;
+  if (minimal.customer) {
+    console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", true);
+    return minimal.customer;
+  }
+
+  if (minimal.httpFailed || !minimal.graphqlErrors) {
+    console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", false);
+    return null;
+  }
+
+  // Last resort: `createdAt`/`numberOfOrders` can themselves be gated by a
+  // shop's protected-customer-data approval status, same as name/email above.
+  // `id` alone is never protected data, so this tier can only ever fail if
+  // the customer genuinely doesn't exist (or the HTTP request itself fails)
+  // — never from a permissions error. This is what guarantees identity
+  // verification never wrongly blocks on Shopify's data-access policy.
+  console.warn(
+    "[SHOPIFY CUSTOMER DEBUG] minimal customer query also returned GraphQL errors — retrying with id only",
+  );
+
+  const idOnly = await runShopifyCustomerQuery(
+    shop,
+    accessToken,
+    `{
+      customer(id: "gid://shopify/Customer/${customerId}") {
+        id
+      }
+    }`,
+  );
+
+  console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", Boolean(idOnly.customer));
+  return idOnly.customer;
 };
 
-// const manageShopifyUser = async (shop, customerId, options = {}) => {
-//   try {
-//     const { existingToken } = options || {};
-
-
-//     const fromExistingToken = await verifyExistingToken(existingToken, customerId);
-//     if (fromExistingToken) {
-//       return cacheSession(shop, customerId, fromExistingToken);
-//     }
-
-//     const shopDoc = await getShopDoc(shop);
-//     if (!shopDoc?.accessToken) {
-//       return null;
-//     }
-
-//     const existingUser = await User.findOne({
-//       shopifyCustomerId: String(customerId),
-//     })
-//       .select("_id shop_id shopifyCustomerId")
-//       .lean();
-
-//     console.log("existingUser", existingUser)
-//     if (existingUser) {
-//       const token = getOrCreateUserToken(existingUser._id);
-//       return cacheSession(
-//         shop,
-//         customerId,
-//         buildSessionResult(existingUser, token),
-//       );
-//     }
-
-//     const customer = await fetchShopifyCustomer(
-//       shop,
-//       shopDoc.accessToken,
-//       customerId,
-//     );
-//     console.log("customer", customer)
-
-//     if (!customer) {
-//       return { success: false, message: "Customer not found in Shopify" };
-//     }
-
-//     const shopifyCustomerId = customer.id.split("/").pop();
-//     const fullname =
-//       [customer.firstName, customer.lastName].filter(Boolean).join(" ") ||
-//       "Shopify Customer";
-
-//     const newUser = new User({
-//       shopifyCustomerId,
-//       shop_id: shopDoc._id,
-//       userType: "customer",
-//       walletBalance: 0,
-//       email: customer.email,
-//       fullname,
-//       isChatAccepted: "request",
-//       createdAt: customer.createdAt,
-//       numberOfOrders: customer.numberOfOrders,
-//       chatLock: true,
-//     });
-
-//     await newUser.save();
-
-//     const token = getOrCreateUserToken(newUser._id);
-//     return cacheSession(
-//       shop,
-//       customerId,
-//       buildSessionResult(newUser, token, "Customer created successfully"), b
-//     );
-//   } catch (error) {
-//     console.error(
-//       "Error fetching customer:",
-//       error.response?.data || error.message,
-//     );
-//     return {
-//       success: false,
-//       message: error.message || "Error registering customer",
-//       error: error.response?.data || error.message,
-//     };
-//   }
-// };
 const manageShopifyUser = async (shop, customerId, options = {}) => {
   try {
     const { existingToken } = options || {};
@@ -374,6 +324,16 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
     // EXISTING USER
     // ======================================================
     if (existingUser) {
+      // Already verified once, at creation — an already-known
+      // (shopifyCustomerId, shop) pair is not re-verified against Shopify on
+      // every request (see needsNameRefresh below), matching this flow's own
+      // idempotency requirement. Re-querying Shopify's Admin API on every
+      // page load for a customer we've already confirmed exists would be
+      // pure added latency/rate-limit cost with no security benefit — the
+      // JWT/socket auth path is what actually gates any privileged action.
+      console.log("[SHOPIFY IDENTITY] Shopify customer verified =", true);
+      console.log("[SHOPIFY IDENTITY] Mongo user found =", true);
+      console.log("[SHOPIFY IDENTITY] Mongo user created =", false);
       // The Shopify Admin API refresh only ever backfills a missing/default
       // fullname, so skip the API call entirely when the name is already set.
       const needsNameRefresh =
@@ -413,6 +373,7 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
 
       console.log("[SHOPIFY CUSTOMER DEBUG] DB user created =", false);
       console.log("[SHOPIFY CUSTOMER DEBUG] identity resolved =", true);
+      console.log("[SHOPIFY IDENTITY] Mongo user ID available =", true);
 
       return cacheSession(
         shop,
@@ -432,14 +393,20 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
     );
 
     console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", Boolean(customer));
+    console.log("[SHOPIFY IDENTITY] Shopify customer verified =", Boolean(customer));
 
     if (!customer) {
       console.log("[SHOPIFY CUSTOMER DEBUG] identity resolved =", false);
+      console.log("[SHOPIFY IDENTITY] Mongo user found =", false);
+      console.log("[SHOPIFY IDENTITY] Mongo user created =", false);
+      console.log("[SHOPIFY IDENTITY] Mongo user ID available =", false);
       return {
         success: false,
         message: "Customer not found in Shopify",
       };
     }
+
+    console.log("[SHOPIFY IDENTITY] Mongo user found =", false);
 
     const shopifyCustomerId = customer.id.split("/").pop();
 
@@ -499,6 +466,8 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
 
     console.log("[SHOPIFY CUSTOMER DEBUG] DB user created =", createdUser === newUser);
     console.log("[SHOPIFY CUSTOMER DEBUG] identity resolved =", true);
+    console.log("[SHOPIFY IDENTITY] Mongo user created =", createdUser === newUser);
+    console.log("[SHOPIFY IDENTITY] Mongo user ID available =", true);
 
     return cacheSession(
       shop,
