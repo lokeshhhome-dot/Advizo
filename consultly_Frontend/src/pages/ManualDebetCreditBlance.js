@@ -1,29 +1,13 @@
-import React, { Fragment, useCallback, useEffect, useState } from 'react'
-import IndexTableList from '../components/consultant-list/IndexTableList'
+import React, { Fragment, useEffect, useState } from 'react'
 import MoneyValue from '../components/Helper/MoneyValue'
-import { Page, Layout, Spinner, ButtonGroup, Button, Toast, Badge, InlineStack } from '@shopify/polaris'
-import { DuplicateIcon, EditIcon, PlusIcon } from '@shopify/polaris-icons'
-import { IndexTable, Text } from '@shopify/polaris'
-import { fetchWalletHistory,fetchAdminDetails } from '../components/Redux/slices/adminSlice'
+import { Page } from '@shopify/polaris'
+import { fetchWalletHistory, fetchAdminDetails } from '../components/Redux/slices/adminSlice'
 import { useDispatch, useSelector } from 'react-redux'
 import { useAppBridge } from '../components/createContext/AppBridgeContext'
 import UpdateUserDetailsModal from './UpdateUserDetailsModal'
 import axios from 'axios'
-import { ToastModel } from '../components/AlertModel/Tost'
 import { getAppBridgeToken } from '../utils/getAppBridgeToken'
-
-
-const walletManagementHeadings = [
-    { title: 'Sr. No.', alignment: 'start' },
-    { title: 'Name', alignment: 'center' },
-    { title: " Type", alignment: 'center' },
-    { title: 'Amount', alignment: 'center' },
-    { title: "Direction", alignment: 'center' },
-    { title: " Reference Type", alignment: 'center' },
-    { title: "Status", alignment: 'center' },
-    { title: "Description", alignment: 'center' },
-    { title: " Action", alignment: 'center' },
-];
+import styles from './AdminTable.module.css'
 
 function ManualDebetCreditBlance() {
     const app = useAppBridge();
@@ -32,18 +16,18 @@ function ManualDebetCreditBlance() {
     const [adminIdLocal, setAdminIdLocal] = useState(null);
     const [userDetails, setUserDetails] = useState({});
     const [page, setPage] = useState(1);
-    const [type, setType] = useState(0);
     const [active, setActive] = useState(false);
     const [toastActive, setToastActive] = useState(false);
     const [refresh, setRefresh] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [queryValue, setQueryValue] = useState('');
     const [updateFormData, setUpdateFormData] = useState({
         userId: '',
         mainType: '',
         amount: '',
         description: '',
     });
-    const { adminDetails_, loading: adminDetailsLoading } = useSelector((state) => state.admin);
+    const { adminDetails_ } = useSelector((state) => state.admin);
 
     const limit = 10;
     const openUpdateWalletModal = (userId, fullname) => {
@@ -58,15 +42,10 @@ function ManualDebetCreditBlance() {
 
     useEffect(() => {
         dispatch(fetchWalletHistory({ adminIdLocal, page, limit, app, searchQuery }));
-        dispatch(fetchAdminDetails({adminIdLocal,app}))
+        dispatch(fetchAdminDetails({ adminIdLocal, app }))
 
     }, [dispatch, adminIdLocal, page, limit, refresh, searchQuery]);
 
-
-    /** 
-     * Update Wallet
-     * 
-     */
     const updateWallet = async () => {
         if (!updateFormData.mainType || !updateFormData.amount || +updateFormData.amount <= 0) {
             setToastActive(true);
@@ -97,129 +76,165 @@ function ManualDebetCreditBlance() {
     const tableData = walletHistory?.data?.map((item) => ({
         id: item?._id,
         userId: item?.userId?._id,
-        shop_id: item?.shop_id,
         fullname: item?.userId?.fullname || '-',
         userType: item?.userId?.userType || '-',
         amount: item?.amount || '-',
-        transactionType: item?.transactionType || '-',
         referenceType: item?.referenceType || '-',
         direction: item?.direction || '-',
         status: item?.status || '-',
         description: item?.description || '-',
         updatedAt: formatDate(item?.updatedAt),
     })) || [];
-    const onHandleCancel = () => {
+
+    const handleReset = () => {
         setPage(1);
         setSearchQuery("");
-        setType(0);
-        return true;
+        setQueryValue("");
     };
 
-    const renderWalletRow = useCallback((wallet, index) => {
-        const { id, userId, shop_Id, fullname, userType, amount, referenceType, direction, status, description } = wallet
-        const serialNumber = (page - 1) * limit + index + 1;
-
-        return (
-            <IndexTable.Row id={id} key={id} position={index}>
-                <IndexTable.Cell>
-                    <Text as="span" alignment="start" variant="bodyMd" fontWeight="bold" numeric>
-                        {serialNumber}
-                    </Text>
-                </IndexTable.Cell>
-                <IndexTable.Cell>
-                    <Text variant="bodyMd" as="span" alignment="center">
-                        {fullname}
-                    </Text>
-                </IndexTable.Cell>
-                <IndexTable.Cell>
-                    <Text variant="bodyMd" as="span" alignment="center">
-                        {userType}
-                    </Text>
-                </IndexTable.Cell>
-                <IndexTable.Cell alignment="center">
-                    <Text variant="bodyMd" as="span" alignment="center" numeric>
-                    <MoneyValue currency={adminDetails_?.currency}>
-                        {amount ? parseFloat(amount).toFixed(2) : "0.0"}
-                    </MoneyValue>
-                    </Text>
-                </IndexTable.Cell>
-                <IndexTable.Cell alignment="center">
-                    <InlineStack align="center">
-                        <Badge tone={direction === "credit" ? "success" : "critical"}>
-                            {direction === "credit" ? "credit" : "debit"}
-                        </Badge>
-                    </InlineStack>
-                </IndexTable.Cell>
-
-                <IndexTable.Cell alignment="center">
-                    <Text variant="bodyMd" as="span" alignment="center">
-                        {referenceType}
-                    </Text>
-                </IndexTable.Cell>
-                <IndexTable.Cell alignment="center">
-                    <InlineStack align="center">
-                        <Badge tone={status === "success" ? "success" : "critical"}>
-                            {status}
-                        </Badge>
-                    </InlineStack>
-                </IndexTable.Cell>
-
-                <IndexTable.Cell alignment="center">
-                    <Text variant="bodyMd" as="span" alignment="center">
-                        {description}
-                    </Text>
-                </IndexTable.Cell>
-                <IndexTable.Cell>
-                    <InlineStack align="center" gap="100">
-                        <Button
-                            variant="tertiary"
-                            icon={EditIcon}
-                            accessibilityLabel="Edit wallet"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                openUpdateWalletModal(userId, fullname, shop_Id);
-                                // handleEdit(_id);
-                            }}
-                        />
-
-                    </InlineStack>
-                </IndexTable.Cell>
-
-            </IndexTable.Row>
-        )
-    }, [page, limit,adminDetails_?.currency])
+    const totalItems = walletHistory?.totalItems || walletHistory?.data?.length || 0;
+    const totalPages = Math.max(1, Math.ceil(totalItems / limit));
 
     return (
         <Fragment>
             <UpdateUserDetailsModal open={active} onClose={() => setActive(false)} userDetails={userDetails} updateFormData={updateFormData} setUpdateFormData={setUpdateFormData} updateWallet={updateWallet} />
-            <Page
-                title="Wallet Management"
-            >
-                <Layout>
-                    <Layout.Section>
-                        <IndexTableList
-                            itemStrings={[]}
-                            sortOptions={[]}
-                            data={tableData}
-                            headings={walletManagementHeadings}
-                            renderRow={renderWalletRow}
-                            resourceName={{ singular: 'wallet', plural: 'wallets' }}
-                            queryPlaceholder="Search wallets"
-                            onTabChange={(value) => setType(value)}
-                            onQueryChange={(value) => { setSearchQuery(value); setPage(1); }}
-                            onSortChange={() => { }}
-                            page={page}
-                            setPage={setPage}
-                            setType={setType}
-                            limit={limit}
-                            totalItems={walletHistory?.totalItems || walletHistory?.data?.length || 0}
-                            loading={walletLoading}
-                            onHandleCancel={onHandleCancel}
-                        />
-                    </Layout.Section>
-                </Layout>
-            </Page>
+            <Page fullWidth>
+                <div className={styles.page}>
+                    <div className={styles.header}>
+                        <div className={styles.headerLeft}>
+                            <h1 className={styles.title}>Wallet Management</h1>
+                            <p className={styles.subtitle}>
+                                Every manual credit, debit, recharge and refund to a user's wallet.
+                            </p>
+                        </div>
+                    </div>
 
+                    <div className={styles.card}>
+                        <div className={styles.toolbar}>
+                            <div className={styles.toolbarLeft}>
+                                <div className={styles.searchWrap}>
+                                    <span className={styles.searchIcon}>🔍</span>
+                                    <input
+                                        className={styles.searchInput}
+                                        value={queryValue}
+                                        onChange={(e) => {
+                                            setQueryValue(e.target.value);
+                                            setSearchQuery(e.target.value);
+                                            setPage(1);
+                                        }}
+                                        placeholder="Search wallets"
+                                    />
+                                </div>
+                            </div>
+                            <button type="button" className={styles.resetButton} onClick={handleReset}>
+                                Reset
+                            </button>
+                        </div>
+
+                        <div className={styles.tableWrap}>
+                            <table className={styles.table}>
+                                <thead>
+                                    <tr>
+                                        <th>Sr. No.</th>
+                                        <th>Name</th>
+                                        <th>Type</th>
+                                        <th>Amount</th>
+                                        <th>Direction</th>
+                                        <th>Reference type</th>
+                                        <th>Status</th>
+                                        <th>Description</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {walletLoading ? (
+                                        <tr>
+                                            <td colSpan={9}>
+                                                <div className={styles.loadingState}>Loading…</div>
+                                            </td>
+                                        </tr>
+                                    ) : tableData.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={9}>
+                                                <div className={styles.emptyState}>No wallet activity found.</div>
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        tableData.map((row, index) => {
+                                            const serialNumber = (page - 1) * limit + index + 1;
+                                            return (
+                                                <tr key={row.id}>
+                                                    <td>{serialNumber}</td>
+                                                    <td className={styles.cellPrimary}>{row.fullname}</td>
+                                                    <td className={styles.cellMuted}>{row.userType}</td>
+                                                    <td className={styles.amount}>
+                                                        <MoneyValue currency={adminDetails_?.currency}>
+                                                            {row.amount !== '-' ? parseFloat(row.amount).toFixed(2) : '0.00'}
+                                                        </MoneyValue>
+                                                    </td>
+                                                    <td>
+                                                        <span className={`${styles.badge} ${row.direction === "credit" ? styles.badgeSuccess : styles.badgeCritical}`}>
+                                                            {row.direction === "credit" ? "credit" : "debit"}
+                                                        </span>
+                                                    </td>
+                                                    <td className={styles.cellMuted}>{row.referenceType}</td>
+                                                    <td>
+                                                        <span className={`${styles.badge} ${row.status === "success" ? styles.badgeSuccess : styles.badgeCritical}`}>
+                                                            {row.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className={styles.cellWrap}>{row.description}</td>
+                                                    <td>
+                                                        <div className={styles.rowActions}>
+                                                            <button
+                                                                type="button"
+                                                                className={styles.iconButton}
+                                                                title="Edit wallet"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    openUpdateWalletModal(row.userId, row.fullname);
+                                                                }}
+                                                            >
+                                                                ✎
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className={styles.footer}>
+                            <span className={styles.footerText}>
+                                Showing {tableData.length} of {totalItems} wallets
+                            </span>
+                            {totalPages > 1 && (
+                                <div style={{ display: "flex", gap: 6 }}>
+                                    <button
+                                        type="button"
+                                        className={styles.pagerButton}
+                                        disabled={page <= 1}
+                                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                    >
+                                        ‹
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={styles.pagerButton}
+                                        disabled={page >= totalPages}
+                                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                                    >
+                                        ›
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </Page>
         </Fragment>
     )
 }

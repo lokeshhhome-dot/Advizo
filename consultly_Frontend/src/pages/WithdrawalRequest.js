@@ -1,37 +1,15 @@
-import React, { Fragment, useCallback, useContext, useEffect, useState } from 'react'
-import IndexTableList from '../components/consultant-list/IndexTableList'
+import React, { Fragment, useContext, useEffect, useState } from 'react'
 import MoneyValue from '../components/Helper/MoneyValue'
-import { Page, Layout, ButtonGroup, Button, Badge, InlineStack, Tooltip } from '@shopify/polaris'
-import { IndexTable, Text } from '@shopify/polaris'
+import { Page } from '@shopify/polaris'
 import { fetchWithdrawalRequests, fetchAdminDetails } from '../components/Redux/slices/adminSlice'
 import { useDispatch, useSelector } from 'react-redux'
 import { useAppBridge } from '../components/createContext/AppBridgeContext'
 import axios from 'axios'
 import { getAppBridgeToken } from '../utils/getAppBridgeToken'
-import { MdOutlinePayments } from "react-icons/md";
 import WidthrwalRequestApprove from '../components/AlertModel/WidthrwalRequestApprove'
-import { RxCross2 } from "react-icons/rx";
 import { ToastContext } from '../components/AlertModel/PolariesTostContext';
 import { WidthrawalReqDeclineAlert } from '../components/AlertModel/WidthrawalReqDeclineAlert'
-import {
-    XCircleIcon
-} from '@shopify/polaris-icons';
-import {
-    PaymentIcon
-} from '@shopify/polaris-icons';
-
-
-
-const withdrawalRequestHeadings = [
-    { title: 'Sr. No.', alignment: 'start' },
-    { title: 'Name', alignment: 'center' },
-    { title: 'Amount', alignment: 'center' },
-    { title: "Status", alignment: 'center' },
-    { title: "Description", alignment: 'center' },
-    { title: " Action", alignment: 'center' },
-];
-
-
+import styles from './AdminTable.module.css'
 
 function WithdrawalRequest() {
     const app = useAppBridge();
@@ -40,13 +18,13 @@ function WithdrawalRequest() {
     const [adminIdLocal, setAdminIdLocal] = useState(null);
     const [userDetails, setUserDetails] = useState({});
     const [page, setPage] = useState(1);
-    const [type, setType] = useState(0);
     const [active, setActive] = useState(false);
     const [refresh, setRefresh] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [queryValue, setQueryValue] = useState('');
     const [isWidthrawalReqDeclineAlertVisible, setIsWidthrawalReqDeclineAlertVisible] = useState(false);
     const [selectedWithdrawalRequestId, setSelectedWithdrawalRequestId] = useState(null);
-    const { adminDetails_, loading: adminDetailsLoading } = useSelector((state) => state.admin);
+    const { adminDetails_ } = useSelector((state) => state.admin);
     const [updateFormData, setUpdateFormData] = useState({
         userId: '',
         transactionId: '',
@@ -72,17 +50,9 @@ function WithdrawalRequest() {
         dispatch(fetchWithdrawalRequests({ adminIdLocal, page, limit, app, searchQuery }));
     }, [dispatch, adminIdLocal, page, limit, refresh, searchQuery]);
 
-
-
-    /** 
-     * Update Wallet
-     * 
-     */
-
-
     const updateWallet = async () => {
         const token = await getAppBridgeToken(app);
-    
+
         try {
             const response = await axios.put(`${process.env.REACT_APP_BACKEND_HOST}/admin/update/widthrwal/req/${adminIdLocal}`, {
                 ...updateFormData, userId: userDetails.userId,
@@ -148,91 +118,15 @@ function WithdrawalRequest() {
         description: item?.note || '-',
         updatedAt: formatDate(item?.createdAt),
     })) || [];
-    const onHandleCancel = () => {
+
+    const handleReset = () => {
         setPage(1);
         setSearchQuery("");
-        setType(0);
-        return true;
+        setQueryValue("");
     };
 
-    const renderWalletRow = useCallback((withdrawal, index) => {
-        const { id, userId, shop_Id, fullname, amount, status, description } = withdrawal
-        const serialNumber = (page - 1) * limit + index + 1;
-
-        return (
-            <IndexTable.Row id={id} key={id} position={index}>
-                <IndexTable.Cell>
-                    <Text as="span" alignment="start" variant="bodyMd" fontWeight="bold" numeric>
-                        {serialNumber}
-                    </Text>
-                </IndexTable.Cell>
-                <IndexTable.Cell>
-                    <Text variant="bodyMd" as="span" alignment="center">
-                        {fullname}
-                    </Text>
-                </IndexTable.Cell>
-
-                <IndexTable.Cell alignment="start">
-                    <Text variant="bodyMd" as="span" alignment="center" numeric>
-                        <MoneyValue currency={adminDetails_?.currency}>
-                            {amount ? parseFloat(amount).toFixed(2) : "0.0"}
-                        </MoneyValue>
-                    </Text>
-                </IndexTable.Cell>
-
-
-                <IndexTable.Cell>
-                    <InlineStack align="center">
-                        <Badge progress="complete" variant="outline" tone={status === "paid" ? "success" : ""}>
-                            {status}
-                        </Badge>
-                    </InlineStack>
-                </IndexTable.Cell>
-
-                <IndexTable.Cell alignment="start">
-                    <Text variant="bodyMd" as="span" alignment="center">
-                        {description}
-                    </Text>
-                </IndexTable.Cell>
-                <IndexTable.Cell>
-                    <InlineStack align="center" gap="100">
-                        <Tooltip
-                            content="Paid"
-                            hoverDelay={300}
-                        >
-                            <Button
-                                variant="tertiary"
-                                icon={PaymentIcon}
-                                accessibilityLabel="Withdrawal Request"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    openUpdateWalletModal(userId, fullname, shop_Id, amount, status, description, id);
-                                    // handleEdit(_id);
-                                }}
-                            />
-                        </Tooltip>
-                        <Tooltip
-                            content="Decline"
-                            hoverDelay={300}
-                        >
-                            <Button
-                                variant="tertiary"
-                                tone="critical"
-                                icon={XCircleIcon}
-                                accessibilityLabel="Decline Withdrawal Request"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    openDeclineModal(id);
-                                }}
-                            />
-                        </Tooltip>
-                    </InlineStack>
-                </IndexTable.Cell>
-
-            </IndexTable.Row>
-        )
-    }, [page, limit, adminDetails_?.currency])
-
+    const totalItems = withdrawalRequests?.totalItems || withdrawalRequests?.data?.length || 0;
+    const totalPages = Math.max(1, Math.ceil(totalItems / limit));
 
     return (
         <Fragment>
@@ -243,35 +137,144 @@ function WithdrawalRequest() {
                 withdrawalRequestId={selectedWithdrawalRequestId}
             />
             <WidthrwalRequestApprove open={active} onClose={() => setActive(false)} userDetails={userDetails} updateFormData={updateFormData} setUpdateFormData={setUpdateFormData} updateWallet={updateWallet} />
-            <Page
-                title="Withdrawal Request"
+            <Page fullWidth>
+                <div className={styles.page}>
+                    <div className={styles.header}>
+                        <div className={styles.headerLeft}>
+                            <h1 className={styles.title}>Withdrawal Request</h1>
+                            <p className={styles.subtitle}>
+                                Consultant payout requests waiting for approval.
+                            </p>
+                        </div>
+                    </div>
 
-            >
-                <Layout>
-                    <Layout.Section>
-                        <IndexTableList
-                            itemStrings={[]}
-                            sortOptions={[]}
-                            data={tableData}
-                            headings={withdrawalRequestHeadings}
-                            renderRow={renderWalletRow}
-                            resourceName={{ singular: 'withdrawal request', plural: 'withdrawal requests' }}
-                            queryPlaceholder="Search wallets"
-                            onTabChange={(value) => setType(value)}
-                            onQueryChange={(value) => { setSearchQuery(value); setPage(1); }}
-                            onSortChange={() => { }}
-                            page={page}
-                            setPage={setPage}
-                            setType={setType}
-                            limit={limit}
-                            totalItems={withdrawalRequests?.totalItems || withdrawalRequests?.data?.length || 0}
-                            loading={withdrawalRequestsLoading}
-                            onHandleCancel={onHandleCancel}
-                        />
-                    </Layout.Section>
-                </Layout>
+                    <div className={styles.card}>
+                        <div className={styles.toolbar}>
+                            <div className={styles.toolbarLeft}>
+                                <div className={styles.searchWrap}>
+                                    <span className={styles.searchIcon}>🔍</span>
+                                    <input
+                                        className={styles.searchInput}
+                                        value={queryValue}
+                                        onChange={(e) => {
+                                            setQueryValue(e.target.value);
+                                            setSearchQuery(e.target.value);
+                                            setPage(1);
+                                        }}
+                                        placeholder="Search withdrawal requests"
+                                    />
+                                </div>
+                            </div>
+                            <button type="button" className={styles.resetButton} onClick={handleReset}>
+                                Reset
+                            </button>
+                        </div>
+
+                        <div className={styles.tableWrap}>
+                            <table className={styles.table}>
+                                <thead>
+                                    <tr>
+                                        <th>Sr. No.</th>
+                                        <th>Name</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                        <th>Description</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {withdrawalRequestsLoading ? (
+                                        <tr>
+                                            <td colSpan={6}>
+                                                <div className={styles.loadingState}>Loading…</div>
+                                            </td>
+                                        </tr>
+                                    ) : tableData.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={6}>
+                                                <div className={styles.emptyState}>No withdrawal requests found.</div>
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        tableData.map((row, index) => {
+                                            const serialNumber = (page - 1) * limit + index + 1;
+                                            return (
+                                                <tr key={row.id}>
+                                                    <td>{serialNumber}</td>
+                                                    <td className={styles.cellPrimary}>{row.fullname}</td>
+                                                    <td className={styles.amount}>
+                                                        <MoneyValue currency={adminDetails_?.currency}>
+                                                            {row.amount !== '-' ? parseFloat(row.amount).toFixed(2) : '0.00'}
+                                                        </MoneyValue>
+                                                    </td>
+                                                    <td>
+                                                        <span className={`${styles.badge} ${row.status === "paid" ? styles.badgeSuccess : styles.badgeNeutral}`}>
+                                                            {row.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className={styles.cellWrap}>{row.description}</td>
+                                                    <td>
+                                                        <div className={styles.rowActions}>
+                                                            <button
+                                                                type="button"
+                                                                className={styles.iconButton}
+                                                                title="Mark paid"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    openUpdateWalletModal(row.userId, row.fullname, row.shop_id, row.amount, row.status, row.description, row.id);
+                                                                }}
+                                                            >
+                                                                💳
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                className={`${styles.iconButton} ${styles.deleteButton}`}
+                                                                title="Decline"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    openDeclineModal(row.id);
+                                                                }}
+                                                            >
+                                                                ✕
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className={styles.footer}>
+                            <span className={styles.footerText}>
+                                Showing {tableData.length} of {totalItems} withdrawal requests
+                            </span>
+                            {totalPages > 1 && (
+                                <div style={{ display: "flex", gap: 6 }}>
+                                    <button
+                                        type="button"
+                                        className={styles.pagerButton}
+                                        disabled={page <= 1}
+                                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                    >
+                                        ‹
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={styles.pagerButton}
+                                        disabled={page >= totalPages}
+                                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                                    >
+                                        ›
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
             </Page>
-
         </Fragment>
     )
 }

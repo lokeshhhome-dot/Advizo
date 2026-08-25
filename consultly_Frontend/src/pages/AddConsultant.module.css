@@ -1,0 +1,432 @@
+.page {
+  padding: 20px 200px 32px;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: none;
+  padding: 0;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #6d7175;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.backLink:hover {
+  color: #202223;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 650;
+  color: #202223;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: #6d7175;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.discardButton {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #d1d3d5;
+  background: #ffffff;
+  color: #202223;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.discardButton:hover {
+  background: #f6f6f7;
+}
+
+.discardButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.saveButton {
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: 1px solid #1a1a1a;
+  background: #1a1a1a;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.saveButton:hover {
+  background: #303030;
+}
+
+.saveButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.mainCol,
+.sideCol {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card {
+  background: #ffffff;
+  border: 1px solid #e3e3e3;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+  color: #202223;
+}
+
+.cardSubtitle {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #8c9196;
+}
+
+.cardHeader {
+  margin-bottom: 16px;
+}
+
+.fieldRow {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 2), 1fr);
+  gap: 14px;
+}
+
+.fieldRow + .fieldRow {
+  margin-top: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #202223;
+}
+
+.fieldLabel .optional {
+  font-weight: 400;
+  color: #8c9196;
+}
+
+.input,
+.select {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid #d1d3d5;
+  background: #ffffff;
+  font-size: 13px;
+  font-family: inherit;
+  color: #202223;
+}
+
+.input::placeholder {
+  color: #a1a5a9;
+}
+
+.input:focus,
+.select:focus {
+  outline: none;
+  border-color: #1a73e8;
+  box-shadow: 0 0 0 1px #1a73e8;
+}
+
+.input.inputError {
+  border-color: #d72c0d;
+}
+
+.fieldHint {
+  font-size: 11px;
+  color: #8c9196;
+}
+
+.fieldError {
+  font-size: 11px;
+  color: #d72c0d;
+}
+
+.amountField {
+  position: relative;
+}
+
+.amountPrefix {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  color: #6d7175;
+  pointer-events: none;
+}
+
+.amountField .input {
+  padding-left: 26px;
+}
+
+/* ---- Upload photo ---- */
+
+.uploadBox {
+  border: 1.5px dashed #c9cccf;
+  border-radius: 12px;
+  padding: 28px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  background: #fafbfb;
+  text-align: center;
+}
+
+.uploadBox:hover {
+  border-color: #8c9196;
+  background: #f6f6f7;
+}
+
+.uploadPlus {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid #d1d3d5;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6d7175;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.uploadPreview {
+  width: 90px;
+  height: 90px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.uploadLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: #202223;
+}
+
+.uploadHint {
+  font-size: 11px;
+  color: #8c9196;
+}
+
+.hiddenFileInput {
+  display: none;
+}
+
+/* ---- Visibility toggle ---- */
+
+.visibilityRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.visibilityText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.visibilityLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: #202223;
+}
+
+.visibilityHint {
+  font-size: 11px;
+  color: #8c9196;
+}
+
+.toggle {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  border: none;
+  background: #d1d3d5;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.toggleOn {
+  background: #29845a;
+}
+
+.toggleKnob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  transition: transform 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.toggleOn .toggleKnob {
+  transform: translateX(16px);
+}
+
+/* ---- Languages / tags ---- */
+
+.tagInputWrap {
+  position: relative;
+}
+
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.tagPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px 4px 10px;
+  border-radius: 999px;
+  background: #f1f1f2;
+  font-size: 12px;
+  color: #202223;
+}
+
+.tagRemove {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #8c9196;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+}
+
+.tagRemove:hover {
+  color: #202223;
+}
+
+.tagDropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: #ffffff;
+  border: 1px solid #e3e3e3;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(23, 24, 24, 0.1);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.tagOption {
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.tagOption:hover {
+  background: #f6f6f7;
+}
+
+@media (max-width: 1100px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .fieldRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding: 16px;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .headerActions {
+    width: 100%;
+  }
+
+  .headerActions > * {
+    flex: 1;
+  }
+}

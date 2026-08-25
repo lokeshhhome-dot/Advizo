@@ -593,7 +593,7 @@ const voucherHandlerController = async (req, res) => {
 const updatesVoucherController = async (req, res) => {
   try {
     const { shopId, voucherId } = req.params;
-    const { totalCoin, extraCoin } = req.body;
+    const { totalCoin, extraCoin, voucherCode } = req.body;
 
     if (
       !mongoose.Types.ObjectId.isValid(shopId) ||
@@ -627,6 +627,7 @@ const updatesVoucherController = async (req, res) => {
 
     if (totalCoin !== undefined) voucher.totalCoin = totalCoin;
     if (extraCoin !== undefined) voucher.extraCoin = extraCoin;
+    if (voucherCode !== undefined) voucher.voucherCode = voucherCode;
 
     await shop.save();
 

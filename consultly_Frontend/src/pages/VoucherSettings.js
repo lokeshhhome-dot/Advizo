@@ -5,108 +5,104 @@ import React, {
   useEffect,
   Fragment,
 } from "react";
-import {
-  Page,
-  Layout,
-  LegacyCard,
-  FormLayout,
-  TextField,
-  Button,
-  Banner,
-  BlockStack,
-  ContextualSaveBar,
-} from "@shopify/polaris";
 import axios from "axios";
 import { useAppBridge } from "../components/createContext/AppBridgeContext";
 import { useMemo } from "react";
 import { Redirect } from "@shopify/app-bridge/actions";
+import { useSelector } from "react-redux";
 import { ToastContext } from "../components/AlertModel/PolariesTostContext";
 import { getAppBridgeToken } from "../utils/getAppBridgeToken";
+import MoneyValue from "../components/Helper/MoneyValue";
+import styles from "./VoucherSettings.module.css";
 
 function VoucherSettings() {
   const app = useAppBridge();
   const { showToast } = useContext(ToastContext);
+  const { adminDetails_ } = useSelector((state) => state.admin);
   const redirect = useMemo(() => {
     if (!app) return null;
     return Redirect.create(app);
   }, [app]);
-  const backToVoucherManagement = () => {
+  const backToVoucherManagement = useCallback(() => {
     if (!redirect) return;
     redirect.dispatch(Redirect.Action.APP, "/voucher-management");
-  };
+  }, [redirect]);
   const [formData, setFormData] = useState({
+    voucherCode: "",
     totalCoin: "",
     extraCoin: "",
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState("");
-  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [dirty, setDirty] = useState(false);
 
   const params = new URLSearchParams(window.location.search);
-  const adminId = params.get("adminId");
   const voucherId = params.get("id");
-  const totalCoin = params.get("totalCoin");
-  const extraCoin = params.get("extraCoin");
+  const totalCoinParam = params.get("totalCoin");
+  const extraCoinParam = params.get("extraCoin");
   const userId = localStorage.getItem("consultly");
 
   useEffect(() => {
-    if (totalCoin && extraCoin) {
-      setFormData({
-        totalCoin: totalCoin,
-        extraCoin: extraCoin,
-      });
+    if (totalCoinParam && extraCoinParam) {
+      setFormData((prev) => ({
+        ...prev,
+        totalCoin: totalCoinParam,
+        extraCoin: extraCoinParam,
+      }));
     }
-  }, [totalCoin, extraCoin]);
+  }, [totalCoinParam, extraCoinParam]);
 
-  const handleFieldChange = useCallback(
-    (fieldName) => {
-      return (value) => {
-        setFormData((prev) => ({
-          ...prev,
-          [fieldName]: value,
-        }));
-        setDirty(true);
-        // Clear errors when user starts typing
-        if (submitError) {
-          setSubmitError("");
-        }
-        if (submitSuccess) {
-          setSubmitSuccess(false);
-        }
-      };
-    },
-    [submitError, submitSuccess],
+  const handleFieldChange = useCallback((fieldName) => (value) => {
+    setFormData((prev) => ({ ...prev, [fieldName]: value }));
+    setErrors((prev) => ({ ...prev, [fieldName]: "" }));
+    setDirty(true);
+  }, []);
+
+  const handleInputEvent = useCallback(
+    (fieldName) => (event) => handleFieldChange(fieldName)(event.target.value),
+    [handleFieldChange],
   );
 
   const validateForm = useCallback(() => {
-    if (!formData.totalCoin || formData.totalCoin.trim() === "") {
-      setSubmitError("Total Coin is required");
-      return false;
+    const newErrors = {};
+    if (!formData.voucherCode.trim()) {
+      newErrors.voucherCode = "Voucher code is required";
     }
-    if (isNaN(Number(formData.totalCoin)) || Number(formData.totalCoin) < 0) {
-      setSubmitError("Total Coin must be a valid positive number");
-      return false;
+    if (
+      formData.totalCoin === "" ||
+      isNaN(Number(formData.totalCoin)) ||
+      Number(formData.totalCoin) < 0
+    ) {
+      newErrors.totalCoin = "Enter a valid amount";
     }
-
-    return true;
+    if (
+      formData.extraCoin !== "" &&
+      (isNaN(Number(formData.extraCoin)) || Number(formData.extraCoin) < 0)
+    ) {
+      newErrors.extraCoin = "Enter a valid amount";
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   }, [formData]);
 
-  const handleSubmit = useCallback(async () => {
-    const token = await getAppBridgeToken(app);
-    if (!validateForm()) {
-      return;
-    }
+  const handleDiscard = () => {
+    setFormData({ voucherCode: "", totalCoin: "", extraCoin: "" });
+    setErrors({});
+    setDirty(false);
+  };
 
-    setIsSubmitting(true);
-    setSubmitError("");
-    setSubmitSuccess(false);
+  //-------------------------- create voucher -------------------
+
+  const handleSubmit = useCallback(async () => {
+    if (!validateForm()) return;
+    const token = await getAppBridgeToken(app);
+    setLoading(true);
 
     try {
       const payload = {
+        voucherCode: formData.voucherCode.trim(),
         totalCoin: Number(formData.totalCoin),
-        extraCoin: Number(formData.extraCoin),
+        extraCoin: Number(formData.extraCoin) || 0,
       };
 
       const response = await axios.post(
@@ -121,142 +117,204 @@ function VoucherSettings() {
       );
       if (response.status === 200) {
         showToast(
-          response.data?.message ||
-            "Voucher settings have been saved successfully.",
+          response.data?.message || "Voucher created successfully.",
         );
         backToVoucherManagement();
       } else {
-        setSubmitError(
-          response.data?.message ||
-            "Failed to save voucher settings. Please try again.",
+        showToast(
+          response.data?.message || "Failed to create voucher.",
+          true,
         );
       }
     } catch (error) {
       console.error("Error saving voucher settings:", error);
-      setSubmitError(
+      showToast(
         error.response?.data?.message ||
           error.message ||
-          "Failed to save voucher settings. Please try again.",
+          "Failed to create voucher. Please try again.",
+        true,
       );
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
-  }, [formData, adminId, validateForm]);
+  }, [formData, userId, validateForm, app, backToVoucherManagement, showToast]);
 
-  //-------------------------- update voucher settings -------------------
+  //-------------------------- update voucher (edit-via-link fallback) -------------------
+  // The consultant list's own edit button now opens a modal instead — this
+  // stays only as a fallback for a direct ?id= link, unchanged behavior.
 
   const handleUpdate = async () => {
+    if (!validateForm()) return;
     const token = await getAppBridgeToken(app);
     setLoading(true);
     try {
       const payload = {
+        voucherCode: formData.voucherCode.trim(),
         totalCoin: Number(formData.totalCoin),
-        extraCoin: Number(formData.extraCoin),
+        extraCoin: Number(formData.extraCoin) || 0,
       };
       const response = await axios.put(
         `${process.env.REACT_APP_BACKEND_HOST}/admin/admin/voucher-updates/${userId}/${voucherId}`,
         payload,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       if (response.status === 200) {
         showToast(
-          response.data?.message ||
-            "Voucher settings have been updated successfully.",
+          response.data?.message || "Voucher updated successfully.",
         );
         backToVoucherManagement();
       } else {
-        setSubmitError(
-          response.data?.message ||
-            "Failed to update voucher settings. Please try again.",
+        showToast(
+          response.data?.message || "Failed to update voucher.",
+          true,
         );
       }
     } catch (error) {
       console.error("Error updating voucher settings:", error);
+      showToast(
+        error.response?.data?.message || "Failed to update voucher.",
+        true,
+      );
     } finally {
       setLoading(false);
     }
   };
 
+  const currency = adminDetails_?.currency;
+  const pays = Number(formData.totalCoin) || 0;
+  const bonus = Number(formData.extraCoin) || 0;
+
   return (
     <Fragment>
-      {dirty && (
-        <ContextualSaveBar
-          message="Unsaved changes"
-          saveAction={{
-            content: voucherId ? "update" : "save",
-            onAction: voucherId ? handleUpdate : handleSubmit,
-            loading: loading,
-          }}
-          discardAction={{
-            onAction: () => setDirty(false),
-          }}
-        />
-      )}
-      <Page
-        disableScroll={dirty}
-        backAction={{
-          content: "Voucher Management",
-          onAction: backToVoucherManagement,
-        }}
-        title={voucherId ? "Update Voucher Settings" : "Voucher Management"}
-      >
-        <Layout>
-          <Layout.Section>
-            <BlockStack gap="400">
-              <LegacyCard sectioned title="Dynamic Card Coin Management">
-                <FormLayout>
-                  <TextField
-                    error={submitError}
-                    label="Coin"
-                    type="number"
-                    value={formData.totalCoin}
-                    onChange={handleFieldChange("totalCoin")}
-                    placeholder="Enter total coin amount"
-                    helpText="Set the total coin amount for dynamic cards"
-                    autoComplete="off"
-                    min={0}
-                    step="1"
-                    onBlur={() => setDirty(true)}
-                  />
+      <div className={styles.page}>
+        <button type="button" className={styles.backLink} onClick={backToVoucherManagement}>
+          ‹ Vouchers
+        </button>
 
-                  <TextField
-                    label="Gift Coin"
-                    type="number"
-                    value={formData.extraCoin}
-                    onChange={handleFieldChange("extraCoin")}
-                    placeholder="Enter extra coin amount"
-                    helpText="Set the gift coin amount for dynamic cards"
-                    autoComplete="off"
-                    min={0}
-                    step="1"
-                    onBlur={() => setDirty(true)}
-                  />
-                </FormLayout>
-              </LegacyCard>
-            </BlockStack>
-          </Layout.Section>
-        </Layout>
-        <div
-          style={{
-            marginTop: "1rem",
-            display: "flex",
-            justifyContent: "flex-end",
-          }}
-        >
-          <Button
-            variant="primary"
-            onClick={voucherId ? handleUpdate : handleSubmit}
-            loading={loading}
-            disabled={loading}
-          >
-            {voucherId ? "update " : "save"}
-          </Button>
+        <div className={styles.header}>
+          <div className={styles.headerLeft}>
+            <h1 className={styles.title}>
+              {voucherId ? "Update voucher" : "Add voucher"}
+            </h1>
+            <p className={styles.subtitle}>
+              Codes that top up a shopper's wallet.
+            </p>
+          </div>
+          <div className={styles.headerActions}>
+            <button
+              type="button"
+              className={styles.discardButton}
+              onClick={handleDiscard}
+              disabled={!dirty || loading}
+            >
+              Discard
+            </button>
+            <button
+              type="button"
+              className={styles.saveButton}
+              onClick={voucherId ? handleUpdate : handleSubmit}
+              disabled={loading}
+            >
+              {loading
+                ? "Saving…"
+                : voucherId
+                  ? "Update voucher"
+                  : "Create voucher"}
+            </button>
+          </div>
         </div>
-      </Page>
+
+        <div className={styles.layout}>
+          <div className={styles.card}>
+            <div className={styles.cardHeader}>
+              <h3 className={styles.cardTitle}>Voucher details</h3>
+              <p className={styles.cardSubtitle}>
+                Customers enter this code to top up their wallet.
+              </p>
+            </div>
+
+            <div className={styles.field}>
+              <label className={styles.fieldLabel}>Voucher code *</label>
+              <input
+                className={`${styles.input} ${errors.voucherCode ? styles.inputError : ""}`}
+                value={formData.voucherCode}
+                onChange={handleInputEvent("voucherCode")}
+                onBlur={(e) =>
+                  handleFieldChange("voucherCode")(e.target.value.toUpperCase())
+                }
+                placeholder="WELCOME50"
+              />
+              {errors.voucherCode && (
+                <span className={styles.fieldError}>{errors.voucherCode}</span>
+              )}
+            </div>
+
+            <div className={styles.field}>
+              <div className={styles.fieldRow}>
+                <div>
+                  <label className={styles.fieldLabel}>Customer pays</label>
+                  <div className={styles.amountField}>
+                    <span className={styles.amountPrefix}>{currency || "₹"}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className={`${styles.input} ${errors.totalCoin ? styles.inputError : ""}`}
+                      value={formData.totalCoin}
+                      onChange={handleInputEvent("totalCoin")}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  {errors.totalCoin && (
+                    <span className={styles.fieldError}>{errors.totalCoin}</span>
+                  )}
+                </div>
+                <div>
+                  <label className={styles.fieldLabel}>Bonus credit added</label>
+                  <div className={styles.amountField}>
+                    <span className={styles.amountPrefix}>{currency || "₹"}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className={`${styles.input} ${errors.extraCoin ? styles.inputError : ""}`}
+                      value={formData.extraCoin}
+                      onChange={handleInputEvent("extraCoin")}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  {errors.extraCoin ? (
+                    <span className={styles.fieldError}>{errors.extraCoin}</span>
+                  ) : (
+                    <span className={styles.fieldHint}>Extra wallet balance as a gift</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {(pays > 0 || bonus > 0) && (
+              <div className={styles.exampleBox}>
+                A shopper who redeems this code gets{" "}
+                <span className={styles.exampleValue}>
+                  <MoneyValue currency={currency}>{pays + bonus}</MoneyValue>
+                </span>{" "}
+                added to their wallet.
+              </div>
+            )}
+          </div>
+
+          <div className={styles.card}>
+            <div className={styles.cardHeader}>
+              <h3 className={styles.cardTitle}>About vouchers</h3>
+            </div>
+            <p className={styles.aboutText}>
+              A shopper enters this code at checkout to top up their store
+              wallet. They pay the "Customer pays" amount, and the "Bonus
+              credit" is added on top for free.
+            </p>
+          </div>
+        </div>
+      </div>
     </Fragment>
   );
 }

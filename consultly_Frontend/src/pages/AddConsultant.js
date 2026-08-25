@@ -1,21 +1,4 @@
-import {
-  Banner,
-  Layout,
-  Page,
-  BlockStack,
-  LegacyCard,
-  FormLayout,
-  TextField,
-  Tag,
-  DropZone,
-  LegacyStack,
-  Text,
-  Select,
-  Button,
-  Spinner,
-  Grid,
-} from "@shopify/polaris";
-import { ConfettiIcon, ExternalIcon } from "@shopify/polaris-icons";
+import { Page, Spinner } from "@shopify/polaris";
 import {
   useState,
   useCallback,
@@ -24,7 +7,6 @@ import {
   useMemo,
   Fragment,
 } from "react";
-import axios from "axios";
 import {
   availableTags,
   genderOptions,
@@ -38,8 +20,7 @@ import {
   validateProfileImage,
   PROFILE_IMAGE_ACCEPT,
 } from "../utils/validateProfileImage";
-import { ContextualSaveBar } from "@shopify/polaris";
-import { Box } from "@shopify/polaris";
+import styles from "./AddConsultant.module.css";
 
 const validationOrder = [
   { key: "fullName", label: "Full Name" },
@@ -86,6 +67,23 @@ const validationOrderUpdate = [
   { key: "dateOfBirth", label: "Date of Birth" },
   { key: "pancardNumber", label: "Pancard Number" },
 ];
+
+function Field({ label, optional, hint, error, children }) {
+  return (
+    <div className={styles.field}>
+      <label className={styles.fieldLabel}>
+        {label}
+        {optional && <span className={styles.optional}> (optional)</span>}
+      </label>
+      {children}
+      {error ? (
+        <span className={styles.fieldError}>{error}</span>
+      ) : hint ? (
+        <span className={styles.fieldHint}>{hint}</span>
+      ) : null}
+    </div>
+  );
+}
 
 function AddConsultant() {
   const app = useAppBridge();
@@ -137,6 +135,14 @@ function AddConsultant() {
     videoPerMinute: "",
     voicePerMinute: "",
   });
+  // Storefront visibility. New consultants are always created with this off
+  // (the backend hardcodes consultantStatus:false on create — a review gate
+  // before a brand-new profile goes live) — the toggle only becomes
+  // interactive once there's an existing consultant to flip, via the same
+  // dedicated PUT /api-consultant-update-status/:id endpoint the consultant
+  // list page already uses for this, not a new mechanism.
+  const [consultantStatus, setConsultantStatus] = useState(false);
+  const [isTogglingStatus, setIsTogglingStatus] = useState(false);
   // Language tags
   const [textFieldValue, setTextFieldValue] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
@@ -175,6 +181,11 @@ function AddConsultant() {
     };
   }, []);
 
+  const handleInputEvent = useCallback(
+    (fieldName) => (event) => handleFieldChange(fieldName)(event.target.value),
+    [handleFieldChange],
+  );
+
   const handleFileInputChange = useCallback(
     (event) => {
       const file = event.target.files?.[0];
@@ -191,33 +202,9 @@ function AddConsultant() {
     },
     [showToast],
   );
-  const handleDropZoneDrop = useCallback(
-    (dropFiles, acceptedFiles, rejectedFiles) => {
-      if (rejectedFiles.length > 0) {
-        showToast("Only JPG, PNG or WEBP images are allowed", true);
-        return;
-      }
-      if (acceptedFiles.length > 0) {
-        const file = acceptedFiles[0];
-        const imageError = validateProfileImage(file);
-        if (imageError) {
-          showToast(imageError, true);
-          return;
-        }
-        setProfileImageUrl(URL.createObjectURL(file));
-        setProfileFile(file);
-        setDirty(true);
-      }
-    },
-    [showToast],
-  );
 
   const handleTextFieldChange = useCallback((value) => {
     setTextFieldValue(value);
-    setShowDropdown(true);
-  }, []);
-
-  const handleTextFieldFocus = useCallback(() => {
     setShowDropdown(true);
   }, []);
 
@@ -228,6 +215,7 @@ function AddConsultant() {
           ...prev,
           languages: [...prev.languages, tag],
         }));
+        setDirty(true);
       }
       setTextFieldValue("");
       setShowDropdown(false);
@@ -240,6 +228,7 @@ function AddConsultant() {
       ...prev,
       languages: prev.languages.filter((tag) => tag !== tagToRemove),
     }));
+    setDirty(true);
   }, []);
 
   const filteredTags = availableTags.filter((tag) => {
@@ -249,66 +238,6 @@ function AddConsultant() {
     const notSelected = !formData.languages.includes(tag);
     return matchesSearch && notSelected;
   });
-
-  const verticalContentMarkup = (
-    <BlockStack gap="200">
-      {formData.languages.length > 0 && (
-        <BlockStack gap="100">
-          <Text variant="bodySm" tone="subdued" fontWeight="medium">
-            Selected Tags:
-          </Text>
-          <LegacyStack spacing="extraTight" alignment="center" wrap>
-            {formData.languages.map((tag) => (
-              <Tag key={tag} onRemove={() => handleRemoveTag(tag)}>
-                {tag}
-              </Tag>
-            ))}
-          </LegacyStack>
-        </BlockStack>
-      )}
-    </BlockStack>
-  );
-
-  //-------------------------- dropdown markup -------------------
-
-  const dropdownMarkup = showDropdown && filteredTags.length > 0 && (
-    <div
-      style={{
-        position: "absolute",
-        top: "100%",
-        left: 0,
-        right: 0,
-        backgroundColor: "white",
-        border: "1px solid #e1e3e5",
-        borderRadius: "6px",
-        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-        zIndex: 1000,
-        maxHeight: "200px",
-        overflowY: "auto",
-        marginTop: "4px",
-      }}
-    >
-      {filteredTags.map((tag) => (
-        <div
-          key={tag}
-          onClick={() => handleTagSelect(tag)}
-          style={{
-            padding: "8px 12px",
-            cursor: "pointer",
-            borderBottom: "1px solid #e1e3e5",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = "#f6f6f7";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "white";
-          }}
-        >
-          <Text variant="bodyMd">{tag}</Text>
-        </div>
-      ))}
-    </div>
-  );
 
   //-------------------------- handle file button click -------------------
 
@@ -367,9 +296,6 @@ function AddConsultant() {
         }
       }
     });
-
-    for (let pair of form.entries()) {
-    }
 
     try {
       const response = await fetch(
@@ -481,6 +407,45 @@ function AddConsultant() {
   };
   //-------------------------- update consultant data / edit consultant data-------------------
 
+  //-------------------------- toggle storefront visibility -------------------
+  // Reuses the existing dedicated status-toggle endpoint (same one the
+  // consultant list page already calls) rather than folding this into the
+  // generic update-consultant submit — takes effect immediately, same as
+  // everywhere else in the app this toggle already exists.
+  const handleToggleStatus = useCallback(async () => {
+    if (!updateIsTrue || !consultantId || isTogglingStatus) return;
+    setIsTogglingStatus(true);
+    try {
+      const token = await getAppBridgeToken(app);
+      const response = await fetch(
+        `${process.env.REACT_APP_BACKEND_HOST}/api-consultant/api-consultant-update-status/${consultantId}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+      const responseData = await response.json();
+      if (response.ok) {
+        setConsultantStatus(Boolean(responseData?.status));
+        showToast(
+          responseData?.status
+            ? "Consultant is now visible on your storefront"
+            : "Consultant is hidden from your storefront",
+        );
+      } else {
+        showToast(responseData?.message || "Failed to update visibility", true);
+      }
+    } catch (error) {
+      console.error("Error toggling consultant status:", error);
+      showToast("Failed to update visibility", true);
+    } finally {
+      setIsTogglingStatus(false);
+    }
+  }, [app, consultantId, updateIsTrue, isTogglingStatus, showToast]);
+  //-------------------------- toggle storefront visibility -------------------
+
   //-------------------------- get consultant by id -------------------
 
   const getConsultantById = async () => {
@@ -573,13 +538,13 @@ function AddConsultant() {
         videoPerMinute: consultantDetails.videoPerMinute || "",
         voicePerMinute: consultantDetails.voicePerMinute || "",
       });
+      setConsultantStatus(Boolean(consultantDetails.consultantStatus));
 
       if (consultantDetails.profileImage) {
         let imagePath = consultantDetails.profileImage.replace(/\\/g, "/");
 
         if (!imagePath.startsWith("http")) {
           const backendHost = process.env.REACT_APP_BACKEND_HOST;
-          const breakpoint = backendHost.split("/").pop();
           const baseUrl = backendHost.replace(/\/$/, "");
           imagePath = imagePath.replace(/^\//, "");
           imagePath = `${baseUrl}/${imagePath}`;
@@ -594,7 +559,18 @@ function AddConsultant() {
 
   const handleDiscard = () => {
     setDirty(false);
+    if (consultantDetails) {
+      // Re-apply the loaded values so a discard on the edit form actually
+      // reverts in-progress edits, not just the dirty flag.
+      setConsultantDetails({ ...consultantDetails });
+    }
   };
+
+  const handleSave = () => {
+    if (updateIsTrue) updateConsultantData();
+    else submitConsultantData();
+  };
+
   if (isLoading) {
     return (
       <div
@@ -612,437 +588,437 @@ function AddConsultant() {
 
   return (
     <Fragment>
-      <Box paddingBlockStart="400">
-        <Page
-          marginBlockStart="400"
-          backAction={{
-            disabled: true,
-            content: "Consultant List",
-            onAction: goToAddConsultant,
-          }}
-          title={
-            updateIsTrue
-              ? "Update Consultant settings"
-              : "Add Consultant settings"
-          }
-        >
-          {dirty && (
-            <ContextualSaveBar
-              message="Unsaved changes"
-              saveAction={{
-                content: updateIsTrue ? "Update" : "Submit",
-                onAction: updateIsTrue
-                  ? updateConsultantData
-                  : submitConsultantData,
-                loading: isSubmitting,
-              }}
-              discardAction={{
-                onAction: handleDiscard,
-              }}
-            />
-          )}
-
-          <Layout>
-            <Layout.Section>
-              <LegacyCard title="Add Consultant settings" sectioned>
-                <FormLayout>
-                  <FormLayout.Group>
-                    <Grid>
-                      <Grid.Cell
-                        columnSpan={{ xs: 6, sm: 3, md: 3, lg: 6, xl: 6 }}
-                      >
-                        <FormLayout>
-                          <FormLayout.Group>
-                            {/* Full Name */}
-                            <TextField
-                              label="Full Name"
-                              value={formData.fullName}
-                              onChange={handleFieldChange("fullName")}
-                              autoComplete="off"
-                              onBlur={() => setDirty(true)}
-                              error={errors.fullName}
-                            />
-                          </FormLayout.Group>
-                          <FormLayout.Group>
-                            {/* Email */}
-                            <TextField
-                              label="Email"
-                              type="email"
-                              value={formData.email}
-                              onChange={handleFieldChange("email")}
-                              autoComplete="email"
-                              onBlur={() => setDirty(true)}
-                              error={errors.email}
-                            />
-                          </FormLayout.Group>
-                          {!updateIsTrue && (
-                            <FormLayout.Group>
-                              <TextField
-                                label="Password"
-                                type="password"
-                                value={formData.password}
-                                onChange={handleFieldChange("password")}
-                                autoComplete="off"
-                                onBlur={() => setDirty(true)}
-                                error={errors.password}
-                              />
-                            </FormLayout.Group>
-                          )}
-                        </FormLayout>
-                      </Grid.Cell>
-                      {/* Profile Image */}
-                      <Grid.Cell
-                        columnSpan={{ xs: 6, sm: 3, md: 3, lg: 6, xl: 6 }}
-                      >
-                        <div
-                          style={{ width: 200, height: "auto", margin: "auto" }}
-                        >
-                          <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept={PROFILE_IMAGE_ACCEPT}
-                            onChange={handleFileInputChange}
-                            style={{ display: "none" }}
-                            onBlur={() => setDirty(true)}
-                          />
-                          <DropZone
-                            onDrop={handleDropZoneDrop}
-                            accept={PROFILE_IMAGE_ACCEPT}
-                            type="image"
-                            allowMultiple={false}
-                            onBlur={() => setDirty(true)}
-                          >
-                            {profileImageUrl ? (
-                              <div
-                                style={{
-                                  width: "100%",
-                                  height: "100%",
-                                  textAlign: "center",
-                                  padding: "10px",
-                                  display: "flex",
-                                  justifyContent: "center",
-                                  alignItems: "center",
-                                }}
-                              >
-                                <img
-                                  src={
-                                    profileImageUrl ||
-                                    "./images/teamdefault.png"
-                                  }
-                                  alt="Profile Preview"
-                                  style={{
-                                    width: 90,
-                                    height: 90,
-                                    borderRadius: "8px",
-                                    objectFit: "cover",
-                                  }}
-                                />
-                              </div>
-                            ) : (
-                              <div
-                                style={{
-                                  width: "100%",
-                                  height: "100%",
-                                  textAlign: "center",
-                                  padding: "10px",
-                                  display: "flex",
-                                  justifyContent: "center",
-                                  alignItems: "center",
-                                }}
-                              >
-                                <img
-                                  src="https://imgs.search.brave.com/yOFX1qSEMWIswSBYLiK9GC4cJjj0gZbFzr7-sfcycHQ/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9jZG4u/dmVjdG9yc3RvY2su/Y29tL2kvNTAwcC80/Mi8wOC9hdmF0YXIt/ZGVmYXVsdC11c2Vy/LXByb2ZpbGUtaWNv/bi1zb2NpYWwtbWVk/aWEtdmVjdG9yLTU3/MjM0MjA4LmpwZw"
-                                  alt="Default Profile"
-                                  style={{
-                                    width: 90,
-                                    height: 90,
-                                    borderRadius: "8px",
-                                    objectFit: "cover",
-                                  }}
-                                />
-                              </div>
-                            )}
-                          </DropZone>
-                          <div
-                            style={{ marginTop: "8px", textAlign: "center" }}
-                          >
-                            <Button size="slim" onClick={handleFileButtonClick}>
-                              Upload Image
-                            </Button>
-                            <div
-                              style={{
-                                marginTop: "4px",
-                                fontSize: "12px",
-                                color: "#6d7175",
-                              }}
-                            >
-                              Max 2MB. JPG, PNG or WEBP
-                            </div>
-                          </div>
-                        </div>
-                      </Grid.Cell>
-                    </Grid>
-                  </FormLayout.Group>
-                  <div style={{ marginTop: updateIsTrue ? "20px" : "0px" }}>
-                    <FormLayout.Group>
-                      {/* Phone Number */}
-                      <TextField
-                        label="Phone Number"
-                        type="number"
-                        value={formData.phoneNumber}
-                        onChange={handleFieldChange("phoneNumber")}
-                        autoComplete="off"
-                        onBlur={() => setDirty(true)}
-                        error={errors.phoneNumber}
-                      />
-
-                      {/* Profession */}
-                      <TextField
-                        label="Profession"
-                        value={formData.profession}
-                        onChange={handleFieldChange("profession")}
-                        autoComplete="off"
-                        onBlur={() => setDirty(true)}
-                        error={errors.profession}
-                      />
-
-                      {/* Specialization */}
-                      <TextField
-                        label="Specialization"
-                        value={formData.specialization}
-                        onChange={handleFieldChange("specialization")}
-                        autoComplete="off"
-                        onBlur={() => setDirty(true)}
-                        error={errors.specialization}
-                      />
-                    </FormLayout.Group>
-                  </div>
-                  <FormLayout.Group>
-                    {/* License / ID Number */}
-                    <TextField
-                      label="License / ID Number"
-                      value={formData.licenseIdNumber}
-                      onChange={handleFieldChange("licenseIdNumber")}
-                      autoComplete="off"
-                      onBlur={() => setDirty(true)}
-                      error={errors.licenseIdNumber}
-                    />
-
-                    {/* Year of Experience */}
-                    <TextField
-                      label="Year of Experience"
-                      type="number"
-                      value={formData.yearOfExperience}
-                      onChange={handleFieldChange("yearOfExperience")}
-                      autoComplete="off"
-                      onBlur={() => setDirty(true)}
-                      error={errors.yearOfExperience}
-                    />
-                  </FormLayout.Group>
-                </FormLayout>
-              </LegacyCard>
-            </Layout.Section>
-
-            <Layout.Section>
-              <LegacyCard title="Add your consultant charges" sectioned>
-                <FormLayout>
-                  <FormLayout.Group>
-                    {/* Display Name */}
-                    <TextField
-                      type="number"
-                      label="Chat per minute"
-                      value={formData.chatPerMinute}
-                      onChange={handleFieldChange("chatPerMinute")}
-                      autoComplete="off"
-                      onBlur={() => setDirty(true)}
-                      error={errors.chatPerMinute}
-                    />
-                    {/* Voice per minute */}
-                    <TextField
-                      type="number"
-                      label="Voice per minute"
-                      value={formData.voicePerMinute}
-                      onChange={handleFieldChange("voicePerMinute")}
-                      autoComplete="off"
-                      onBlur={() => setDirty(true)}
-                      error={errors.voicePerMinute}
-                    />
-                    {/* Audio per minute */}
-                    {/* Video per minute */}
-
-                    <TextField
-                      type="number"
-                      label="Video per minute"
-                      value={formData.videoPerMinute}
-                      onChange={handleFieldChange("videoPerMinute")}
-                      autoComplete="off"
-                      onBlur={() => setDirty(true)}
-                      error={errors.videoPerMinute}
-                    />
-
-                  </FormLayout.Group>
-                </FormLayout>
-              </LegacyCard>
-            </Layout.Section>
-
-            {/* add your consultant Language */}
-            <Layout.Section>
-              <div className="language-card-wrapper">
-                <LegacyCard title="Add your consultant Language" sectioned>
-                  <FormLayout>
-                    <FormLayout.Group>
-                      <div style={{ position: "relative", width: "100%" }}>
-                        <TextField
-                          label="Tags"
-                          paddingBlockEnd="0"
-                          value={textFieldValue}
-                          onChange={handleTextFieldChange}
-                          onFocus={handleTextFieldFocus}
-                          onBlur={() => {
-                            setTimeout(() => setShowDropdown(false), 200);
-                          }}
-                          placeholder="Search tags"
-                          autoComplete="off"
-                          verticalContent={verticalContentMarkup}
-                          error={errors.languages}
-                        />
-                        {dropdownMarkup}
-                      </div>
-                    </FormLayout.Group>
-                  </FormLayout>
-                </LegacyCard>
-              </div>
-            </Layout.Section>
-
-            {/* Add your consultant details */}
-            <Layout.Section>
-              <LegacyCard title="Add your consultant details" sectioned>
-                <div className="consultant-details-grid">
-                  {/* Display Name */}
-                  <TextField
-                    label="Display Name"
-                    value={formData.displayName}
-                    onChange={handleFieldChange("displayName")}
-                    autoComplete="off"
-                    onBlur={() => setDirty(true)}
-                    error={errors.displayName}
-                  />
-                  {/* Gender */}
-                  <Select
-                    label="Gender"
-                    options={genderOptions}
-                    onChange={handleFieldChange("gender")}
-                    value={formData.gender}
-                    onBlur={() => setDirty(true)}
-                    error={errors.gender}
-                  />
-                  {/* House Number */}
-                  <TextField
-                    label="House Number"
-                    value={formData.houseNumber}
-                    onChange={handleFieldChange("houseNumber")}
-                    autoComplete="off"
-                    onBlur={() => setDirty(true)}
-                    error={errors.houseNumber}
-                  />
-                </div>
-                <div className="consultant-details-grid">
-                  {/* Street Area */}
-                  <TextField
-                    label="Street Area"
-                    value={formData.streetArea}
-                    onChange={handleFieldChange("streetArea")}
-                    autoComplete="off"
-                    onBlur={() => setDirty(true)}
-                    error={errors.streetArea}
-                  />
-
-                  {/* Landmark */}
-                  <TextField
-                    label="Landmark"
-                    value={formData.landmark}
-                    onChange={handleFieldChange("landmark")}
-                    autoComplete="off"
-                    onBlur={() => setDirty(true)}
-                    error={errors.landmark}
-                  />
-
-                  {/* Address */}
-                  <TextField
-                    label="Address"
-                    value={formData.address}
-                    onChange={handleFieldChange("address")}
-                    autoComplete="off"
-                    onBlur={() => setDirty(true)}
-                    error={errors.address}
-                  />
-                </div>
-                <div className="consultant-details-grid">
-                  {/* Pincode */}
-                  <TextField
-                    label="Pincode"
-                    value={formData.pincode}
-                    type="number"
-                    onChange={handleFieldChange("pincode")}
-                    autoComplete="off"
-                    onBlur={() => setDirty(true)}
-                    error={errors.pincode}
-                  />
-
-                  {/* Date of Birth */}
-                  <TextField
-                    label="Date of Birth"
-                    type="date"
-                    value={formData.dateOfBirth}
-                    onChange={handleFieldChange("dateOfBirth")}
-                    autoComplete="off"
-                    onBlur={() => setDirty(true)}
-                    error={errors.dateOfBirth}
-                  />
-
-                  {/* Pancard Number */}
-                  <TextField
-                    label="Pancard Number"
-                    value={formData.pancardNumber}
-                    onChange={handleFieldChange("pancardNumber")}
-                    autoComplete="off"
-                    onBlur={() => setDirty(true)}
-                    error={errors.pancardNumber}
-                  />
-                </div>
-              </LegacyCard>
-            </Layout.Section>
-          </Layout>
-          <div
-            style={{
-              marginTop: "20px",
-              display: "flex",
-              gap: "10px",
-              justifyContent: "flex-end",
-            }}
+      <Page fullWidth>
+        <div className={styles.page}>
+          <button
+            type="button"
+            className={styles.backLink}
+            onClick={goToAddConsultant}
           >
-            {updateIsTrue ? (
-              <Button
-                variant="primary"
-                onClick={updateConsultantData}
-                loading={isSubmitting}
+            ‹ Consultants
+          </button>
+
+          <div className={styles.header}>
+            <div className={styles.headerLeft}>
+              <h1 className={styles.title}>
+                {updateIsTrue ? "Update consultant" : "Add consultant"}
+              </h1>
+              <p className={styles.subtitle}>
+                This information appears on your storefront's consultant listing.
+              </p>
+            </div>
+            <div className={styles.headerActions}>
+              <button
+                type="button"
+                className={styles.discardButton}
+                onClick={handleDiscard}
+                disabled={!dirty || isSubmitting}
+              >
+                Discard
+              </button>
+              <button
+                type="button"
+                className={styles.saveButton}
+                onClick={handleSave}
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "Updating..." : "Update"}
-              </Button>
-            ) : (
-              <Button
-                variant="primary"
-                onClick={submitConsultantData}
-                loading={isSubmitting}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Submitting..." : "Submit"}
-              </Button>
-            )}
+                {isSubmitting ? "Saving…" : "Save"}
+              </button>
+            </div>
           </div>
-        </Page>
-      </Box>
+
+          <div className={styles.layout}>
+            {/* Main column */}
+            <div className={styles.mainCol}>
+              {/* Basic information */}
+              <div className={styles.card}>
+                <div className={styles.cardHeader}>
+                  <h3 className={styles.cardTitle}>Basic information</h3>
+                  <p className={styles.cardSubtitle}>
+                    Login details and how they're identified.
+                  </p>
+                </div>
+                <div className={styles.fieldRow} style={{ "--cols": 2 }}>
+                  <Field label="Full name" error={errors.fullName}>
+                    <input
+                      className={`${styles.input} ${errors.fullName ? styles.inputError : ""}`}
+                      value={formData.fullName}
+                      onChange={handleInputEvent("fullName")}
+                      placeholder="Dr. Anita Sharma"
+                    />
+                  </Field>
+                  <Field
+                    label="Display name"
+                    hint="Leave blank to use full name"
+                    error={errors.displayName}
+                  >
+                    <input
+                      className={`${styles.input} ${errors.displayName ? styles.inputError : ""}`}
+                      value={formData.displayName}
+                      onChange={handleInputEvent("displayName")}
+                      placeholder="Shown to customers"
+                    />
+                  </Field>
+                </div>
+                <div className={styles.fieldRow} style={{ "--cols": 2 }}>
+                  <Field label="Email" error={errors.email}>
+                    <input
+                      type="email"
+                      className={`${styles.input} ${errors.email ? styles.inputError : ""}`}
+                      value={formData.email}
+                      onChange={handleInputEvent("email")}
+                      placeholder="name@example.com"
+                    />
+                  </Field>
+                  <Field label="Phone number" error={errors.phoneNumber}>
+                    <input
+                      type="tel"
+                      className={`${styles.input} ${errors.phoneNumber ? styles.inputError : ""}`}
+                      value={formData.phoneNumber}
+                      onChange={handleInputEvent("phoneNumber")}
+                      placeholder="+91 98765 43210"
+                    />
+                  </Field>
+                </div>
+                {!updateIsTrue && (
+                  <div className={styles.fieldRow} style={{ "--cols": 2 }}>
+                    <Field label="Password" error={errors.password}>
+                      <input
+                        type="password"
+                        className={`${styles.input} ${errors.password ? styles.inputError : ""}`}
+                        value={formData.password}
+                        onChange={handleInputEvent("password")}
+                        placeholder="Set an initial password"
+                        autoComplete="new-password"
+                      />
+                    </Field>
+                  </div>
+                )}
+              </div>
+
+              {/* Professional details */}
+              <div className={styles.card}>
+                <div className={styles.cardHeader}>
+                  <h3 className={styles.cardTitle}>Professional details</h3>
+                  <p className={styles.cardSubtitle}>
+                    Helps customers know who they're booking.
+                  </p>
+                </div>
+                <div className={styles.fieldRow} style={{ "--cols": 3 }}>
+                  <Field label="Profession" error={errors.profession}>
+                    <input
+                      className={`${styles.input} ${errors.profession ? styles.inputError : ""}`}
+                      value={formData.profession}
+                      onChange={handleInputEvent("profession")}
+                      placeholder="Nutritionist"
+                    />
+                  </Field>
+                  <Field label="Specialization" error={errors.specialization}>
+                    <input
+                      className={`${styles.input} ${errors.specialization ? styles.inputError : ""}`}
+                      value={formData.specialization}
+                      onChange={handleInputEvent("specialization")}
+                      placeholder="Weight management"
+                    />
+                  </Field>
+                  <Field
+                    label="Years of experience"
+                    error={errors.yearOfExperience}
+                  >
+                    <input
+                      type="number"
+                      min="0"
+                      className={`${styles.input} ${errors.yearOfExperience ? styles.inputError : ""}`}
+                      value={formData.yearOfExperience}
+                      onChange={handleInputEvent("yearOfExperience")}
+                      placeholder="6"
+                    />
+                  </Field>
+                </div>
+                <div className={styles.fieldRow} style={{ "--cols": 2 }}>
+                  <Field
+                    label="License / ID number"
+                    hint="Optional — for verified badge"
+                    error={errors.licenseIdNumber}
+                  >
+                    <input
+                      className={`${styles.input} ${errors.licenseIdNumber ? styles.inputError : ""}`}
+                      value={formData.licenseIdNumber}
+                      onChange={handleInputEvent("licenseIdNumber")}
+                      placeholder="Optional — for verified badge"
+                    />
+                  </Field>
+                  <Field label="Languages" error={errors.languages}>
+                    <div className={styles.tagInputWrap}>
+                      {formData.languages.length > 0 && (
+                        <div className={styles.tagList}>
+                          {formData.languages.map((tag) => (
+                            <span key={tag} className={styles.tagPill}>
+                              {tag}
+                              <button
+                                type="button"
+                                className={styles.tagRemove}
+                                onClick={() => handleRemoveTag(tag)}
+                                aria-label={`Remove ${tag}`}
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <input
+                        className={styles.input}
+                        value={textFieldValue}
+                        onChange={(e) => handleTextFieldChange(e.target.value)}
+                        onFocus={() => setShowDropdown(true)}
+                        onBlur={() =>
+                          setTimeout(() => setShowDropdown(false), 200)
+                        }
+                        placeholder="Search and add languages"
+                      />
+                      {showDropdown && filteredTags.length > 0 && (
+                        <div className={styles.tagDropdown}>
+                          {filteredTags.map((tag) => (
+                            <div
+                              key={tag}
+                              className={styles.tagOption}
+                              onClick={() => handleTagSelect(tag)}
+                            >
+                              {tag}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </Field>
+                </div>
+              </div>
+
+              {/* Consultation pricing */}
+              <div className={styles.card}>
+                <div className={styles.cardHeader}>
+                  <h3 className={styles.cardTitle}>Consultation pricing</h3>
+                  <p className={styles.cardSubtitle}>
+                    What customers pay per minute, by channel.
+                  </p>
+                </div>
+                <div className={styles.fieldRow} style={{ "--cols": 3 }}>
+                  <Field label="Chat — per min" error={errors.chatPerMinute}>
+                    <div className={styles.amountField}>
+                      <span className={styles.amountPrefix}>₹</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className={`${styles.input} ${errors.chatPerMinute ? styles.inputError : ""}`}
+                        value={formData.chatPerMinute}
+                        onChange={handleInputEvent("chatPerMinute")}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </Field>
+                  <Field label="Voice — per min" error={errors.voicePerMinute}>
+                    <div className={styles.amountField}>
+                      <span className={styles.amountPrefix}>₹</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className={`${styles.input} ${errors.voicePerMinute ? styles.inputError : ""}`}
+                        value={formData.voicePerMinute}
+                        onChange={handleInputEvent("voicePerMinute")}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </Field>
+                  <Field label="Video — per min" error={errors.videoPerMinute}>
+                    <div className={styles.amountField}>
+                      <span className={styles.amountPrefix}>₹</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className={`${styles.input} ${errors.videoPerMinute ? styles.inputError : ""}`}
+                        value={formData.videoPerMinute}
+                        onChange={handleInputEvent("videoPerMinute")}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </Field>
+                </div>
+              </div>
+
+              {/* Address — not part of the storefront listing reference,
+                  kept as its own section since these fields are still
+                  required/collected by the existing backend. */}
+              <div className={styles.card}>
+                <div className={styles.cardHeader}>
+                  <h3 className={styles.cardTitle}>Address</h3>
+                  <p className={styles.cardSubtitle}>
+                    Not shown on the storefront — used for records only.
+                  </p>
+                </div>
+                <div className={styles.fieldRow} style={{ "--cols": 3 }}>
+                  <Field label="House number" error={errors.houseNumber}>
+                    <input
+                      className={`${styles.input} ${errors.houseNumber ? styles.inputError : ""}`}
+                      value={formData.houseNumber}
+                      onChange={handleInputEvent("houseNumber")}
+                    />
+                  </Field>
+                  <Field label="Street area" error={errors.streetArea}>
+                    <input
+                      className={`${styles.input} ${errors.streetArea ? styles.inputError : ""}`}
+                      value={formData.streetArea}
+                      onChange={handleInputEvent("streetArea")}
+                    />
+                  </Field>
+                  <Field label="Landmark" error={errors.landmark}>
+                    <input
+                      className={`${styles.input} ${errors.landmark ? styles.inputError : ""}`}
+                      value={formData.landmark}
+                      onChange={handleInputEvent("landmark")}
+                    />
+                  </Field>
+                </div>
+                <div className={styles.fieldRow} style={{ "--cols": 2 }}>
+                  <Field label="Address" error={errors.address}>
+                    <input
+                      className={`${styles.input} ${errors.address ? styles.inputError : ""}`}
+                      value={formData.address}
+                      onChange={handleInputEvent("address")}
+                    />
+                  </Field>
+                  <Field label="Pincode" error={errors.pincode}>
+                    <input
+                      type="number"
+                      className={`${styles.input} ${errors.pincode ? styles.inputError : ""}`}
+                      value={formData.pincode}
+                      onChange={handleInputEvent("pincode")}
+                    />
+                  </Field>
+                </div>
+              </div>
+            </div>
+
+            {/* Side column */}
+            <div className={styles.sideCol}>
+              {/* Upload photo */}
+              <div className={styles.card}>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={PROFILE_IMAGE_ACCEPT}
+                  onChange={handleFileInputChange}
+                  className={styles.hiddenFileInput}
+                />
+                <div
+                  className={styles.uploadBox}
+                  onClick={handleFileButtonClick}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") handleFileButtonClick();
+                  }}
+                >
+                  {profileImageUrl ? (
+                    <img
+                      src={profileImageUrl}
+                      alt="Consultant"
+                      className={styles.uploadPreview}
+                    />
+                  ) : (
+                    <>
+                      <span className={styles.uploadPlus}>+</span>
+                      <span className={styles.uploadLabel}>Upload photo</span>
+                    </>
+                  )}
+                  <span className={styles.uploadHint}>
+                    JPG, PNG or WEBP — Max 2MB
+                  </span>
+                </div>
+              </div>
+
+              {/* Visibility */}
+              <div className={styles.card}>
+                <div className={styles.cardHeader}>
+                  <h3 className={styles.cardTitle}>Visibility</h3>
+                </div>
+                <div className={styles.visibilityRow}>
+                  <div className={styles.visibilityText}>
+                    <span className={styles.visibilityLabel}>
+                      Show on storefront
+                    </span>
+                    <span className={styles.visibilityHint}>
+                      {updateIsTrue
+                        ? "Bookable by customers"
+                        : "Bookable once saved"}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={consultantStatus}
+                    className={`${styles.toggle} ${consultantStatus ? styles.toggleOn : ""}`}
+                    onClick={handleToggleStatus}
+                    disabled={!updateIsTrue || isTogglingStatus}
+                    title={
+                      updateIsTrue
+                        ? "Toggle storefront visibility"
+                        : "Available once this consultant is saved"
+                    }
+                  >
+                    <span className={styles.toggleKnob} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Personal details */}
+              <div className={styles.card}>
+                <div className={styles.cardHeader}>
+                  <h3 className={styles.cardTitle}>Personal details</h3>
+                </div>
+                <div className={styles.fieldRow} style={{ "--cols": 1 }}>
+                  <Field label="Gender" error={errors.gender}>
+                    <select
+                      className={styles.select}
+                      value={formData.gender}
+                      onChange={handleInputEvent("gender")}
+                    >
+                      {genderOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Date of birth" error={errors.dateOfBirth}>
+                    <input
+                      type="date"
+                      className={`${styles.input} ${errors.dateOfBirth ? styles.inputError : ""}`}
+                      value={formData.dateOfBirth}
+                      onChange={handleInputEvent("dateOfBirth")}
+                    />
+                  </Field>
+                  <Field
+                    label="PAN number"
+                    hint="Used for payouts and verification only — never shown publicly."
+                    error={errors.pancardNumber}
+                  >
+                    <input
+                      className={`${styles.input} ${errors.pancardNumber ? styles.inputError : ""}`}
+                      value={formData.pancardNumber}
+                      onChange={handleInputEvent("pancardNumber")}
+                      placeholder="ABCDE1234F"
+                    />
+                  </Field>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Page>
     </Fragment>
   );
 }

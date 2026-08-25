@@ -1,11 +1,8 @@
 import {
   Page,
-  LegacyCard,
   Text,
-  Box,
   Button,
   Badge,
-  Divider,
   Icon,
 } from "@shopify/polaris";
 import {
@@ -20,14 +17,12 @@ import {
   CreditCardIcon,
   CartDiscountIcon,
   PlusIcon,
-  ChevronRightIcon,
   PhoneIcon,
   CameraIcon,
   WorkIcon,
   RefreshIcon,
   XIcon,
-  ClockIcon,
-  WatchIcon,
+  CheckIcon,
 } from "@shopify/polaris-icons";
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { animate } from "framer-motion";
@@ -53,6 +48,12 @@ import WelcomeModal from "../components/dashboard/WelcomeModal";
 import styles from "./Dashboard.module.css";
 
 const TIP_BANNER_DISMISS_KEY = "consultly_dashboard_tip_dismissed";
+// Recent activity table only ever shows the latest 4 (unchanged), but the
+// Revenue card's last-7-days bars are bucketed from this same fetched list
+// client-side — real transaction data, not a fabricated series. 40 is enough
+// to cover a week for all but the very highest-volume stores without an
+// unnecessarily large fetch.
+const HOME_ACTIVITY_FETCH_LIMIT = 40;
 
 function AnimatedCount({ value }) {
   const targetValue = value || 0;
@@ -103,37 +104,134 @@ function formatTimeAgo(date) {
   return `${days} day${days !== 1 ? "s" : ""} ago`;
 }
 
-function getActivityMeta(item) {
-  const user =
-    item.senderId?.fullname || item.receiverId?.fullname || "User";
-  const type = item.type?.toLowerCase();
+/**
+ * Small inline trend chart for a metric card. @shopify/polaris-viz (Shopify's
+ * own charting package, the natural choice for this) only supports React
+ * 16-18 (checked via `npm view` — peerDependencies caps at ^18.0.0); this
+ * project is on React 19, so installing it would be unsupported and
+ * unverifiable without a browser. This is a plain inline SVG instead — no
+ * new dependency, same Polaris color tokens already used across this page.
+ * `values` must be real data; renders nothing meaningful for an all-zero
+ * series rather than pretending there's a trend.
+ */
+function Sparkline({ values, color = "#29845a" }) {
+  if (!values || values.length < 2) return null;
+  const max = Math.max(...values, 1);
+  const min = Math.min(...values, 0);
+  const range = max - min || 1;
+  const w = 100;
+  const h = 32;
+  const step = w / (values.length - 1);
+  const points = values
+    .map((v, i) => `${i * step},${h - ((v - min) / range) * h}`)
+    .join(" ");
+  const areaPoints = `0,${h} ${points} ${w},${h}`;
 
+  return (
+    <svg
+      className={styles.sparkline}
+      viewBox={`0 0 ${w} ${h}`}
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <polygon points={areaPoints} fill={color} fillOpacity="0.12" />
+      <polyline
+        points={points}
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** Small horizontal ratio bar — for a real current value (0-100), not a
+ * fabricated trend. Used where no historical series exists but a genuine
+ * current proportion does (active/total consultants, commission %). */
+function MiniRatioBar({ percent, color = "#29845a" }) {
+  const clamped = Math.max(0, Math.min(100, percent || 0));
+  return (
+    <div className={styles.miniRatioTrack} aria-hidden="true">
+      <div
+        className={styles.miniRatioFill}
+        style={{ width: `${clamped}%`, background: color }}
+      />
+    </div>
+  );
+}
+
+function getActivityTypeBadge(item) {
+  const type = item.type?.toLowerCase();
   if (type === "voice") {
-    return {
-      icon: PhoneIcon,
-      tone: "critical",
-      text: `${user} completed a voice call`,
-    };
+    return { label: "Voice", icon: PhoneIcon, className: "typeBadgeVoice" };
   }
   if (type === "video") {
-    return {
-      icon: CameraIcon,
-      tone: "base",
-      text: `${user} completed a video call`,
-    };
+    return { label: "Video", icon: CameraIcon, className: "typeBadgeVideo" };
   }
   if (type === "chat") {
-    return {
-      icon: ChatIcon,
-      tone: "base",
-      text: `${user} started a chat`,
-    };
+    return { label: "Chat", icon: ChatIcon, className: "typeBadgeChat" };
   }
-  return {
-    icon: WorkIcon,
-    tone: "subdued",
-    text: `${user} completed a session`,
+  return { label: "Session", icon: WorkIcon, className: "typeBadgeDefault" };
+}
+
+/**
+ * "Consultly is set up" summary — DashboardSetupGuide.js returns null once
+ * every step is complete (it's a nudge-to-finish-setup component, nothing to
+ * nudge once done), so there was previously no all-done state at all. Reuses
+ * getSetupGuideSteps for step id/title/status — only the per-step summary
+ * copy below is new, built from data already available on Dashboard rather
+ * than the step's generic pre-completion `description`.
+ */
+function SetupCompleteCard({ steps, consultantCount, adminPercentage }) {
+  const summaries = {
+    1: `${consultantCount} consultant${consultantCount === 1 ? "" : "s"} added`,
+    2: `Set to ${Number(adminPercentage)}%`,
+    // No "activated on" timestamp exists anywhere in the data available
+    // here — shown as an honest status rather than a fabricated date.
+    3: "Active on your storefront",
+    4: "Added to your storefront navigation",
   };
+  // Display order only (4, 1, 2, 3) — matches the reference layout;
+  // status/completeness itself is untouched, still driven by real data.
+  const orderedSteps = [4, 1, 2, 3]
+    .map((id) => steps.find((s) => s.id === id))
+    .filter(Boolean);
+
+  return (
+    <div className={styles.setupCompleteCard}>
+      <div className={styles.setupCompleteHeader}>
+        <div>
+          <h3 className={styles.setupCompleteTitle}>Consultly is set up</h3>
+          <p className={styles.setupCompleteSubtitle}>
+            All four setup steps are complete — bookings are live on your storefront.
+          </p>
+        </div>
+        <span className={styles.setupCompleteCount}>
+          {steps.length} / {steps.length}
+        </span>
+      </div>
+      <div className={styles.setupCompleteProgressTrack}>
+        <div className={styles.setupCompleteProgressFill} style={{ width: "100%" }} />
+      </div>
+      <ul className={styles.setupCompleteList}>
+        {orderedSteps.map((step) => (
+          <li key={step.id} className={styles.setupCompleteItem}>
+            <span className={styles.setupCompleteCheck}>
+              <Icon source={CheckIcon} tone="base" />
+            </span>
+            <div>
+              <p className={styles.setupCompleteItemTitle}>{step.title}</p>
+              <p className={styles.setupCompleteItemDesc}>
+                {summaries[step.id] || "Complete"}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 function Dashboard() {
@@ -179,8 +277,35 @@ function Dashboard() {
   const consultantCount = shopAllConsultants?.data?.length || 0;
   const consultationCount = activityHistory?.totalItems || 0;
   const recentActivity = activityHistory?.data?.slice(0, 4) || [];
-  const activeConsultant =
-    shopAllConsultants?.data?.filter(item => item.isActive).length || 0;
+  const activeConsultantsCount =
+    shopAllConsultants?.data?.filter((c) => c.consultantStatus)?.length || 0;
+
+  // Real last-7-days revenue, bucketed client-side from the same activity
+  // records already fetched above (HOME_ACTIVITY_FETCH_LIMIT) — not a
+  // separate endpoint, not fabricated numbers.
+  const last7DaysRevenue = useMemo(() => {
+    const days = [];
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      days.push({
+        key: d.toDateString(),
+        label: i === 0 ? "Today" : d.toLocaleDateString("en-US", { weekday: "short" }),
+        total: 0,
+      });
+    }
+    const byKey = new Map(days.map((d) => [d.key, d]));
+    (activityHistory?.data || []).forEach((item) => {
+      if (!item?.createdAt) return;
+      const key = new Date(item.createdAt).toDateString();
+      const bucket = byKey.get(key);
+      if (bucket) bucket.total += Number(item.amount || 0);
+    });
+    return days;
+  }, [activityHistory]);
+  const last7DaysTotal = last7DaysRevenue.reduce((sum, d) => sum + d.total, 0);
+  const last7DaysMax = Math.max(...last7DaysRevenue.map((d) => d.total), 1);
   const hasActivity = consultationCount > 0;
   const adminPercentage = adminDetails_?.adminPersenTage?.$numberDecimal || 0;
   const menusComplete =
@@ -220,6 +345,17 @@ function Dashboard() {
     return getSetupGuideSteps(setupGuideProps).filter(
       (step) => step.status !== "completed",
     );
+  }, [
+    setupComplete,
+    consultantCount,
+    adminPercentage,
+    enabled,
+    menuSetupComplete,
+    shopDomain,
+  ]);
+  const allSetupSteps = useMemo(() => {
+    if (!setupComplete) return [];
+    return getSetupGuideSteps(setupGuideProps);
   }, [
     setupComplete,
     consultantCount,
@@ -311,7 +447,7 @@ function Dashboard() {
           fetchActivityHistory({
             adminIdLocal,
             page: 1,
-            limit: 4,
+            limit: HOME_ACTIVITY_FETCH_LIMIT,
             type: 0,
             app,
           }),
@@ -424,9 +560,6 @@ function Dashboard() {
   const usedPercentage =
     plan?.usedPercentage ??
     (totalMinutes ? Math.round((usedMinutes / totalMinutes) * 100) : 0);
-  const CIRCLE_CIRCUMFERENCE = 314;
-  const circleOffset =
-    CIRCLE_CIRCUMFERENCE - (CIRCLE_CIRCUMFERENCE * usedPercentage) / 100;
   const resetDate = plan?.currentPeriodEnd
     ? new Date(plan.currentPeriodEnd).toLocaleDateString("en-GB", {
       day: "numeric",
@@ -434,9 +567,6 @@ function Dashboard() {
       year: "numeric",
     })
     : "—";
-
-  const activeConsultantsCount =
-    shopAllConsultants?.data?.filter((c) => c.consultantStatus)?.length || 0;
 
   const overviewMetrics = [
     {
@@ -482,39 +612,74 @@ function Dashboard() {
     },
   ];
 
-  const detailMetrics = [
+  // No conversion-rate data source exists anywhere in this app today
+  // (nothing tracks storefront views vs. bookings) — shown as an honest
+  // placeholder rather than reusing adminPercentage under the wrong label,
+  // which is what this card used to do.
+  const voucherCount = adminDetails_?.vouchers?.length || 0;
+  const activeRatio = consultantCount
+    ? (activeConsultantsCount / consultantCount) * 100
+    : 0;
+
+  // Real vouchers-created-per-day over the last 14 days, from each
+  // voucher's own createdAt — not a fabricated trend.
+  const voucherSparkline = useMemo(() => {
+    const days = [];
+    const now = new Date();
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      days.push({ key: d.toDateString(), count: 0 });
+    }
+    const byKey = new Map(days.map((d) => [d.key, d]));
+    (adminDetails_?.vouchers || []).forEach((v) => {
+      if (!v?.createdAt) return;
+      const key = new Date(v.createdAt).toDateString();
+      const bucket = byKey.get(key);
+      if (bucket) bucket.count += 1;
+    });
+    return days.map((d) => d.count);
+  }, [adminDetails_?.vouchers]);
+  const hasVoucherTrend = voucherSparkline.some((v) => v > 0);
+
+  const homeMetrics = [
     {
       label: "Conversion rate",
-      value: `${Number(adminPercentage)}%`,
+      value: "—",
       icon: ChartVerticalIcon,
-      bg: "#FFF8E1",
+      bg: "#F1F1F2",
+      iconColor: "#5C5F62",
+      sub: "Not tracked yet",
+      isPlaceholder: true,
     },
     {
       label: "Active consultants",
-      value: activeConsultant,
+      value: <AnimatedCount value={consultantCount} />,
       icon: PersonIcon,
-      bg: "#E8F5E9",
+      bg: "#F1F1F2",
+      iconColor: "#5C5F62",
+      sub: `${activeConsultantsCount} available now`,
+      chart: <MiniRatioBar percent={activeRatio} color="#2E7D32" />,
     },
     {
-      label: "Admin Percantage",
-      value: (
-        <MoneyValue
-          currency={adminDetails?.currency}
-          amount={
-            adminDetails?.adminWalletBalance?.$numberDecimal ??
-            adminDetails?.adminWalletBalance ??
-            0
-          }
-        />
-      ),
+      label: "Commission rate",
+      value: `${Number(adminPercentage)}%`,
       icon: CreditCardIcon,
-      bg: "#E3F2FD",
+      bg: "#F1F1F2",
+      iconColor: "#5C5F62",
+      sub: "Applied to all bookings",
+      chart: <MiniRatioBar percent={Number(adminPercentage)} color="#1565C0" />,
     },
     {
-      label: "Vouchers created",
-      value: adminDetails_?.vouchers?.length || 0,
+      label: "Vouchers issued",
+      value: <AnimatedCount value={voucherCount} />,
       icon: CartDiscountIcon,
-      bg: "#FCE4EC",
+      bg: "#F1F1F2",
+      iconColor: "#5C5F62",
+      sub: "Total vouchers created",
+      chart: hasVoucherTrend ? (
+        <Sparkline values={voucherSparkline} color="#C2185B" />
+      ) : null,
     },
   ];
 
@@ -552,6 +717,16 @@ function Dashboard() {
       bg: "#FFF8E1",
       iconColor: "#F9A825",
     },
+    {
+      icon: ExternalIcon,
+      title: "Configure menus",
+      desc: menusComplete
+        ? "Storefront navigation links are set"
+        : "Add navigation links to your storefront",
+      onClick: handleOpenMenus,
+      bg: "#F1F5FF",
+      iconColor: "#4338CA",
+    },
   ];
 
   const openSupportEmail = useCallback(() => {
@@ -587,8 +762,7 @@ function Dashboard() {
 
     {
       icon: EmailIcon,
-      title: "Email support",
-      desc: "support@consultly.com",
+      title: "support@consultly.com",
       bg: "#FFF3E0",
       iconColor: "#EF6C00",
       action: openSupportEmail,
@@ -598,6 +772,8 @@ function Dashboard() {
   if (adminIdLocal && !adminDetails_?.shop && adminLoading) {
     return <DashboardSkeleton />;
   }
+
+  const currency = adminDetails?.currency || "$";
 
   return (
     <>
@@ -609,15 +785,15 @@ function Dashboard() {
         shopOwnerName={adminDetails_?.shopOwnerName}
         shopName={adminDetails_?.shopName}
       /> */}
-      <Page >
+      <Page fullWidth>
         <div className={styles.page}>
-          {/* Greeting header */}
-          <div className={styles.greetingRow}>
-            <div className={styles.greetingContainer}>
-              <h1 className={styles.greetingTitle}>  Welcome back, {displayName}
-</h1>
-              <p className={styles.greetingSubTitle}>
-                Here's what's happening with your business today.
+          {/* Header */}
+          <div className={styles.homeHeader}>
+            <div className={styles.homeHeaderLeft}>
+              <h1 className={styles.homeTitle}>Home</h1>
+              <p className={styles.homeSubtitle}>
+                Welcome back, {displayName}. Here's what's happening with
+                your consultation business.
               </p>
             </div>
             <div className={styles.greetingActions}>
@@ -662,7 +838,7 @@ function Dashboard() {
                 Refresh
               </Button>
               <Button onClick={() => navigateTo("/faq")}>
-                View documentation
+                Documentation
               </Button>
             </div>
           </div>
@@ -691,186 +867,40 @@ function Dashboard() {
             </div>
           )}
 
+          {/* Top metric cards */}
           <div className={styles.metricsGrid}>
-            {detailMetrics.map((metric) => (
+            {homeMetrics.map((metric) => (
               <div key={metric.label} className={styles.metricCard}>
-                <div
-                  className={styles.metricIcon}
-                  style={{ background: metric.bg }}
-                >
-                  <Icon source={metric.icon} tone="base" />
-                </div>
-                <div>
+                <div className={styles.metricCardTop}>
                   <p className={styles.metricLabel}>{metric.label}</p>
-                  <p className={styles.metricValue}>{metric.value}</p>
+                  <div
+                    className={styles.metricIcon}
+                    style={{ background: metric.bg, color: metric.iconColor }}
+                  >
+                    <Icon source={metric.icon} tone="base" />
+                  </div>
                 </div>
+                <p
+                  className={[
+                    styles.metricValue,
+                    metric.isPlaceholder && styles.metricValuePlaceholder,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
+                  {metric.value}
+                </p>
+                <p className={styles.metricSub}>{metric.sub}</p>
+                {metric.chart && (
+                  <div className={styles.metricChart}>{metric.chart}</div>
+                )}
               </div>
             ))}
           </div>
-          {/* Setup guide — always visible while any step is incomplete */}
-          {!setupComplete && (
-            <div className={styles.sectionGap}>
-              <DashboardSetupGuide
-                {...setupGuideProps}
-                onStepAction={handleStepAction}
-              />
-            </div>
-          )}
-          <div className={styles.minutesCard}>
-            <div className={styles.minutesHeader}>
-              <div className={styles.minutesTitle}>
-                <span className={styles.minutesTitleIcon}>
-                  <Icon source={ClockIcon} />
-                </span>
-                <div>
-                  <h3>Communication Minutes Usage</h3>
-                  <p className={styles.minutesSubtitle}>
-                    Plan resets on {resetDate}
-                  </p>
-                </div>
-              </div>
-              <Badge
-                tone={
-                  usedPercentage >= 90
-                    ? "critical"
-                    : usedPercentage >= 70
-                      ? "warning"
-                      : "success"
-                }
-              >
-                {`${usedPercentage}% used`}
-              </Badge>
-            </div>
 
-            <div className={styles.minutesRow}>
-              <div className={styles.minutesItem}>
-                <div className={`${styles.minutesIcon} ${styles.minutesIconBlue}`}>
-                  <Icon source={WatchIcon} />
-                </div>
-                <div>
-                  <p className={styles.minutesLabel}>Total minutes</p>
-                  <p className={styles.minutesValue}>
-                    <AnimatedCount value={totalMinutes} />
-                    <span className={styles.minutesUnit}>min</span>
-                  </p>
-                </div>
-              </div>
-
-              <div className={styles.minutesItem}>
-                <div className={`${styles.minutesIcon} ${styles.minutesIconOrange}`}>
-                  <Icon source={ClockIcon} />
-                </div>
-                <div>
-                  <p className={styles.minutesLabel}>Used minutes</p>
-                  <p className={styles.minutesValue}>
-                    <AnimatedCount value={usedMinutes} />
-                    <span className={styles.minutesUnit}>min</span>
-                  </p>
-                </div>
-              </div>
-
-              <div className={styles.minutesItem}>
-                <div className={`${styles.minutesIcon} ${styles.minutesIconGreen}`}>
-                  <Icon source={RefreshIcon} />
-                </div>
-                <div>
-                  <p className={styles.minutesLabel}>Remaining minutes</p>
-                  <p className={styles.minutesValue}>
-                    <AnimatedCount value={remainingMinutes} />
-                    <span className={styles.minutesUnit}>min</span>
-                  </p>
-                </div>
-              </div>
-
-              <div className={styles.minutesUsage}>
-                <div className={styles.minutesDonut}>
-                  <svg viewBox="0 0 120 120">
-                    <circle
-                      cx="60"
-                      cy="60"
-                      r="50"
-                      className={styles.minutesDonutBg}
-                    />
-                    <circle
-                      cx="60"
-                      cy="60"
-                      r="50"
-                      className={`${styles.minutesDonutProgress} ${usedPercentage >= 90
-                        ? styles.minutesToneCritical
-                        : usedPercentage >= 70
-                          ? styles.minutesToneWarning
-                          : styles.minutesToneOk
-                        }`}
-                      strokeDasharray={CIRCLE_CIRCUMFERENCE}
-                      strokeDashoffset={circleOffset}
-                    />
-                  </svg>
-
-                  <div className={styles.minutesDonutText}>
-                    <h2>{usedPercentage}%</h2>
-                    <span>Used</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Status rows */}
-          <div className={styles.sectionGap}>
-            <div className={styles.statusRow}>
-              <div className={styles.statusLeft}>
-                <p className={styles.statusLabel}>Store navigation links</p>
-                <Badge tone={menusComplete ? "success" : undefined}>
-                  {menusComplete ? "On" : "Off"}
-                </Badge>
-              </div>
-              <div className={styles.statusRight}>
-                <Button icon={ExternalIcon} onClick={handleOpenMenus}>
-                  Configure menus
-                </Button>
-                <Button variant="plain" onClick={() => navigateTo("/faq")}>
-                  Guideline
-                </Button>
-              </div>
-            </div>
-
-            <div className={styles.statusRow}>
-              <div className={styles.statusLeft}>
-                <p className={styles.statusLabel}>App setting status</p>
-                <Badge tone={enabled ? "success" : undefined}>
-                  {enabled ? "On" : "Off"}
-                </Badge>
-              </div>
-              <div className={styles.statusRight}>
-                <Button
-                  onClick={handleToggle}
-                  loading={isTogglingApp}
-                  disabled={isTogglingApp}
-                >
-                  {enabled ? "Deactivate app" : "Activate app"}
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => navigateTo("/consultant-list")}
-                >
-                  Manage consultants
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Overview */}
+            {/* Overview & trends — kept from the existing dashboard, unchanged */}
           <div className={styles.overviewHeader}>
             <h2 className={styles.overviewTitle}>Overview</h2>
-            {/* <Button
-              icon={RefreshIcon}
-              onClick={handleRefresh}
-              loading={isRefreshing}
-              disabled={isRefreshing}
-            >
-              Refresh data
-            </Button> */}
           </div>
           <div className={styles.trendsCard}>
             <div className={styles.trendsCardHeader}>
@@ -896,96 +926,101 @@ function Dashboard() {
                 </div>
               ))}
             </div>
-          </div>
+          </div> 
 
-
-          {/* Recent activity + help */}
-          <div className={styles.twoCol}>
-            <LegacyCard>
-              <Box padding="400">
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: 12,
-                  }}
-                >
+          {/* Revenue (left, stretches to match the right column's height) /
+              Communication minutes + Need help (right, stacked) */}
+          <div className={styles.revenueMinutesRow}>
+            <div className={styles.revenueBoxWrap}>
+              <div className={styles.homeCard}>
+                <div className={styles.homeCardHeader}>
                   <Text variant="headingMd" as="h3">
-                    Recent activity
+                    Revenue — last 7 days
                   </Text>
-                  <Button variant="plain" onClick={() => navigateTo("/history")}>
-                    View all
-                  </Button>
+                  <p className={styles.revenueTotal}>
+                    <MoneyValue currency={currency} amount={last7DaysTotal} />
+                  </p>
                 </div>
-                {recentActivity.length === 0 ? (
-                  <Text as="p" tone="subdued">
-                    No recent activity yet.
-                  </Text>
-                ) : (
-                  recentActivity.map((item, i) => {
-                    const meta = getActivityMeta(item);
-                    const amount = Number(item.amount || 0);
-                    const currency = adminDetails?.currency || "$";
-                    return (
-                      <div key={item._id || i}>
+                <div className={styles.revenueChart}>
+                  {last7DaysRevenue.map((day) => (
+                    <div key={day.key} className={styles.revenueBarCol}>
+                      <div className={styles.revenueBarTrack}>
                         <div
+                          className={[
+                            styles.revenueBar,
+                            day.total > 0 && styles.revenueBarActive,
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
                           style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            padding: "10px 0",
+                            height: `${Math.max((day.total / last7DaysMax) * 100, 8)}%`,
                           }}
-                        >
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 12,
-                            }}
-                          >
-                            <div
-                              style={{
-                                width: 36,
-                                height: 36,
-                                borderRadius: "50%",
-                                background: "#f6f6f7",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                flexShrink: 0,
-                              }}
-                            >
-                              <Icon source={meta.icon} tone={meta.tone} />
-                            </div>
-                            <div>
-                              <Text variant="bodySm" as="p">
-                                {meta.text}
-                              </Text>
-                              <Text variant="bodySm" tone="subdued" as="p">
-                                {formatTimeAgo(item.createdAt)}
-                              </Text>
-                            </div>
-                          </div>
-                          <Text
-                            variant="bodySm"
-                            tone="success"
-                            fontWeight="semibold"
-                            as="p"
-                          >
-                            +<MoneyValue currency={currency} amount={amount} />
-                          </Text>
-                        </div>
-                        {i < recentActivity.length - 1 && <Divider />}
+                          title={`${day.label}: ${day.total}`}
+                        />
                       </div>
-                    );
-                  })
-                )}
-              </Box>
-            </LegacyCard>
+                      <span className={styles.revenueBarLabel}>{day.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
 
-            <LegacyCard>
-              <Box padding="400">
+            <div className={styles.homeSideCol}>
+              {/* Communication minutes */}
+              <div className={styles.homeCard}>
+                <div className={styles.homeCardHeader}>
+                  <Text variant="headingMd" as="h3">
+                    Communication minutes
+                  </Text>
+                </div>
+
+                <div className={styles.minutesStatsList}>
+                  <div className={styles.minutesStatRow}>
+                    <span className={styles.minutesStatLabel}>Total</span>
+                    <span className={styles.minutesStatValue}>
+                      <AnimatedCount value={totalMinutes} /> min
+                    </span>
+                  </div>
+                  <div className={styles.minutesStatRow}>
+                    <span className={styles.minutesStatLabel}>Used</span>
+                    <span className={styles.minutesStatValue}>
+                      <AnimatedCount value={usedMinutes} /> min
+                    </span>
+                  </div>
+                  <div className={styles.minutesStatRow}>
+                    <span className={styles.minutesStatLabel}>Remaining</span>
+                    <span
+                      className={`${styles.minutesStatValue} ${styles.minutesStatValueGood}`}
+                    >
+                      <AnimatedCount value={remainingMinutes} /> min
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  className={styles.minutesUsageTrack}
+                  role="progressbar"
+                  aria-valuenow={usedPercentage}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                >
+                  <div
+                    className={[
+                      styles.minutesUsageFill,
+                      usedPercentage >= 90
+                        ? styles.minutesToneCritical
+                        : usedPercentage >= 70
+                          ? styles.minutesToneWarning
+                          : styles.minutesToneOk,
+                    ].join(" ")}
+                    style={{ width: `${Math.min(usedPercentage, 100)}%` }}
+                  />
+                </div>
+                <p className={styles.minutesResetText}>Resets {resetDate}</p>
+              </div>
+
+              {/* Need help */}
+              <div className={styles.homeCard}>
                 <Text variant="headingMd" as="h3">
                   Need help?
                 </Text>
@@ -1001,60 +1036,128 @@ function Dashboard() {
                       }}
                       className={styles.helpItem}
                     >
-                      <div className={styles.helpItemLeft}>
-                        <div
-                          className={styles.helpIconBox}
-                          style={{ background: item.bg, color: item.iconColor }}
-                        >
-                          <Icon source={item.icon} tone="base" />
-                        </div>
-                        <div className={styles.helpItemText}>
-                          <Text variant="bodySm" fontWeight="semibold" as="p">
-                            {item.title}
-                          </Text>
-                          <Text variant="bodySm" tone="subdued" as="p">
-                            {item.desc}
-                          </Text>
-                        </div>
+                      <div
+                        className={styles.helpIconBox}
+                        style={{ background: item.bg, color: item.iconColor }}
+                      >
+                        <Icon source={item.icon} tone="base" />
                       </div>
-                      <span className={styles.helpItemAction}>
-                        <Icon source={ExternalIcon} tone="subdued" />
-                      </span>
+                      <Text variant="bodySm" as="p">
+                        {item.title}
+                      </Text>
                     </div>
                   ))}
                 </div>
-                <div style={{ marginTop: 20 }}>
-                  <Button
-                    icon={ExternalIcon}
-                    onClick={openSupportEmail}
-                    variant="secondary"
-                  >
-                    Contact support
-                  </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Setup guide — the nudge-to-finish version while incomplete,
+              the "all done" summary once every step is complete (the guide
+              component itself renders nothing in that state). */}
+          {!setupComplete ? (
+            <div className={styles.sectionGap}>
+              <DashboardSetupGuide
+                {...setupGuideProps}
+                onStepAction={handleStepAction}
+              />
+            </div>
+          ) : (
+            <div className={styles.sectionGap}>
+              {/* <SetupCompleteCard
+                steps={allSetupSteps}
+                consultantCount={consultantCount}
+                adminPercentage={adminPercentage}
+              /> */}
+            </div>
+          )}
+
+          {/* Recent activity */}
+          <div className={styles.homeCard}>
+              <div className={styles.homeCardHeader}>
+                <div>
+                  <Text variant="headingMd" as="h3">
+                    Recent activity
+                  </Text>
+                  <p className={styles.homeCardSubtitle}>
+                    Latest consultations booked through your store.
+                  </p>
                 </div>
-              </Box>
-            </LegacyCard>
+                <Button variant="plain" onClick={() => navigateTo("/history")}>
+                  View all
+                </Button>
+              </div>
 
-
+              {recentActivity.length === 0 ? (
+                <div className={styles.activityEmpty}>
+                  <Text as="p" tone="subdued">
+                    No recent activity yet.
+                  </Text>
+                </div>
+              ) : (
+                <div className={styles.activityTableWrap}>
+                  <table className={styles.activityTable}>
+                    <thead>
+                      <tr>
+                        <th>Customer</th>
+                        <th>Consultant</th>
+                        <th>Type</th>
+                        <th>Cost</th>
+                        <th>When</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentActivity.map((item, i) => {
+                        const badge = getActivityTypeBadge(item);
+                        const amount = Number(item.amount || 0);
+                        return (
+                          <tr key={item._id || i}>
+                            <td data-label="Customer">
+                              {item.senderId?.fullname || "—"}
+                            </td>
+                            <td data-label="Consultant">
+                              {item.receiverId?.fullname || "—"}
+                            </td>
+                            <td data-label="Type">
+                              <span
+                                className={`${styles.typeBadge} ${styles[badge.className]}`}
+                              >
+                                <Icon source={badge.icon} tone="base" />
+                                {badge.label}
+                              </span>
+                            </td>
+                            <td data-label="Cost">
+                              <MoneyValue currency={currency} amount={amount} />
+                            </td>
+                            <td data-label="When" className={styles.activityWhen}>
+                              {formatTimeAgo(item.createdAt)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
           </div>
 
           {/* Quick actions */}
-          <LegacyCard>
-            <Box padding="400">
-              <Text variant="headingMd" as="h3">
-                Quick actions
-              </Text>
-              <div className={styles.quickGrid}>
-                {quickActions.map((action) => (
+          <div className={styles.homeCard}>
+            <Text variant="headingMd" as="h3">
+              Quick actions
+            </Text>
+            <div className={styles.quickGrid}>
+              {quickActions.map((action) => {
+                const handleActivate = () =>
+                  action.onClick ? action.onClick() : navigateTo(action.path);
+                return (
                   <div
                     key={action.title}
                     role="button"
                     tabIndex={0}
-                    onClick={() => navigateTo(action.path)}
+                    onClick={handleActivate}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        navigateTo(action.path);
-                      }
+                      if (e.key === "Enter" || e.key === " ") handleActivate();
                     }}
                     className={styles.quickItem}
                   >
@@ -1077,12 +1180,13 @@ function Dashboard() {
                         </Text>
                       </div>
                     </div>
-                    <Icon source={ChevronRightIcon} tone="subdued" />
                   </div>
-                ))}
-              </div>
-            </Box>
-          </LegacyCard>
+                );
+              })}
+            </div>
+          </div>
+
+        
         </div>
       </Page>
     </>

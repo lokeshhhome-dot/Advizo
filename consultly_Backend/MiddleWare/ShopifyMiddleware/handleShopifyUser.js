@@ -310,7 +310,7 @@ const fetchShopifyCustomer = async (shop, accessToken, customerId) => {
 //     return cacheSession(
 //       shop,
 //       customerId,
-//       buildSessionResult(newUser, token, "Customer created successfully"),
+//       buildSessionResult(newUser, token, "Customer created successfully"), b
 //     );
 //   } catch (error) {
 //     console.error(
