@@ -17,6 +17,18 @@ const SESSION_CACHE_TTL_MS = 5 * 60 * 1000;
 const USER_TOKEN_CACHE_TTL_MS = 6 * 24 * 60 * 60 * 1000;
 const JWT_EXPIRY = "7d";
 
+// TEMPORARY TESTING FLAG — do not treat this as the production auth path.
+// While the installed shop's token is missing read_customers (ACCESS_DENIED
+// even on a bare `customer(id){ id }` query — see verifyShopifyCustomer's
+// own comment), this lets Theme Extension / New Customer Accounts testing
+// continue by trusting App-Proxy-verified logged_in_customer_id directly,
+// skipping the Shopify Admin GraphQL existence check. The real
+// verifyShopifyCustomer/fetchShopifyCustomerProfile implementations are left
+// completely intact below and are exactly what runs again the moment this
+// flag is unset — this is a bypass of ONE step, not a second auth system.
+const TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL =
+  String(process.env.TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL || "").toLowerCase() === "true";
+
 const buildSessionResult = (user, token, message = "Customer already exists") => ({
   success: true,
   message,
@@ -315,6 +327,101 @@ const verifyAppInstallationScopes = async (shop, accessToken) => {
   }
 };
 
+/**
+ * Shared Mongo find-or-create for a verified Shopify customer — used by both
+ * the real verified path and the TEMPORARY bypass path below, so there is
+ * exactly one User-creation implementation regardless of which one supplied
+ * `verifiedCustomerId`/`profile`. `profile` may be null (bypass path, or the
+ * real path when Protected Customer Data enrichment failed) — the same
+ * existing placeholder-email/fullname rule applies either way.
+ */
+const createShopifyCustomerUser = async ({
+  shop,
+  shopDoc,
+  customerId,
+  verifiedCustomerId,
+  profile,
+  testAuthLogging = false,
+}) => {
+  const shopifyCustomerId = verifiedCustomerId;
+
+  const fullname =
+    [profile?.firstName, profile?.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim() || "Shopify Customer";
+
+  // The userSchema `email` field is required+unique. When the Admin API
+  // couldn't return the real email (fetchShopifyCustomerProfile's
+  // protected-data limitation — see that function's comment — or the
+  // bypass path, which never calls it at all), a real email is genuinely
+  // unavailable, not just unset — falling back to a shared placeholder
+  // would collide on the schema's unique index for the second such
+  // customer. This synthetic address is unique per (shop, Shopify
+  // customer id) and is never used for actual communication.
+  const email =
+    profile?.email ||
+    `shopify-customer-${shopifyCustomerId}@${shop}.consultly-placeholder`;
+
+  const newUser = new User({
+    shopifyCustomerId,
+    shop_id: shopDoc._id,
+    userType: "customer",
+    walletBalance: 0,
+    email,
+    fullname,
+    isChatAccepted: "request",
+    createdAt: profile?.createdAt,
+    numberOfOrders: profile?.numberOfOrders,
+    chatLock: true,
+  });
+
+  // Two near-simultaneous first-ever requests from the same brand-new
+  // Shopify customer can both pass the findOne() check above and both
+  // reach here — the userSchema partial unique index on
+  // {shopifyCustomerId, shop_id} guarantees only one insert wins; this
+  // catch reconciles the loser to that winner instead of failing its
+  // request (and instead of ever producing a second User document).
+  let createdUser = newUser;
+  try {
+    await newUser.save();
+  } catch (saveErr) {
+    if (saveErr?.code === 11000) {
+      const winner = await User.findOne({
+        shopifyCustomerId: String(customerId),
+        shop_id: shopDoc._id,
+      }).select("_id shop_id");
+      if (!winner) throw saveErr; // genuinely unexpected — surface it
+      createdUser = winner;
+    } else {
+      throw saveErr;
+    }
+  }
+
+  const token = getOrCreateUserToken(createdUser._id);
+  const wasCreated = createdUser === newUser;
+
+  console.log("[SHOPIFY CUSTOMER DEBUG] DB user created =", wasCreated);
+  console.log("[SHOPIFY CUSTOMER DEBUG] identity resolved =", true);
+  console.log("[SHOPIFY IDENTITY] Mongo user created =", wasCreated);
+  console.log("[SHOPIFY IDENTITY] Mongo user ID available =", true);
+  console.log("[SHOPIFY IDENTITY] Mongo identity resolved =", true);
+  if (testAuthLogging) {
+    console.log("[SHOPIFY TEST AUTH] Mongo user created =", wasCreated);
+    console.log("[SHOPIFY TEST AUTH] Mongo user ID available =", true);
+  }
+
+  return cacheSession(
+    shop,
+    customerId,
+    buildSessionResult(
+      createdUser,
+      token,
+      wasCreated ? "Customer created successfully" : "Customer already exists",
+    ),
+  );
+};
+
 const manageShopifyUser = async (shop, customerId, options = {}) => {
   try {
     const { existingToken } = options || {};
@@ -342,6 +449,15 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
     const shopDoc = await getShopDoc(shop);
 
     console.log("[SHOPIFY IDENTITY] Mongo shop found =", Boolean(shopDoc?.accessToken));
+
+    // TEMPORARY TEST AUTH diagnostics — see TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL
+    // above. Reaching this function at all means verifyAppProxy's HMAC check
+    // already passed (resolveStorefrontCustomer/manageShopifyUser are only
+    // ever called after that middleware calls next()).
+    console.log("[SHOPIFY TEST AUTH] App Proxy verified =", true);
+    console.log("[SHOPIFY TEST AUTH] Shop available =", Boolean(shop));
+    console.log("[SHOPIFY TEST AUTH] Shopify customer ID available =", Boolean(customerId));
+    console.log("[SHOPIFY TEST AUTH] GraphQL bypass enabled =", TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL);
 
     if (!shopDoc?.accessToken) {
       return {
@@ -377,12 +493,18 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
       console.log("[SHOPIFY IDENTITY] Shopify customer verified =", true);
       console.log("[SHOPIFY IDENTITY] Mongo user found =", true);
       console.log("[SHOPIFY IDENTITY] Mongo user created =", false);
+      console.log("[SHOPIFY TEST AUTH] Mongo user found =", true);
+      console.log("[SHOPIFY TEST AUTH] Mongo user created =", false);
       // The Shopify Admin API refresh only ever backfills a missing/default
       // fullname, so skip the API call entirely when the name is already set.
+      // Skipped outright under the bypass flag — the same ACCESS_DENIED that
+      // blocks verification would also block this, so there's no point
+      // spending the round trip while it's active.
       const needsNameRefresh =
-        !existingUser.fullname ||
-        existingUser.fullname.trim() === "" ||
-        existingUser.fullname === "Shopify Customer";
+        !TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL &&
+        (!existingUser.fullname ||
+          existingUser.fullname.trim() === "" ||
+          existingUser.fullname === "Shopify Customer");
 
       if (needsNameRefresh) {
         try {
@@ -420,6 +542,7 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
       console.log("[SHOPIFY CUSTOMER DEBUG] identity resolved =", true);
       console.log("[SHOPIFY IDENTITY] Mongo user ID available =", true);
       console.log("[SHOPIFY IDENTITY] Mongo identity resolved =", true);
+      console.log("[SHOPIFY TEST AUTH] Mongo user ID available =", true);
 
       return cacheSession(
         shop,
@@ -431,6 +554,26 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
     // ======================================================
     // NEW USER
     // ======================================================
+
+    // TEMPORARY TEST AUTH BYPASS — see TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL's
+    // own comment at the top of this file. Trusts App-Proxy-verified
+    // logged_in_customer_id directly as shopifyCustomerId, skipping
+    // verifyShopifyCustomer entirely, then falls into the EXACT SAME Mongo
+    // create logic used by the real path below (same schema, same
+    // placeholder-email rule, same E11000 race-reconciliation) — this is not
+    // a second user-creation implementation, only a different source for
+    // `verifiedCustomerId`/`profile`.
+    if (TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL) {
+      console.log("[SHOPIFY TEST AUTH] Mongo user found =", false);
+      return createShopifyCustomerUser({
+        shop,
+        shopDoc,
+        customerId,
+        verifiedCustomerId: String(customerId),
+        profile: null,
+        testAuthLogging: true,
+      });
+    }
 
     const accessToken = await getShopAccessToken(shopDoc);
     const lookupResult = await verifyShopifyCustomer(shop, accessToken, customerId);
@@ -496,77 +639,13 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
     // before when the shop lacks Protected Customer Data approval.
     const profile = await fetchShopifyCustomerProfile(shop, accessToken, customerId);
 
-    const fullname =
-      [profile?.firstName, profile?.lastName]
-        .filter(Boolean)
-        .join(" ")
-        .trim() || "Shopify Customer";
-
-    // The userSchema `email` field is required+unique. When the Admin API
-    // couldn't return the real email (fetchShopifyCustomerProfile's
-    // protected-data limitation — see that function's comment), a real email
-    // is genuinely unavailable, not just unset — falling back to a shared
-    // placeholder would collide on the schema's unique index for the second
-    // such customer. This synthetic address is unique per (shop, Shopify
-    // customer id) and is never used for actual communication.
-    const email =
-      profile?.email ||
-      `shopify-customer-${shopifyCustomerId}@${shop}.consultly-placeholder`;
-
-    const newUser = new User({
-      shopifyCustomerId,
-      shop_id: shopDoc._id,
-      userType: "customer",
-      walletBalance: 0,
-      email,
-      fullname,
-      isChatAccepted: "request",
-      createdAt: profile?.createdAt,
-      numberOfOrders: profile?.numberOfOrders,
-      chatLock: true,
-    });
-
-    // Two near-simultaneous first-ever requests from the same brand-new
-    // Shopify customer can both pass the findOne() check above and both
-    // reach here — the userSchema partial unique index on
-    // {shopifyCustomerId, shop_id} guarantees only one insert wins; this
-    // catch reconciles the loser to that winner instead of failing its
-    // request (and instead of ever producing a second User document).
-    let createdUser = newUser;
-    try {
-      await newUser.save();
-    } catch (saveErr) {
-      if (saveErr?.code === 11000) {
-        const winner = await User.findOne({
-          shopifyCustomerId: String(customerId),
-          shop_id: shopDoc._id,
-        }).select("_id shop_id");
-        if (!winner) throw saveErr; // genuinely unexpected — surface it
-        createdUser = winner;
-      } else {
-        throw saveErr;
-      }
-    }
-
-    const token = getOrCreateUserToken(createdUser._id);
-
-    console.log("[SHOPIFY CUSTOMER DEBUG] DB user created =", createdUser === newUser);
-    console.log("[SHOPIFY CUSTOMER DEBUG] identity resolved =", true);
-    console.log("[SHOPIFY IDENTITY] Mongo user created =", createdUser === newUser);
-    console.log("[SHOPIFY IDENTITY] Mongo user ID available =", true);
-    console.log("[SHOPIFY IDENTITY] Mongo identity resolved =", true);
-
-    return cacheSession(
+    return createShopifyCustomerUser({
       shop,
+      shopDoc,
       customerId,
-      buildSessionResult(
-        createdUser,
-        token,
-        createdUser === newUser
-          ? "Customer created successfully"
-          : "Customer already exists"
-      )
-    );
+      verifiedCustomerId: shopifyCustomerId,
+      profile,
+    });
   } catch (error) {
     console.error(
       "Error fetching customer:",
