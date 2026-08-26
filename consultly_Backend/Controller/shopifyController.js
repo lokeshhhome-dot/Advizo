@@ -434,19 +434,11 @@ const authCallback = async (req, res) => {
       .select("_id accessToken");
     const wasInstalledBefore = Boolean(existingShop?.accessToken);
 
-    const shopDoc = await saveInstalledShop(
-      shop,
-      accessToken,
-      shopProfile,
-      expiringFields,
-      tokenResponse.data.scope || null,
-    );
+    const shopDoc = await saveInstalledShop(shop, accessToken, shopProfile, expiringFields);
     rememberFreshInstallTokens(shopDoc._id, accessToken, expiringFields);
     shopDocCache.delete(`shop:${shop}`);
 
     console.log(`[authCallback] Shop saved for ${shop}, adminId=${shopDoc._id}`);
-    // Scope handles are permission names, not secrets — safe to log in full.
-    console.log(`[authCallback] Granted scopes for ${shop}: ${tokenResponse.data.scope || "(none returned)"}`);
 
     // Managed pricing: the merchant may have bought a plan from the App Store
     // BEFORE this (re)install — sync any already-active charge now so they

@@ -18,14 +18,19 @@ const USER_TOKEN_CACHE_TTL_MS = 6 * 24 * 60 * 60 * 1000;
 const JWT_EXPIRY = "7d";
 
 // TEMPORARY TESTING FLAG — do not treat this as the production auth path.
-// While the installed shop's token is missing read_customers (ACCESS_DENIED
-// even on a bare `customer(id){ id }` query — see verifyShopifyCustomer's
-// own comment), this lets Theme Extension / New Customer Accounts testing
-// continue by trusting App-Proxy-verified logged_in_customer_id directly,
-// skipping the Shopify Admin GraphQL existence check. The real
-// verifyShopifyCustomer/fetchShopifyCustomerProfile implementations are left
-// completely intact below and are exactly what runs again the moment this
-// flag is unset — this is a bypass of ONE step, not a second auth system.
+// Confirmed live: App Proxy verified, shop found, logged_in_customer_id
+// present, AND the installed token DOES have read_customers granted — yet
+// Admin GraphQL customer(id){ id } still returns ACCESS_DENIED. Since id is
+// never protected data and the scope is confirmed present, this points at
+// something Shopify gates independently of OAuth scopes (most likely
+// Protected Customer Data app-review approval), which no amount of query
+// retrying can work around. This flag lets Theme Extension / New Customer
+// Accounts testing continue in the meantime by trusting App-Proxy-verified
+// logged_in_customer_id directly, skipping the Shopify Admin GraphQL
+// existence check. The real verifyShopifyCustomer/fetchShopifyCustomerProfile
+// implementations are left completely intact below and are exactly what
+// runs again the moment this flag is unset — this is a bypass of ONE step,
+// not a second auth system.
 const TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL =
   String(process.env.TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL || "").toLowerCase() === "true";
 
@@ -409,6 +414,7 @@ const createShopifyCustomerUser = async ({
   if (testAuthLogging) {
     console.log("[SHOPIFY TEST AUTH] Mongo user created =", wasCreated);
     console.log("[SHOPIFY TEST AUTH] Mongo user ID available =", true);
+    console.log("[SHOPIFY TEST AUTH] identity resolved =", true);
   }
 
   return cacheSession(
@@ -460,6 +466,7 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
     console.log("[SHOPIFY TEST AUTH] GraphQL bypass enabled =", TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL);
 
     if (!shopDoc?.accessToken) {
+      console.log("[SHOPIFY TEST AUTH] identity resolved =", false);
       return {
         success: false,
         message: "Shop not found",
@@ -543,6 +550,7 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
       console.log("[SHOPIFY IDENTITY] Mongo user ID available =", true);
       console.log("[SHOPIFY IDENTITY] Mongo identity resolved =", true);
       console.log("[SHOPIFY TEST AUTH] Mongo user ID available =", true);
+      console.log("[SHOPIFY TEST AUTH] identity resolved =", true);
 
       return cacheSession(
         shop,
