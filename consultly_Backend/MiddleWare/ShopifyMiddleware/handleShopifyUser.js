@@ -145,22 +145,31 @@ const runShopifyCustomerQuery = async (shop, accessToken, query) => {
     );
   } catch (err) {
     // Safe only — HTTP status/shop, never the access token or full body.
+    const httpStatus = err.response?.status || null;
     console.log("[SHOPIFY CUSTOMER DEBUG] API request success =", false);
-    console.log(
-      "[SHOPIFY CUSTOMER DEBUG] HTTP status =",
-      err.response?.status || null,
-    );
-    return { customer: null, httpFailed: true, graphqlErrors: false };
+    console.log("[SHOPIFY CUSTOMER DEBUG] HTTP status =", httpStatus);
+    console.log("[SHOPIFY IDENTITY] GraphQL request success =", false);
+    return {
+      customer: null,
+      httpFailed: true,
+      graphqlErrors: false,
+      httpStatus,
+      errorCodes: [],
+    };
   }
 
   console.log("[SHOPIFY CUSTOMER DEBUG] API request success =", true);
+  console.log("[SHOPIFY IDENTITY] GraphQL request success =", true);
 
   const errors = Array.isArray(response.data?.errors) ? response.data.errors : [];
+  const errorCodes = errors.map((e) => e.extensions?.code || "UNKNOWN");
   console.log("[SHOPIFY CUSTOMER DEBUG] GraphQL error present =", errors.length > 0);
+  console.log("[SHOPIFY IDENTITY] GraphQL error present =", errors.length > 0);
   if (errors.length) {
     // Safe only — error message/code, never the customer payload itself.
-    errors.forEach((e) => {
-      console.log("[SHOPIFY CUSTOMER DEBUG] GraphQL error code =", e.extensions?.code || "UNKNOWN");
+    errorCodes.forEach((code) => {
+      console.log("[SHOPIFY CUSTOMER DEBUG] GraphQL error code =", code);
+      console.log("[SHOPIFY IDENTITY] GraphQL error code =", code);
     });
   }
 
@@ -168,6 +177,8 @@ const runShopifyCustomerQuery = async (shop, accessToken, query) => {
     customer: response.data?.data?.customer || null,
     httpFailed: false,
     graphqlErrors: errors.length > 0,
+    httpStatus: response.status,
+    errorCodes,
   };
 };
 
@@ -184,6 +195,14 @@ const runShopifyCustomerQuery = async (shop, accessToken, query) => {
  * so the fallback query below still succeeds in that case; fullname/email
  * simply fall back to their existing "Shopify Customer" placeholder
  * (unchanged behavior already present in manageShopifyUser for that case).
+ */
+/**
+ * Result shape: { customer, verified, reason, httpStatus, errorCodes }
+ *   reason: "verified" | "not_found" | "http_failed" | "graphql_error"
+ * Callers must branch on `reason`, never on `customer` truthiness alone —
+ * that collapse (customer==null means "not found") is exactly what
+ * previously turned an expired shop token or a permissions error into the
+ * misleading "Customer not found in Shopify" message.
  */
 const fetchShopifyCustomer = async (shop, accessToken, customerId) => {
   console.log("[SHOPIFY CUSTOMER DEBUG] customer lookup attempted =", true);
@@ -205,23 +224,31 @@ const fetchShopifyCustomer = async (shop, accessToken, customerId) => {
 
   if (full.customer) {
     console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", true);
-    return full.customer;
+    console.log("[SHOPIFY IDENTITY] GraphQL customer exists =", true);
+    return { customer: full.customer, verified: true, reason: "verified" };
   }
 
   // HTTP-level failure (bad/expired token, network, shop unreachable) would
   // fail identically on a retry with different fields — no point trying
   // again, and doing so would just double-charge Shopify's rate limit for
-  // no benefit.
+  // no benefit. Critically: this is NOT "customer doesn't exist" — it means
+  // verification could not even be attempted.
   if (full.httpFailed) {
     console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", false);
-    return null;
+    return {
+      customer: null,
+      verified: false,
+      reason: "http_failed",
+      httpStatus: full.httpStatus,
+    };
   }
 
   // A clean response with no GraphQL errors and no customer really does
   // mean "no such customer" — retrying with fewer fields can't change that.
   if (!full.graphqlErrors) {
     console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", false);
-    return null;
+    console.log("[SHOPIFY IDENTITY] GraphQL customer exists =", false);
+    return { customer: null, verified: false, reason: "not_found" };
   }
 
   console.warn(
@@ -242,12 +269,24 @@ const fetchShopifyCustomer = async (shop, accessToken, customerId) => {
 
   if (minimal.customer) {
     console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", true);
-    return minimal.customer;
+    console.log("[SHOPIFY IDENTITY] GraphQL customer exists =", true);
+    return { customer: minimal.customer, verified: true, reason: "verified" };
   }
 
-  if (minimal.httpFailed || !minimal.graphqlErrors) {
+  if (minimal.httpFailed) {
     console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", false);
-    return null;
+    return {
+      customer: null,
+      verified: false,
+      reason: "http_failed",
+      httpStatus: minimal.httpStatus,
+    };
+  }
+
+  if (!minimal.graphqlErrors) {
+    console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", false);
+    console.log("[SHOPIFY IDENTITY] GraphQL customer exists =", false);
+    return { customer: null, verified: false, reason: "not_found" };
   }
 
   // Last resort: `createdAt`/`numberOfOrders` can themselves be gated by a
@@ -271,7 +310,35 @@ const fetchShopifyCustomer = async (shop, accessToken, customerId) => {
   );
 
   console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", Boolean(idOnly.customer));
-  return idOnly.customer;
+
+  if (idOnly.customer) {
+    console.log("[SHOPIFY IDENTITY] GraphQL customer exists =", true);
+    return { customer: idOnly.customer, verified: true, reason: "verified" };
+  }
+
+  if (idOnly.httpFailed) {
+    return {
+      customer: null,
+      verified: false,
+      reason: "http_failed",
+      httpStatus: idOnly.httpStatus,
+    };
+  }
+
+  if (idOnly.graphqlErrors) {
+    // id-only still errored — a genuine API/permission problem unrelated to
+    // protected customer data (e.g. missing read_customers scope entirely).
+    // Never silently treated as "not found".
+    return {
+      customer: null,
+      verified: false,
+      reason: "graphql_error",
+      errorCodes: idOnly.errorCodes,
+    };
+  }
+
+  console.log("[SHOPIFY IDENTITY] GraphQL customer exists =", false);
+  return { customer: null, verified: false, reason: "not_found" };
 };
 
 const manageShopifyUser = async (shop, customerId, options = {}) => {
@@ -299,6 +366,8 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
 
     // 2. Get shop
     const shopDoc = await getShopDoc(shop);
+
+    console.log("[SHOPIFY IDENTITY] Mongo shop found =", Boolean(shopDoc?.accessToken));
 
     if (!shopDoc?.accessToken) {
       return {
@@ -343,15 +412,15 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
 
       if (needsNameRefresh) {
         try {
-          const customer = await fetchShopifyCustomer(
+          const nameLookup = await fetchShopifyCustomer(
             shop,
             await getShopAccessToken(shopDoc),
             customerId
           );
 
-          if (customer) {
+          if (nameLookup.customer) {
             const fullname =
-              [customer.firstName, customer.lastName]
+              [nameLookup.customer.firstName, nameLookup.customer.lastName]
                 .filter(Boolean)
                 .join(" ")
                 .trim() || "Shopify Customer";
@@ -374,6 +443,7 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
       console.log("[SHOPIFY CUSTOMER DEBUG] DB user created =", false);
       console.log("[SHOPIFY CUSTOMER DEBUG] identity resolved =", true);
       console.log("[SHOPIFY IDENTITY] Mongo user ID available =", true);
+      console.log("[SHOPIFY IDENTITY] Mongo identity resolved =", true);
 
       return cacheSession(
         shop,
@@ -386,20 +456,52 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
     // NEW USER
     // ======================================================
 
-    const customer = await fetchShopifyCustomer(
+    const lookupResult = await fetchShopifyCustomer(
       shop,
       await getShopAccessToken(shopDoc),
       customerId
     );
 
-    console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", Boolean(customer));
-    console.log("[SHOPIFY IDENTITY] Shopify customer verified =", Boolean(customer));
+    console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", Boolean(lookupResult.customer));
+    console.log("[SHOPIFY IDENTITY] Shopify customer verified =", lookupResult.verified);
 
-    if (!customer) {
+    // CASE B/C/D — never collapsed into one message. Only a genuine
+    // "not_found" means the Shopify customer doesn't exist; http_failed and
+    // graphql_error mean verification itself could not be completed (bad/
+    // expired shop token, network issue, or a real API/permission problem
+    // unrelated to protected-data fields) — a Mongo User must not be created
+    // or reused off the back of either, but the caller needs to be able to
+    // tell "customer really doesn't exist" apart from "we couldn't check".
+    if (!lookupResult.verified) {
       console.log("[SHOPIFY CUSTOMER DEBUG] identity resolved =", false);
       console.log("[SHOPIFY IDENTITY] Mongo user found =", false);
       console.log("[SHOPIFY IDENTITY] Mongo user created =", false);
       console.log("[SHOPIFY IDENTITY] Mongo user ID available =", false);
+      console.log("[SHOPIFY IDENTITY] Mongo identity resolved =", false);
+
+      if (lookupResult.reason === "http_failed") {
+        console.log(
+          "[SHOPIFY IDENTITY] verification failed reason = http_failed, status =",
+          lookupResult.httpStatus || null,
+        );
+        return {
+          success: false,
+          message: "Shopify authentication failed while verifying customer",
+        };
+      }
+
+      if (lookupResult.reason === "graphql_error") {
+        console.log(
+          "[SHOPIFY IDENTITY] verification failed reason = graphql_error, codes =",
+          (lookupResult.errorCodes || []).join(","),
+        );
+        return {
+          success: false,
+          message: "Shopify permission error while verifying customer",
+        };
+      }
+
+      // reason === "not_found"
       return {
         success: false,
         message: "Customer not found in Shopify",
@@ -408,6 +510,7 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
 
     console.log("[SHOPIFY IDENTITY] Mongo user found =", false);
 
+    const customer = lookupResult.customer;
     const shopifyCustomerId = customer.id.split("/").pop();
 
     const fullname =
@@ -468,6 +571,7 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
     console.log("[SHOPIFY CUSTOMER DEBUG] identity resolved =", true);
     console.log("[SHOPIFY IDENTITY] Mongo user created =", createdUser === newUser);
     console.log("[SHOPIFY IDENTITY] Mongo user ID available =", true);
+    console.log("[SHOPIFY IDENTITY] Mongo identity resolved =", true);
 
     return cacheSession(
       shop,

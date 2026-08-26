@@ -25,6 +25,7 @@ const verifyAppProxy = (req, res, next) => {
 
   const { signature, ...rest } = req.query;
   if (!signature) {
+    console.log("[SHOPIFY IDENTITY] App Proxy verified =", false);
     return res.status(401).send("Missing app proxy signature");
   }
 
@@ -40,14 +41,17 @@ const verifyAppProxy = (req, res, next) => {
   const digest = crypto.createHmac("sha256", secret).update(message).digest("hex");
 
   if (!timingSafeEqualHex(digest, String(signature))) {
+    console.log("[SHOPIFY IDENTITY] App Proxy verified =", false);
     return res.status(401).send("Invalid app proxy signature");
   }
 
   // Signature is valid → the shop param is now trustworthy, but still validate shape.
   if (req.query.shop && !isValidShopDomain(req.query.shop)) {
+    console.log("[SHOPIFY IDENTITY] App Proxy verified =", false);
     return res.status(400).send("Invalid shop domain");
   }
 
+  console.log("[SHOPIFY IDENTITY] App Proxy verified =", true);
   next();
 };
 

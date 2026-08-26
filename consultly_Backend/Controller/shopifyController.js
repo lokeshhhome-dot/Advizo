@@ -85,13 +85,17 @@ const resolveStorefrontCustomer = async (req, shop) => {
   const customerId = req.query.logged_in_customer_id;
   const existingToken = req.cookies?.token;
 
+  // Never log the raw numeric Shopify customer id — boolean presence only.
   console.log("[SHOPIFY IDENTITY] Shopify customer ID available =", Boolean(customerId));
-  console.log("[SHOPIFY IDENTITY] Shopify customer ID available =", customerId);
-
 
   if (shop && customerId) {
     const result = await manageShopifyUser(shop, customerId, { existingToken });
     if (result?.success) return result;
+    // result?.message now distinguishes "Shop not found" /
+    // "Shopify authentication failed while verifying customer" /
+    // "Shopify permission error while verifying customer" /
+    // "Customer not found in Shopify" — see manageShopifyUser. Previously
+    // every one of those collapsed into this same generic warning.
     console.warn("[proxy] customer resolution failed:", result?.message);
     return null;
   }
@@ -810,6 +814,11 @@ const proxyConsultantProfileJson = async (req, res) => {
 const proxyConsultantsJson = async (req, res) => {
   try {
     const shop = req.query.shop;
+    // Shopify's own App Proxy forwarding appends shop/logged_in_customer_id/
+    // signature/timestamp to this request itself — verifyAppProxy has already
+    // checked the signature by this point, so `shop` here is trustworthy.
+    // Nothing in this codebase invents or overrides it from client input.
+    console.log("[SHOPIFY IDENTITY] Shop available =", Boolean(shop));
     if (!shop) {
       return res
         .status(400)
