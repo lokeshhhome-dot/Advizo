@@ -183,31 +183,73 @@ const runShopifyCustomerQuery = async (shop, accessToken, query) => {
 };
 
 /**
- * name/email/firstName/lastName are Shopify "protected customer data" —
- * querying them requires the app to have completed Shopify's separate
- * Protected Customer Data approval (a Partner Dashboard review, independent
- * of the read_customers/write_customers OAuth scopes already granted). An
- * app without that approval gets an ACCESS_DENIED-style GraphQL error on
- * this field set specifically, with `customer` coming back null — which
- * previously surfaced here as an indistinguishable "Customer not found in
- * Shopify", even though the id was completely valid and the customer is
- * genuinely logged in. id/createdAt/numberOfOrders are NOT protected fields,
- * so the fallback query below still succeeds in that case; fullname/email
- * simply fall back to their existing "Shopify Customer" placeholder
- * (unchanged behavior already present in manageShopifyUser for that case).
- */
-/**
+ * ONE clean, minimal identity-verification query — no retries, no fallback
+ * tiers. Earlier versions of this file retried with progressively fewer
+ * fields on a GraphQL error, on the theory that only Protected Customer Data
+ * fields (name/email/phone) could be denied. Confirmed-in-production logs
+ * showed even this bare `{ id }` query getting ACCESS_DENIED, which retrying
+ * with fewer fields can never fix — `id` is not protected data, so a denial
+ * on it means the installed app's token doesn't have `read_customers`
+ * granted AT ALL for this shop (see verifyAppInstallationScopes below),
+ * which is a re-authorization problem, not a query-shape problem.
+ *
  * Result shape: { customer, verified, reason, httpStatus, errorCodes }
  *   reason: "verified" | "not_found" | "http_failed" | "graphql_error"
- * Callers must branch on `reason`, never on `customer` truthiness alone —
- * that collapse (customer==null means "not found") is exactly what
- * previously turned an expired shop token or a permissions error into the
- * misleading "Customer not found in Shopify" message.
+ * Callers must branch on `reason`, never on `customer` truthiness alone.
  */
-const fetchShopifyCustomer = async (shop, accessToken, customerId) => {
-  console.log("[SHOPIFY CUSTOMER DEBUG] customer lookup attempted =", true);
+const verifyShopifyCustomer = async (shop, accessToken, customerId) => {
+  const result = await runShopifyCustomerQuery(
+    shop,
+    accessToken,
+    `{
+      customer(id: "gid://shopify/Customer/${customerId}") {
+        id
+      }
+    }`,
+  );
 
-  const full = await runShopifyCustomerQuery(
+  if (result.customer) {
+    console.log("[SHOPIFY IDENTITY] GraphQL customer exists =", true);
+    return { customer: result.customer, verified: true, reason: "verified" };
+  }
+
+  if (result.httpFailed) {
+    return {
+      customer: null,
+      verified: false,
+      reason: "http_failed",
+      httpStatus: result.httpStatus,
+    };
+  }
+
+  if (result.graphqlErrors) {
+    // A permission/installation problem, unrelated to protected customer
+    // data (id is never protected) — never silently treated as "not found".
+    return {
+      customer: null,
+      verified: false,
+      reason: "graphql_error",
+      errorCodes: result.errorCodes,
+    };
+  }
+
+  console.log("[SHOPIFY IDENTITY] GraphQL customer exists =", false);
+  return { customer: null, verified: false, reason: "not_found" };
+};
+
+/**
+ * Best-effort ONLY, called after verifyShopifyCustomer already succeeded —
+ * never part of verification itself, never retried. name/email/firstName/
+ * lastName are Shopify "protected customer data": querying them requires the
+ * app to have completed Shopify's separate Protected Customer Data approval
+ * (a Partner Dashboard review, independent of the read_customers/
+ * write_customers OAuth scopes). A shop without that approval gets
+ * ACCESS_DENIED here specifically; this function swallows that and returns
+ * null so the caller falls back to its existing "Shopify Customer"
+ * placeholder — it must never be able to fail identity verification.
+ */
+const fetchShopifyCustomerProfile = async (shop, accessToken, customerId) => {
+  const result = await runShopifyCustomerQuery(
     shop,
     accessToken,
     `{
@@ -221,124 +263,56 @@ const fetchShopifyCustomer = async (shop, accessToken, customerId) => {
       }
     }`,
   );
+  return result.customer || null;
+};
 
-  if (full.customer) {
-    console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", true);
-    console.log("[SHOPIFY IDENTITY] GraphQL customer exists =", true);
-    return { customer: full.customer, verified: true, reason: "verified" };
+/**
+ * Diagnostic only — introspects THIS installation's own granted OAuth
+ * scopes via Shopify Admin GraphQL. Unlike a customer lookup, querying your
+ * own app's accessScopes needs no particular scope beyond being installed at
+ * all, so it succeeds even when read_customers itself is missing — which is
+ * exactly what makes it useful for telling "token is fine but read_customers
+ * was never granted to this specific installation" apart from "token/shop
+ * itself is broken". Scope handles are permission names, not secrets.
+ */
+const verifyAppInstallationScopes = async (shop, accessToken) => {
+  try {
+    const response = await axios.post(
+      `https://${shop}/admin/api/${SHOPIFY_ADMIN_API_VERSION}/graphql.json`,
+      {
+        query: `{
+          currentAppInstallation {
+            accessScopes {
+              handle
+            }
+          }
+        }`,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "X-Shopify-Access-Token": accessToken,
+        },
+      },
+    );
+
+    const scopes = (
+      response.data?.data?.currentAppInstallation?.accessScopes || []
+    ).map((s) => s.handle);
+
+    console.log("[SHOPIFY IDENTITY] granted scopes =", scopes.join(","));
+    console.log(
+      "[SHOPIFY IDENTITY] read_customers granted =",
+      scopes.includes("read_customers"),
+    );
+    return scopes;
+  } catch (err) {
+    console.log(
+      "[SHOPIFY IDENTITY] accessScopes lookup failed, HTTP status =",
+      err.response?.status || null,
+    );
+    return null;
   }
-
-  // HTTP-level failure (bad/expired token, network, shop unreachable) would
-  // fail identically on a retry with different fields — no point trying
-  // again, and doing so would just double-charge Shopify's rate limit for
-  // no benefit. Critically: this is NOT "customer doesn't exist" — it means
-  // verification could not even be attempted.
-  if (full.httpFailed) {
-    console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", false);
-    return {
-      customer: null,
-      verified: false,
-      reason: "http_failed",
-      httpStatus: full.httpStatus,
-    };
-  }
-
-  // A clean response with no GraphQL errors and no customer really does
-  // mean "no such customer" — retrying with fewer fields can't change that.
-  if (!full.graphqlErrors) {
-    console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", false);
-    console.log("[SHOPIFY IDENTITY] GraphQL customer exists =", false);
-    return { customer: null, verified: false, reason: "not_found" };
-  }
-
-  console.warn(
-    "[SHOPIFY CUSTOMER DEBUG] full customer query returned GraphQL errors — retrying with non-protected fields only (id/createdAt/numberOfOrders)",
-  );
-
-  const minimal = await runShopifyCustomerQuery(
-    shop,
-    accessToken,
-    `{
-      customer(id: "gid://shopify/Customer/${customerId}") {
-        id
-        createdAt
-        numberOfOrders
-      }
-    }`,
-  );
-
-  if (minimal.customer) {
-    console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", true);
-    console.log("[SHOPIFY IDENTITY] GraphQL customer exists =", true);
-    return { customer: minimal.customer, verified: true, reason: "verified" };
-  }
-
-  if (minimal.httpFailed) {
-    console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", false);
-    return {
-      customer: null,
-      verified: false,
-      reason: "http_failed",
-      httpStatus: minimal.httpStatus,
-    };
-  }
-
-  if (!minimal.graphqlErrors) {
-    console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", false);
-    console.log("[SHOPIFY IDENTITY] GraphQL customer exists =", false);
-    return { customer: null, verified: false, reason: "not_found" };
-  }
-
-  // Last resort: `createdAt`/`numberOfOrders` can themselves be gated by a
-  // shop's protected-customer-data approval status, same as name/email above.
-  // `id` alone is never protected data, so this tier can only ever fail if
-  // the customer genuinely doesn't exist (or the HTTP request itself fails)
-  // — never from a permissions error. This is what guarantees identity
-  // verification never wrongly blocks on Shopify's data-access policy.
-  console.warn(
-    "[SHOPIFY CUSTOMER DEBUG] minimal customer query also returned GraphQL errors — retrying with id only",
-  );
-
-  const idOnly = await runShopifyCustomerQuery(
-    shop,
-    accessToken,
-    `{
-      customer(id: "gid://shopify/Customer/${customerId}") {
-        id
-      }
-    }`,
-  );
-
-  console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", Boolean(idOnly.customer));
-
-  if (idOnly.customer) {
-    console.log("[SHOPIFY IDENTITY] GraphQL customer exists =", true);
-    return { customer: idOnly.customer, verified: true, reason: "verified" };
-  }
-
-  if (idOnly.httpFailed) {
-    return {
-      customer: null,
-      verified: false,
-      reason: "http_failed",
-      httpStatus: idOnly.httpStatus,
-    };
-  }
-
-  if (idOnly.graphqlErrors) {
-    // id-only still errored — a genuine API/permission problem unrelated to
-    // protected customer data (e.g. missing read_customers scope entirely).
-    // Never silently treated as "not found".
-    return {
-      customer: null,
-      verified: false,
-      reason: "graphql_error",
-      errorCodes: idOnly.errorCodes,
-    };
-  }
-
-  console.log("[SHOPIFY IDENTITY] GraphQL customer exists =", false);
-  return { customer: null, verified: false, reason: "not_found" };
 };
 
 const manageShopifyUser = async (shop, customerId, options = {}) => {
@@ -412,15 +386,17 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
 
       if (needsNameRefresh) {
         try {
-          const nameLookup = await fetchShopifyCustomer(
+          // Best-effort enrichment only — this existing user is already
+          // trusted, so no re-verification against Shopify happens here.
+          const profile = await fetchShopifyCustomerProfile(
             shop,
             await getShopAccessToken(shopDoc),
             customerId
           );
 
-          if (nameLookup.customer) {
+          if (profile) {
             const fullname =
-              [nameLookup.customer.firstName, nameLookup.customer.lastName]
+              [profile.firstName, profile.lastName]
                 .filter(Boolean)
                 .join(" ")
                 .trim() || "Shopify Customer";
@@ -456,11 +432,8 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
     // NEW USER
     // ======================================================
 
-    const lookupResult = await fetchShopifyCustomer(
-      shop,
-      await getShopAccessToken(shopDoc),
-      customerId
-    );
+    const accessToken = await getShopAccessToken(shopDoc);
+    const lookupResult = await verifyShopifyCustomer(shop, accessToken, customerId);
 
     console.log("[SHOPIFY CUSTOMER DEBUG] customer found =", Boolean(lookupResult.customer));
     console.log("[SHOPIFY IDENTITY] Shopify customer verified =", lookupResult.verified);
@@ -495,6 +468,12 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
           "[SHOPIFY IDENTITY] verification failed reason = graphql_error, codes =",
           (lookupResult.errorCodes || []).join(","),
         );
+        // ACCESS_DENIED on a bare `{ id }` query cannot be a protected-data
+        // problem (id is never protected) — it means this installation's
+        // token itself is missing a scope it should have. Diagnostic-only,
+        // read-only, and needs no scope beyond being installed at all — see
+        // verifyAppInstallationScopes's own comment.
+        await verifyAppInstallationScopes(shop, accessToken);
         return {
           success: false,
           message: "Shopify permission error while verifying customer",
@@ -510,24 +489,28 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
 
     console.log("[SHOPIFY IDENTITY] Mongo user found =", false);
 
-    const customer = lookupResult.customer;
-    const shopifyCustomerId = customer.id.split("/").pop();
+    const shopifyCustomerId = lookupResult.customer.id.split("/").pop();
+
+    // Best-effort enrichment, separate from verification — never blocks user
+    // creation. Returns null (falling back to placeholders below) exactly as
+    // before when the shop lacks Protected Customer Data approval.
+    const profile = await fetchShopifyCustomerProfile(shop, accessToken, customerId);
 
     const fullname =
-      [customer.firstName, customer.lastName]
+      [profile?.firstName, profile?.lastName]
         .filter(Boolean)
         .join(" ")
         .trim() || "Shopify Customer";
 
     // The userSchema `email` field is required+unique. When the Admin API
-    // couldn't return the real email (fetchShopifyCustomer's protected-data
-    // fallback — see that function's comment), a real email is genuinely
-    // unavailable, not just unset — falling back to a shared placeholder
-    // would collide on the schema's unique index for the second such
-    // customer. This synthetic address is unique per (shop, Shopify
+    // couldn't return the real email (fetchShopifyCustomerProfile's
+    // protected-data limitation — see that function's comment), a real email
+    // is genuinely unavailable, not just unset — falling back to a shared
+    // placeholder would collide on the schema's unique index for the second
+    // such customer. This synthetic address is unique per (shop, Shopify
     // customer id) and is never used for actual communication.
     const email =
-      customer.email ||
+      profile?.email ||
       `shopify-customer-${shopifyCustomerId}@${shop}.consultly-placeholder`;
 
     const newUser = new User({
@@ -538,8 +521,8 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
       email,
       fullname,
       isChatAccepted: "request",
-      createdAt: customer.createdAt,
-      numberOfOrders: customer.numberOfOrders,
+      createdAt: profile?.createdAt,
+      numberOfOrders: profile?.numberOfOrders,
       chatLock: true,
     });
 

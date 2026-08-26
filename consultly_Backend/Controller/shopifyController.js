@@ -287,10 +287,14 @@ const beginOAuth = async (req, res) => {
   return res.redirect(installUrl);
 };
 
-const saveInstalledShop = async (shop, accessToken, shopProfile, expiringFields = null) => {
+const saveInstalledShop = async (shop, accessToken, shopProfile, expiringFields = null, grantedScopes = null) => {
   const shopPayload = {
     shop,
     accessToken,
+    // The scope string Shopify's own token response returned for THIS
+    // authorization — see the schema field's own comment for why this must
+    // be stored rather than assumed from shopify.app.toml.
+    grantedScopes: grantedScopes || null,
     // Expiring-token lifecycle fields; null for legacy non-expiring installs.
     refreshToken: expiringFields?.refreshToken || null,
     accessTokenExpiresAt: expiringFields?.accessTokenExpiresAt || null,
@@ -430,11 +434,19 @@ const authCallback = async (req, res) => {
       .select("_id accessToken");
     const wasInstalledBefore = Boolean(existingShop?.accessToken);
 
-    const shopDoc = await saveInstalledShop(shop, accessToken, shopProfile, expiringFields);
+    const shopDoc = await saveInstalledShop(
+      shop,
+      accessToken,
+      shopProfile,
+      expiringFields,
+      tokenResponse.data.scope || null,
+    );
     rememberFreshInstallTokens(shopDoc._id, accessToken, expiringFields);
     shopDocCache.delete(`shop:${shop}`);
 
     console.log(`[authCallback] Shop saved for ${shop}, adminId=${shopDoc._id}`);
+    // Scope handles are permission names, not secrets — safe to log in full.
+    console.log(`[authCallback] Granted scopes for ${shop}: ${tokenResponse.data.scope || "(none returned)"}`);
 
     // Managed pricing: the merchant may have bought a plan from the App Store
     // BEFORE this (re)install — sync any already-active charge now so they

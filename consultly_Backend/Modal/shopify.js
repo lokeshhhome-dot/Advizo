@@ -2,6 +2,16 @@ const mongoose = require('mongoose');
 const shop = new mongoose.Schema({
     shop: { type: String, },
     accessToken: String,
+    // The comma-separated `scope` string Shopify's own OAuth token-exchange
+    // response returns (tokenResponse.data.scope in authCallback) — the
+    // ACTUAL scopes granted to this specific installation's token, which can
+    // differ from shopify.app.toml's current [access_scopes] if this shop
+    // installed/last re-authorized before a scope was added there. Existing
+    // installations are never retroactively upgraded by a toml/env change;
+    // comparing this field against the app's current declared scopes is how
+    // to tell whether a shop needs to be re-authorized. Null until an OAuth
+    // callback runs after this field was added.
+    grantedScopes: { type: String, default: null },
     // Expiring offline token support (Shopify mandate for new public apps).
     // Legacy shops keep refreshToken null and use accessToken as-is.
     refreshToken: { type: String, default: null },
