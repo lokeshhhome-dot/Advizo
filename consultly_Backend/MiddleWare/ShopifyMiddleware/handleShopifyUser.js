@@ -31,7 +31,11 @@ const JWT_EXPIRY = "7d";
 // implementations are left completely intact below and are exactly what
 // runs again the moment this flag is unset — this is a bypass of ONE step,
 // not a second auth system.
+// SHOPIFY_CUSTOMER_GRAPHQL_VERIFICATION_BYPASS is the preferred/canonical
+// name going forward; TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL is still honored
+// so an already-set env var on any deployed environment keeps working.
 const TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL =
+  String(process.env.SHOPIFY_CUSTOMER_GRAPHQL_VERIFICATION_BYPASS || "").toLowerCase() === "true" ||
   String(process.env.TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL || "").toLowerCase() === "true";
 
 const buildSessionResult = (user, token, message = "Customer already exists") => ({
@@ -415,6 +419,7 @@ const createShopifyCustomerUser = async ({
     console.log("[SHOPIFY TEST AUTH] Mongo user created =", wasCreated);
     console.log("[SHOPIFY TEST AUTH] Mongo user ID available =", true);
     console.log("[SHOPIFY TEST AUTH] identity resolved =", true);
+    console.log("[SHOPIFY TEST AUTH] Mongo identity resolved =", true);
   }
 
   return cacheSession(
@@ -464,6 +469,7 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
     console.log("[SHOPIFY TEST AUTH] Shop available =", Boolean(shop));
     console.log("[SHOPIFY TEST AUTH] Shopify customer ID available =", Boolean(customerId));
     console.log("[SHOPIFY TEST AUTH] GraphQL bypass enabled =", TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL);
+    console.log("[SHOPIFY TEST AUTH] GraphQL customer verification bypass =", TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL);
 
     if (!shopDoc?.accessToken) {
       console.log("[SHOPIFY TEST AUTH] identity resolved =", false);
@@ -551,6 +557,7 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
       console.log("[SHOPIFY IDENTITY] Mongo identity resolved =", true);
       console.log("[SHOPIFY TEST AUTH] Mongo user ID available =", true);
       console.log("[SHOPIFY TEST AUTH] identity resolved =", true);
+      console.log("[SHOPIFY TEST AUTH] Mongo identity resolved =", true);
 
       return cacheSession(
         shop,
