@@ -34,6 +34,11 @@ const JWT_EXPIRY = "7d";
 // SHOPIFY_CUSTOMER_GRAPHQL_VERIFICATION_BYPASS is the preferred/canonical
 // name going forward; TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL is still honored
 // so an already-set env var on any deployed environment keeps working.
+// TODO: unset this env var (or set it to false) once the Protected Customer
+// Data / ACCESS_DENIED issue above is resolved, to re-enable real Shopify
+// customer verification. verifyShopifyCustomer/fetchShopifyCustomerProfile/
+// verifyAppInstallationScopes below are untouched and are exactly what runs
+// again the moment this flag is off.
 const TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL =
   String(process.env.SHOPIFY_CUSTOMER_GRAPHQL_VERIFICATION_BYPASS || "").toLowerCase() === "true" ||
   String(process.env.TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL || "").toLowerCase() === "true";
@@ -470,6 +475,7 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
     console.log("[SHOPIFY TEST AUTH] Shopify customer ID available =", Boolean(customerId));
     console.log("[SHOPIFY TEST AUTH] GraphQL bypass enabled =", TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL);
     console.log("[SHOPIFY TEST AUTH] GraphQL customer verification bypass =", TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL);
+    console.log("[SHOPIFY TEST AUTH] GraphQL customer verification bypassed =", TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL);
 
     if (!shopDoc?.accessToken) {
       console.log("[SHOPIFY TEST AUTH] identity resolved =", false);
@@ -573,11 +579,16 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
     // TEMPORARY TEST AUTH BYPASS — see TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL's
     // own comment at the top of this file. Trusts App-Proxy-verified
     // logged_in_customer_id directly as shopifyCustomerId, skipping
-    // verifyShopifyCustomer entirely, then falls into the EXACT SAME Mongo
-    // create logic used by the real path below (same schema, same
-    // placeholder-email rule, same E11000 race-reconciliation) — this is not
-    // a second user-creation implementation, only a different source for
-    // `verifiedCustomerId`/`profile`.
+    // verifyShopifyCustomer entirely — the customer(id) GraphQL call and its
+    // "Customer not found in Shopify" / ACCESS_DENIED rejection path below
+    // are never reached while this branch returns first — then falls into
+    // the EXACT SAME Mongo create logic used by the real path below (same
+    // schema, same placeholder-email rule, same E11000 race-reconciliation)
+    // — this is not a second user-creation implementation, only a different
+    // source for `verifiedCustomerId`/`profile`.
+    // TODO: remove this `if` block (or confirm the flag is unset) once real
+    // Shopify customer verification is restored — verifyShopifyCustomer
+    // itself, further down, is untouched and ready to resume immediately.
     if (TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL) {
       console.log("[SHOPIFY TEST AUTH] Mongo user found =", false);
       return createShopifyCustomerUser({
