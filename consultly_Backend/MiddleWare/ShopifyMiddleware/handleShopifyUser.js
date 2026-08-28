@@ -31,17 +31,21 @@ const JWT_EXPIRY = "7d";
 // implementations are left completely intact below and are exactly what
 // runs again the moment this flag is unset — this is a bypass of ONE step,
 // not a second auth system.
-// SHOPIFY_CUSTOMER_GRAPHQL_VERIFICATION_BYPASS is the preferred/canonical
-// name going forward; TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL is still honored
-// so an already-set env var on any deployed environment keeps working.
-// TODO: unset this env var (or set it to false) once the Protected Customer
-// Data / ACCESS_DENIED issue above is resolved, to re-enable real Shopify
-// customer verification. verifyShopifyCustomer/fetchShopifyCustomerProfile/
-// verifyAppInstallationScopes below are untouched and are exactly what runs
-// again the moment this flag is off.
-const TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL =
-  String(process.env.SHOPIFY_CUSTOMER_GRAPHQL_VERIFICATION_BYPASS || "").toLowerCase() === "true" ||
-  String(process.env.TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL || "").toLowerCase() === "true";
+// UNCONDITIONAL for now — an env-var-gated version of this flag was tried
+// first (SHOPIFY_CUSTOMER_GRAPHQL_VERIFICATION_BYPASS /
+// TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL), but production logs showed it
+// evaluating to false ("[SHOPIFY TEST AUTH] GraphQL customer verification
+// bypassed = false"), meaning the env var was never actually set/propagated
+// on the live deployment — so this is hardcoded true instead, with no env
+// var dependency, to guarantee the bypass is actually active regardless of
+// deployment configuration.
+//
+// TODO — RE-ENABLE REAL VERIFICATION: set this back to `false` (or restore
+// an env-var check) once the Protected Customer Data / ACCESS_DENIED issue
+// is resolved. verifyShopifyCustomer / fetchShopifyCustomerProfile /
+// verifyAppInstallationScopes below are completely untouched and start
+// running again the instant this is `false` — nothing else needs to change.
+const TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL = true;
 
 const buildSessionResult = (user, token, message = "Customer already exists") => ({
   success: true,
@@ -423,7 +427,6 @@ const createShopifyCustomerUser = async ({
   if (testAuthLogging) {
     console.log("[SHOPIFY TEST AUTH] Mongo user created =", wasCreated);
     console.log("[SHOPIFY TEST AUTH] Mongo user ID available =", true);
-    console.log("[SHOPIFY TEST AUTH] identity resolved =", true);
     console.log("[SHOPIFY TEST AUTH] Mongo identity resolved =", true);
   }
 
@@ -473,12 +476,10 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
     console.log("[SHOPIFY TEST AUTH] App Proxy verified =", true);
     console.log("[SHOPIFY TEST AUTH] Shop available =", Boolean(shop));
     console.log("[SHOPIFY TEST AUTH] Shopify customer ID available =", Boolean(customerId));
-    console.log("[SHOPIFY TEST AUTH] GraphQL bypass enabled =", TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL);
-    console.log("[SHOPIFY TEST AUTH] GraphQL customer verification bypass =", TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL);
     console.log("[SHOPIFY TEST AUTH] GraphQL customer verification bypassed =", TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL);
 
     if (!shopDoc?.accessToken) {
-      console.log("[SHOPIFY TEST AUTH] identity resolved =", false);
+      console.log("[SHOPIFY TEST AUTH] Mongo identity resolved =", false);
       return {
         success: false,
         message: "Shop not found",
@@ -562,7 +563,6 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
       console.log("[SHOPIFY IDENTITY] Mongo user ID available =", true);
       console.log("[SHOPIFY IDENTITY] Mongo identity resolved =", true);
       console.log("[SHOPIFY TEST AUTH] Mongo user ID available =", true);
-      console.log("[SHOPIFY TEST AUTH] identity resolved =", true);
       console.log("[SHOPIFY TEST AUTH] Mongo identity resolved =", true);
 
       return cacheSession(
