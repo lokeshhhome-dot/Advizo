@@ -929,11 +929,20 @@
             return;
           }
 
-          // Voice/video: opens the same profile modal shown on card click
-          // (instead of navigating to /pages/consultant-profile) — actually
-          // starting the call happens from that modal's own action buttons,
-          // via openCallOverlay (see buildCallOverlayUrl's comment).
-          openProfileModal(consultantId, ctx.shop);
+          // Voice/video clicked directly on the card: open the call overlay
+          // immediately — no intermediate Consultant Profile modal/page.
+          // (Clicking the card itself, or the Profile modal's own Call/Video
+          // buttons, still goes through openProfileModal/openCallOverlay as
+          // before — this only changes the card's OWN action buttons.)
+          console.log(
+            "[CALL FLOW DEBUG] " +
+              (action === "video" ? "video" : "customer") +
+              " call button clicked",
+          );
+          console.log("[CALL FLOW DEBUG] profile navigation prevented");
+          console.log("[CALL FLOW DEBUG] call mode =", action);
+          console.log("[CALL FLOW DEBUG] opening customer call modal");
+          openCallOverlay(consultantId, ctx.shop, action);
         });
       });
     });
