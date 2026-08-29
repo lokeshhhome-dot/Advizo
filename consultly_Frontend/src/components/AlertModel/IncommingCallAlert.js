@@ -6,7 +6,6 @@ import { socket } from "../Sokect-io/SokectConfig";
 import { checkMicPermission } from "../ConsultantCards/ConsultantCards";
 import TestRingtone from "../../pages/TestRingtone";
 import axios from "axios";
-import { buildCallPageUrl } from "../../utils/buildCallPageUrl";
 import VideoCallModal from "./VideoCallModal";
 import userDefultProfile from "../../assets/avatar-or-person-sign-profile-picture-portrait-icon-user-profile-symbol.webp"
 
@@ -17,10 +16,11 @@ export default function IncomingCallAlert() {
     localStorage.getItem("consultant_u_Identity");
   const { incomingCall, callEnded } = useSelector((state) => state.socket);
   const { callAccepted } = useSelector((state) => state.socket);
-  // Holds the accepted call's iframe URL. Kept separate from `incomingCall`
-  // (which is cleared the moment the call is accepted) so the call modal
-  // stays mounted for the whole call instead of disappearing with the ring.
-  const [activeCallUrl, setActiveCallUrl] = useState(null);
+  // Holds the accepted call's config (passed to VideoCallingPage as props,
+  // no iframe/URL involved). Kept separate from `incomingCall` (which is
+  // cleared the moment the call is accepted) so the call modal stays
+  // mounted for the whole call instead of disappearing with the ring.
+  const [activeCallConfig, setActiveCallConfig] = useState(null);
   const { callType, callerName } = incomingCall || {};
 
   useEffect(() => {
@@ -78,30 +78,36 @@ export default function IncomingCallAlert() {
         shopId: shopId,
       });
       const callType = incomingCall.callType || "voice";
-      const returnUrl = `https://${shop}/apps/consultly/consultant-dashboard`;
 
-      const callUrl = buildCallPageUrl({
-        shop,
-        shopId,
+      // Same fields VideoCallingPage used to read from the URL — now passed
+      // as props (VideoCallModal renders <VideoCallingPage config={...}>
+      // directly, no iframe). Only include values that are actually set, to
+      // match params.get() returning null for an absent key rather than the
+      // literal string "undefined".
+      const rawConfig = {
         callerId,
         receiverId: userId,
         callType,
-        uid,
+        uid: String(uid),
         channelName,
-        agoraToken: data.token,
+        token: data.token,
         appId: data.appId,
         userId,
+        shopId,
+        shop,
         userType: "consultant",
-        returnUrl,
         authToken: localStorage.getItem("token") || "",
-        // Renders inside VideoCallModal below (an iframe in the Consultant
-        // Dashboard) — must be the app's own URL, not the shop's App Proxy,
-        // or the call UI would come back wrapped in the storefront theme.
-        direct: true,
+      };
+      const callConfig = {};
+      Object.keys(rawConfig).forEach((key) => {
+        const value = rawConfig[key];
+        if (value !== undefined && value !== null && value !== "") {
+          callConfig[key] = String(value);
+        }
       });
 
       dispatch(setIncomingCall(null));
-      setActiveCallUrl(callUrl);
+      setActiveCallConfig(callConfig);
     }
   };
 
@@ -120,8 +126,8 @@ export default function IncomingCallAlert() {
   return (
     <>
       <VideoCallModal
-        callUrl={activeCallUrl}
-        onClose={() => setActiveCallUrl(null)}
+        callConfig={activeCallConfig}
+        onClose={() => setActiveCallConfig(null)}
       />
       {incomingCall && (
         <>

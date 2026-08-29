@@ -34,7 +34,17 @@ const TERMINAL_CALL_STATUSES = [
 ];
 const isTerminalCallSession = (session) =>
   TERMINAL_CALL_STATUSES.includes(String(session?.status || "").toLowerCase());
-function VideoCallingPage() {
+// config: optional plain object of the exact same fields this page used to
+// read from the URL (receiverId, callType, token, channelName, callerId,
+// uid, appId, userId, shopId, userType, authToken, returnUrl, shop) — passed
+// by VideoCallModal to mount this SAME component directly (no iframe/route)
+// inside the Consultant Dashboard. onCallEnded: called instead of any
+// navigation/postMessage when the call ends — the modal owns closing itself.
+// Omitting both keeps this exactly the standalone /video/calling/page route
+// it always was (URL query params, iframe/window navigation on end) — every
+// params.get(...) below works unchanged either way since URLSearchParams
+// accepts a plain object directly.
+function VideoCallingPage({ config, onCallEnded } = {}) {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
@@ -45,7 +55,17 @@ function VideoCallingPage() {
   const [callSession, setCallSession] = useState(null);
   const [callSessionEnded, setCallSessionEnded] = useState(false);
   const { callEnded } = useSelector((state) => state.socket);
-  const params = new URLSearchParams(window.location.search);
+  const params = config
+    ? new URLSearchParams(config)
+    : new URLSearchParams(window.location.search);
+  // Mounted directly inside a modal (no iframe, no standalone route) — the
+  // root container must size to its modal box (height:100%) instead of the
+  // real viewport (height:100vh), which is only correct when this page
+  // fills an actual browser tab/iframe on its own.
+  const isEmbedded = Boolean(config);
+  const containerClassName = isEmbedded
+    ? `${styles.videoCallContainer} ${styles.embedded}`
+    : styles.videoCallContainer;
   const receiverId = params.get("receiverId");
   const callType = params.get("callType") || "video";
   const token = params.get("token")
@@ -201,16 +221,23 @@ function VideoCallingPage() {
     channelName: channelNameParam,
   };
 
-  // This page is now also loaded inside a call MODAL (an iframe rendered on
-  // top of the Consultant Dashboard or the Shopify theme card) instead of
-  // always being a standalone tab/popup. Navigating window.top from inside
-  // that iframe would break out of the modal and drag the whole dashboard/
-  // storefront tab away with it — the exact "consultant gets redirected to
-  // the theme" bug this was built to fix. When framed, tell whichever parent
-  // opened the modal that the call ended instead of navigating anywhere;
-  // the modal owns closing itself. Standalone (window.top === window, the
-  // pre-existing popup/full-tab paths) keeps navigating exactly as before.
+  // Three ways this page's call can end, in priority order:
+  // 1. Mounted directly as a component (onCallEnded provided, e.g. the
+  //    Consultant Dashboard's native VideoCallModal) — just tell the parent
+  //    component the call ended; it owns unmounting/closing, no navigation
+  //    or postMessage involved at all.
+  // 2. Loaded inside an iframe (the Shopify theme's call overlay, until that
+  //    also moves off iframes) — navigating window.top from in there would
+  //    break out of the modal and drag the whole storefront tab away with
+  //    it, so post a message for whichever parent opened the overlay to
+  //    close it instead.
+  // 3. Standalone (window.top === window, the pre-existing popup/full-tab
+  //    paths) — keeps navigating exactly as before.
   const exitCallView = (url) => {
+    if (typeof onCallEnded === "function") {
+      onCallEnded();
+      return;
+    }
     if (window.self !== window.top) {
       try {
         window.parent.postMessage({ type: "CONSULTLY_CALL_ENDED" }, "*");
@@ -1158,6 +1185,14 @@ function VideoCallingPage() {
       }
     }
 
+    // Embedded as a modal component: there is no separate window/tab to
+    // close, so skip closeCallWindow's window.close()-then-400ms-fallback
+    // dance (built for the legacy popup path) and close the modal instantly.
+    if (typeof onCallEnded === "function") {
+      onCallEnded();
+      return;
+    }
+
     const returnUrl = params.get("returnUrl");
     closeCallWindow(() => {
       if (returnUrl) {
@@ -1388,7 +1423,7 @@ function VideoCallingPage() {
 
   if (endingOnRefresh) {
     return (
-      <div className={styles.videoCallContainer} style={themeVars || undefined}>
+      <div className={containerClassName} style={themeVars || undefined}>
         <div className={styles.callCard}>
           <div className={styles.callHeader}>
             <p>Ending call after page refresh…</p>
@@ -1399,7 +1434,7 @@ function VideoCallingPage() {
   }
 
   return (
-    <div className={styles.videoCallContainer} style={themeVars || undefined}>
+    <div className={containerClassName} style={themeVars || undefined}>
       <div className={styles.callCard}>
       <div className={styles.callHeader}>
         <div className={styles.callHeaderLeft}>
