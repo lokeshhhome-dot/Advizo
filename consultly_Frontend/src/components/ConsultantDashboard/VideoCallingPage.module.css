@@ -39,10 +39,26 @@
 }
 
 /* Mounted directly inside a modal (Consultant Dashboard's native call
-   modal) instead of a standalone tab/iframe — height must come from the
-   modal box it's actually sitting in, not the real browser viewport. */
+   modal) instead of a standalone tab/iframe. .videoCallContainer is a PAGE
+   wrapper — full-viewport light background + padding to center .callCard
+   on an otherwise empty landing page. That's correct for a standalone page,
+   but the modal (VideoCallModal.module.css's .modal) is already the "page"
+   here: its own dark background + rounded corners + fixed box. Without this
+   override, .videoCallContainer's light background/padding shows as a
+   visible white surface around the dark .callCard, floating inside the
+   modal instead of filling it. Height comes from the modal box, not the
+   real viewport; padding/background are removed entirely so .callCard fills
+   the modal edge-to-edge; .callCard's own radius is zeroed so the modal's
+   own overflow:hidden + border-radius is the only rounding, with no
+   mismatched double-rounded corner. */
 .videoCallContainer.embedded {
     height: 100%;
+    padding: 0;
+    background: transparent;
+}
+
+.videoCallContainer.embedded .callCard {
+    border-radius: 0;
 }
 
 /* ---------- The centered call card ---------- */

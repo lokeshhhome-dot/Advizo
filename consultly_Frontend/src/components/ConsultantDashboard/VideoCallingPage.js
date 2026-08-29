@@ -66,6 +66,31 @@ function VideoCallingPage({ config, onCallEnded } = {}) {
   const containerClassName = isEmbedded
     ? `${styles.videoCallContainer} ${styles.embedded}`
     : styles.videoCallContainer;
+  // Inline overrides on top of the .embedded CSS class: inline styles beat
+  // any external stylesheet rule regardless of specificity or a stale
+  // cached bundle, so there's no ambiguity about the page-wrapper's light
+  // background/padding actually going away in embedded/modal mode, or
+  // about .callCard actually filling the modal edge-to-edge.
+  const embeddedContainerStyle = isEmbedded
+    ? {
+        background: "transparent",
+        padding: 0,
+        margin: 0,
+        width: "100%",
+        height: "100%",
+        minHeight: 0,
+      }
+    : null;
+  const embeddedCallCardStyle = isEmbedded
+    ? {
+        width: "100%",
+        height: "100%",
+        maxWidth: "none",
+        maxHeight: "none",
+        margin: 0,
+        borderRadius: 0,
+      }
+    : null;
   const receiverId = params.get("receiverId");
   const callType = params.get("callType") || "video";
   const token = params.get("token")
@@ -114,6 +139,7 @@ function VideoCallingPage({ config, onCallEnded } = {}) {
   const [endingOnRefresh, setEndingOnRefresh] = useState(false);
   // Store theme accent (posted in by the parent app-proxy page) → CSS variables.
   const [themeVars, setThemeVars] = useState(null);
+  const containerStyle = { ...(themeVars || {}), ...(embeddedContainerStyle || {}) };
   // UI-only: enlarge/restore the local (self) video preview tile.
   const [selfExpanded, setSelfExpanded] = useState(false);
   // Safari autoplay: remote audio was blocked until a user gesture.
@@ -1423,8 +1449,8 @@ function VideoCallingPage({ config, onCallEnded } = {}) {
 
   if (endingOnRefresh) {
     return (
-      <div className={containerClassName} style={themeVars || undefined}>
-        <div className={styles.callCard}>
+      <div className={containerClassName} style={containerStyle}>
+        <div className={styles.callCard} style={embeddedCallCardStyle || undefined}>
           <div className={styles.callHeader}>
             <p>Ending call after page refresh…</p>
           </div>
@@ -1434,8 +1460,8 @@ function VideoCallingPage({ config, onCallEnded } = {}) {
   }
 
   return (
-    <div className={containerClassName} style={themeVars || undefined}>
-      <div className={styles.callCard}>
+    <div className={containerClassName} style={containerStyle}>
+      <div className={styles.callCard} style={embeddedCallCardStyle || undefined}>
       <div className={styles.callHeader}>
         <div className={styles.callHeaderLeft}>
           <button
