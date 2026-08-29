@@ -80,6 +80,41 @@ const shop = new mongoose.Schema({
 
     },
 
+    // Storefront Consultant Card appearance — every field is null/empty
+    // until an admin explicitly saves a value via
+    // updateConsultantCardTheme. The Theme Extension's own CSS already has
+    // the current/default look baked in as fallback values (CSS custom
+    // properties with a fallback), so a shop with no saved theme here
+    // renders IDENTICALLY to today — this object only ever narrows what the
+    // storefront shows, never widens it. Colors are validated server-side
+    // (updateConsultantCardTheme) to 6-digit hex only, and cardShadow to a
+    // fixed enum, specifically so nothing saved here can ever inject
+    // arbitrary CSS into the storefront.
+    consultantCardTheme: {
+        cardBackground: { type: String, default: null },
+        cardBorderColor: { type: String, default: null },
+        cardBorderRadius: { type: Number, default: null },
+        cardShadow: { type: String, enum: ["none", "soft", "default", "strong", null], default: null },
+        headerBackground: { type: String, default: null },
+        nameColor: { type: String, default: null },
+        categoryColor: { type: String, default: null },
+        supportingTextColor: { type: String, default: null },
+        priceColor: { type: String, default: null },
+        chatButtonBg: { type: String, default: null },
+        chatButtonText: { type: String, default: null },
+        callButtonBg: { type: String, default: null },
+        callButtonText: { type: String, default: null },
+        buttonBorderColor: { type: String, default: null },
+        buttonHoverColor: { type: String, default: null },
+        onlineColor: { type: String, default: null },
+        busyColor: { type: String, default: null },
+        offlineColor: { type: String, default: null },
+        // Profession name (lowercased, trimmed) -> header background color.
+        // e.g. {"astrologer": "#fdf4e3"}. Empty/absent means every card uses
+        // headerBackground (or the CSS default) regardless of profession.
+        professionColors: { type: Map, of: String, default: {} },
+    },
+
     installedAt: { type: Date, default: Date.now }
 });
 

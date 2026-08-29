@@ -35,14 +35,84 @@
       '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
       '<path d="M23 7L16 12L23 17V7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
       '<path d="M14 5H3C1.9 5 1 5.9 1 7V17C1 18.1 1.9 19 3 19H14C15.1 19 16 18.1 16 17V7C16 5.9 15.1 5.1 14 5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-    experience:
-      '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">' +
-      '<path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7.4-6.3-4.6L5.7 21.4 8 14 2 9.4h7.6z"/></svg>',
   };
 
   var COMM_DISABLED_MESSAGE =
     "Communication unavailable. The store has exhausted its communication minutes.";
   var COMM_DISABLED_TOAST = "Communication is currently unavailable.";
+
+  // ---------- Consultant Card admin customization ----------
+  //
+  // Every CSS rule this maps to already has the CURRENT hardcoded value as
+  // its var() fallback (see consultant-card.css's own comment on this) — so
+  // a shop that never saved a theme (data.consultantCardTheme is null/empty)
+  // results in ZERO setProperty() calls below, and the card renders exactly
+  // as it always has. Only fields the admin actually saved are ever set.
+  var THEME_COLOR_VARS = {
+    cardBackground: "--consultant-card-bg",
+    cardBorderColor: "--consultant-card-border",
+    headerBackground: "--consultant-card-header-bg",
+    nameColor: "--consultant-card-name-color",
+    categoryColor: "--consultant-card-category-color",
+    supportingTextColor: "--consultant-card-supporting-color",
+    priceColor: "--consultant-card-price-color",
+    chatButtonBg: "--consultant-card-chat-bg",
+    chatButtonText: "--consultant-card-chat-text",
+    callButtonBg: "--consultant-card-call-bg",
+    callButtonText: "--consultant-card-call-text",
+    buttonBorderColor: "--consultant-card-button-border",
+    buttonHoverColor: "--consultant-card-button-hover",
+    onlineColor: "--consultant-card-online",
+    busyColor: "--consultant-card-busy",
+    offlineColor: "--consultant-card-offline",
+  };
+
+  // Fixed presets, not free-text CSS — matches the enum the backend
+  // validates cardShadow against (updateConsultantCardTheme). "default" is
+  // the exact same value the CSS fallback already uses.
+  var SHADOW_PRESETS = {
+    none: "none",
+    soft: "0 1px 2px rgba(16,35,28,.05)",
+    default: "0 1px 2px rgba(16,35,28,.05), 0 14px 34px -22px rgba(16,35,28,.3)",
+    strong: "0 4px 10px rgba(16,35,28,.1), 0 24px 48px -20px rgba(16,35,28,.45)",
+  };
+
+  // Applied once to the shared container — every card inherits these
+  // through normal CSS var() cascade, so this is O(1) regardless of how
+  // many consultants are on the page.
+  function applyConsultantCardTheme(container, theme) {
+    if (!theme || typeof theme !== "object") return;
+
+    Object.keys(THEME_COLOR_VARS).forEach(function (field) {
+      var value = theme[field];
+      if (typeof value === "string" && value) {
+        container.style.setProperty(THEME_COLOR_VARS[field], value);
+      }
+    });
+
+    if (typeof theme.cardBorderRadius === "number" && isFinite(theme.cardBorderRadius)) {
+      container.style.setProperty("--consultant-card-radius", theme.cardBorderRadius + "px");
+    }
+
+    if (theme.cardShadow && SHADOW_PRESETS[theme.cardShadow]) {
+      container.style.setProperty("--consultant-card-shadow", SHADOW_PRESETS[theme.cardShadow]);
+    }
+  }
+
+  // Per-card override (profession -> header background) — set as an INLINE
+  // custom property on that one card's root element, which CSS var()
+  // cascade rules make take precedence over the container-wide
+  // --consultant-card-header-bg for that card only, without touching any
+  // other consultant's header color.
+  function applyProfessionHeaderColor(cardEl, consultant, professionColors) {
+    if (!professionColors || typeof professionColors !== "object") return;
+    var profession = String(consultant.profession || "").trim().toLowerCase();
+    if (!profession) return;
+    var color = professionColors[profession];
+    if (typeof color === "string" && color) {
+      cardEl.style.setProperty("--consultant-card-header-bg", color);
+    }
+  }
 
   // Same rules as consultly_Frontend/src/components/Helper/Helper.js
   // formatAmountHelper — kept in sync by hand since this bundle can't import
@@ -118,17 +188,6 @@
     );
   }
 
-  // Native Consultant Profile page (Theme App Extension block), added
-  // alongside this card. Relative + plain window.location — this bundle
-  // runs directly in the theme now, not inside an iframe, so there's no
-  // need to break out via window.top the way the old iframe-era code had
-  // to. The merchant must have a Shopify Page at this handle with the
-  // "Consultant Profile" app block added (Theme Editor) — see the block's
-  // own comments for that one-time setup step.
-  function buildProfileUrl(consultantId) {
-    return "/pages/consultant-profile?id=" + encodeURIComponent(consultantId);
-  }
-
   // TEMP (Chat modal UI test): App-Proxy-relative on purpose — Shopify's own
   // edge intercepts this and forwards it to our backend WITH
   // logged_in_customer_id + a verified signature attached, and the browser
@@ -146,19 +205,25 @@
     );
   }
 
-  function priceMarkup(currencySymbol, amount) {
+  // TEMP (same auth-bridge gap as chat): actually STARTING a voice/video call
+  // still lives in the not-yet-migrated OpenCallingPage.js + Agora-token /
+  // Socket.IO flow — this legacy iframe page already has everything needed.
+  // Ported from consultant-profile.js's buildLegacyCallBridgeUrl (identical
+  // reasoning/destination) — these two asset files can't share code (no
+  // bundler between Theme Extension assets), so this is a direct copy, same
+  // as this file's own helpers were already duplicated the other way.
+  function buildLegacyCallBridgeUrl(shop, consultantId) {
     return (
-      '<span class="consultly-consultant-card__action-price">' +
-      '<span class="consultly-consultant-card__currency">' +
-      escapeHtml(currencySymbol) +
-      "</span>" +
-      escapeHtml(formatAmount(amount)) +
-      '<span class="consultly-consultant-card__action-unit">/min</span>' +
-      "</span>"
+      "https://" +
+      shop +
+      "/apps/consultly/view-profile?consultantId=" +
+      encodeURIComponent(consultantId)
     );
   }
 
-  function actionButtonMarkup(kind, icon, amount, currencySymbol, disabled) {
+  var ACTION_LABELS = { chat: "Chat", voice: "Call", video: "Video" };
+
+  function actionButtonMarkup(kind, icon, disabled) {
     return (
       '<button type="button" class="consultly-consultant-card__action consultly-consultant-card__action--' +
       kind +
@@ -172,62 +237,129 @@
       '<span class="consultly-consultant-card__action-icon">' +
       icon +
       "</span>" +
-      priceMarkup(currencySymbol, amount) +
+      '<span class="consultly-consultant-card__action-label">' +
+      ACTION_LABELS[kind] +
+      "</span>" +
       "</button>"
     );
   }
 
+  // Real data has 3 independent per-minute rates (chat/voice/video), not one
+  // price — this is the lowest of the three real rates, never a fabricated
+  // number. "From" only appears when the rates actually differ, so a single
+  // flat rate is never misrepresented as a range.
+  function priceMarkup(consultant, currencySymbol) {
+    var prices = [consultant.chatPrice, consultant.audioPrice, consultant.videoPrice].filter(
+      function (p) {
+        return p > 0;
+      },
+    );
+    if (!prices.length) return "";
+
+    var min = Math.min.apply(null, prices);
+    var max = Math.max.apply(null, prices);
+    var fromLabel =
+      max > min
+        ? '<span class="consultly-consultant__price-from">From</span>'
+        : "";
+
+    return (
+      '<div class="consultly-consultant__price">' +
+      fromLabel +
+      '<span class="consultly-consultant__price-amount">' +
+      escapeHtml(currencySymbol) +
+      escapeHtml(formatAmount(min)) +
+      "</span>" +
+      '<span class="consultly-consultant__price-unit">/min</span>' +
+      "</div>"
+    );
+  }
+
+  // Real data has two independent booleans (isActive, isBusy) — the header
+  // never had a single combined "online/busy/offline" state before. This
+  // derives one from the same two existing fields (busy takes priority since
+  // it's the more specific/urgent signal); nothing new is fetched or
+  // fabricated, isActive/isBusy remain exactly what the API already sends.
+  function availabilityMarkup(consultant) {
+    var state = consultant.isBusy ? "busy" : consultant.isActive ? "online" : "offline";
+    // "replies in ~1 min" is fixed copy, not a measured value — there is no
+    // reply-time tracking anywhere in the data. Only added to the "online"
+    // state, matching the reference; busy/offline keep their existing text.
+    var label =
+      state === "busy"
+        ? "Busy · ~5 min"
+        : state === "online"
+          ? "Available now · replies in ~1 min"
+          : "Offline";
+    return (
+      '<div class="consultly-consultant__availability consultly-consultant__availability--' +
+      state +
+      '">' +
+      '<span class="consultly-consultant__availability-dot"></span>' +
+      "<span>" +
+      label +
+      "</span>" +
+      "</div>"
+    );
+  }
+
+  // There is no rating/review/session-count field anywhere in the API
+  // response — showing a specific number (like the reference's "4.9 · 2,140
+  // sessions") would be a fabricated value on every card. Per explicit
+  // product decision, this shows a neutral "New" placeholder instead of a
+  // star rating, so the row isn't empty without inventing data. If a real
+  // rating/session-count field is ever added to the API response, this is
+  // the one place to switch on it.
+  function ratingMarkup() {
+    return '<span class="consultly-consultant__rating-badge">New</span>';
+  }
+
   function cardMarkup(consultant, currencySymbol, communicationDisabled) {
-    var languagesText = escapeHtml(consultant.languages.join(", "));
-    var busyBadge = consultant.isBusy
-      ? '<span class="consultly-consultant-card__badge consultly-consultant-card__badge--busy">' +
-        '<span class="consultly-consultant-card__busy-dot"></span>Busy · ~5 min</span>'
-      : "";
-    var statusDot = consultant.isActive
-      ? '<span class="consultly-consultant-card__status-dot"></span>'
-      : "";
     var imgSrc = consultant.image || DEFAULT_AVATAR;
+
+    // Meta line: real fields only (experience, languages) — no
+    // qualification/rating/offer fields exist in the API response, so those
+    // reference-design sections are intentionally omitted rather than
+    // invented. "0 yrs" isn't meaningful, so that segment is skipped when
+    // experience is unset.
+    var metaParts = [];
+    if (consultant.experience > 0) metaParts.push(consultant.experience + "+ yrs");
+    if (consultant.languages.length) metaParts.push(consultant.languages.join(", "));
+    var metaText = escapeHtml(metaParts.join(" · "));
 
     return (
       '<div class="consultly-consultant-card__item">' +
       '<div class="consultly-consultant" data-consultant-id="' +
       escapeHtml(consultant.id) +
       '" role="button" tabindex="0">' +
-      '<div class="consultly-consultant__body">' +
-      '<div class="consultly-consultant__header">' +
+      '<div class="consultly-consultant__header-band">' +
+      '<span class="consultly-consultant__category">' +
+      escapeHtml(consultant.profession) +
+      "</span>" +
+      // No favourite/secondary action exists anywhere in this app today —
+      // left empty rather than adding a fake button (per design brief).
+      "</div>" +
       '<div class="consultly-consultant__avatar-wrap">' +
       '<img class="consultly-consultant__avatar" src="' +
       escapeHtml(imgSrc) +
       '" alt="' +
       escapeHtml(consultant.name) +
       '" loading="lazy" />' +
-      statusDot +
       "</div>" +
-      '<div class="consultly-consultant__info">' +
+      '<div class="consultly-consultant__body">' +
       '<h3 class="consultly-consultant__name">' +
       escapeHtml(consultant.name) +
       "</h3>" +
-      '<p class="consultly-consultant__profession">' +
-      escapeHtml(consultant.profession) +
-      "</p>" +
-      '<div class="consultly-consultant__meta">' +
-      '<span class="consultly-consultant-card__badge">' +
-      ICONS.experience +
-      consultant.experience +
-      "+ Yrs Exp</span>" +
-      busyBadge +
-      "</div>" +
-      "</div>" +
-      "</div>" +
-      '<hr class="consultly-consultant__divider" />' +
-      '<p class="consultly-consultant__languages"><strong>Speaks:</strong> ' +
-      languagesText +
-      "</p>" +
-      '<span class="consultly-consultant__actions-title">Consultation Options</span>' +
+      (metaText
+        ? '<p class="consultly-consultant__meta">' + metaText + "</p>"
+        : "") +
+      ratingMarkup() +
+      availabilityMarkup(consultant) +
+      priceMarkup(consultant, currencySymbol) +
       '<div class="consultly-consultant__actions">' +
-      actionButtonMarkup("chat", ICONS.chat, consultant.chatPrice, currencySymbol, communicationDisabled) +
-      actionButtonMarkup("voice", ICONS.voice, consultant.audioPrice, currencySymbol, communicationDisabled) +
-      actionButtonMarkup("video", ICONS.video, consultant.videoPrice, currencySymbol, communicationDisabled) +
+      actionButtonMarkup("chat", ICONS.chat, communicationDisabled) +
+      actionButtonMarkup("voice", ICONS.voice, communicationDisabled) +
+      actionButtonMarkup("video", ICONS.video, communicationDisabled) +
       "</div>" +
       "</div>" +
       "</div>" +
@@ -308,6 +440,371 @@
     chatOverlayIframe = iframe;
   }
 
+  // ---------- Consultant Profile modal ----------
+  //
+  // Ported/adapted from consultant-profile.js's renderProfile: same fields
+  // (name, image, profession, experience, languages, availability, bio,
+  // specialization, chat/voice/video actions), same API endpoint
+  // (/apps/consultly/consultant/<id> — zero backend change), same
+  // action-button behavior (chat -> the existing overlay iframe above;
+  // voice/video -> the same legacy call-bridge redirect the real profile
+  // page's own buttons already use). Rendered into a modal on THIS page
+  // instead of navigating to /pages/consultant-profile. consultant-profile.js
+  // and its Liquid block are untouched and still work standalone — nothing
+  // here removes them; this only changes where the card/action clicks below
+  // send the shopper.
+  var PROFILE_API_BASE = "/apps/consultly/consultant";
+  var profileModalEls = null; // { backdrop, panel, body, closeBtn }
+  var profileModalPreviouslyFocused = null;
+  var profileModalKeydownBound = false;
+  var profileModalBodyOverflow = "";
+
+  function ensureProfileModal() {
+    if (profileModalEls) return profileModalEls;
+
+    var backdrop = document.createElement("div");
+    backdrop.className = "consultly-profile-modal-backdrop";
+    backdrop.setAttribute("hidden", "hidden");
+
+    var panel = document.createElement("div");
+    panel.className = "consultly-profile-modal";
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-modal", "true");
+    panel.setAttribute("aria-label", "Consultant profile");
+    panel.setAttribute("tabindex", "-1");
+
+    var closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.className = "consultly-profile-modal__close";
+    closeBtn.setAttribute("aria-label", "Close");
+    closeBtn.innerHTML =
+      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+      '<path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    closeBtn.addEventListener("click", closeProfileModal);
+
+    // Three fixed-role regions inside the panel (not three separate
+    // scrollers): header and footer are flex-shrink:0 and never scroll;
+    // only .body flexes/scrolls. This — not overflow-y on the whole panel —
+    // is what keeps the header/close button always visible and the modal's
+    // own height fixed regardless of how much consultant content there is.
+    var header = document.createElement("div");
+    header.className = "consultly-profile-modal__header";
+
+    var body = document.createElement("div");
+    body.className = "consultly-profile-modal__body";
+
+    var footer = document.createElement("div");
+    footer.className = "consultly-profile-modal__footer";
+
+    panel.appendChild(closeBtn);
+    panel.appendChild(header);
+    panel.appendChild(body);
+    panel.appendChild(footer);
+    backdrop.appendChild(panel);
+
+    // Click on the backdrop itself (not bubbled from inside the panel)
+    // closes the modal.
+    backdrop.addEventListener("click", function (evt) {
+      if (evt.target === backdrop) closeProfileModal();
+    });
+
+    document.body.appendChild(backdrop);
+    profileModalEls = {
+      backdrop: backdrop,
+      panel: panel,
+      header: header,
+      body: body,
+      footer: footer,
+      closeBtn: closeBtn,
+    };
+    return profileModalEls;
+  }
+
+  function isProfileModalOpen() {
+    return Boolean(profileModalEls) && !profileModalEls.backdrop.hasAttribute("hidden");
+  }
+
+  function handleProfileModalKeydown(evt) {
+    if (evt.key === "Escape" || evt.key === "Esc") closeProfileModal();
+  }
+
+  function closeProfileModal() {
+    if (!isProfileModalOpen()) return;
+    profileModalEls.backdrop.setAttribute("hidden", "hidden");
+    document.body.style.overflow = profileModalBodyOverflow;
+    if (profileModalKeydownBound) {
+      document.removeEventListener("keydown", handleProfileModalKeydown);
+      profileModalKeydownBound = false;
+    }
+    if (
+      profileModalPreviouslyFocused &&
+      typeof profileModalPreviouslyFocused.focus === "function"
+    ) {
+      profileModalPreviouslyFocused.focus();
+    }
+    profileModalPreviouslyFocused = null;
+  }
+
+  // Clears header/footer too — without this, re-opening the modal for a
+  // DIFFERENT consultant while it's still loading would briefly show the
+  // PREVIOUS consultant's header/action buttons above the new loading state.
+  function clearProfileModalChrome(els) {
+    els.header.innerHTML = "";
+    els.footer.innerHTML = "";
+  }
+
+  function renderProfileModalLoading(els) {
+    clearProfileModalChrome(els);
+    els.body.innerHTML =
+      '<div class="consultly-profile-modal__state">Loading consultant profile…</div>';
+  }
+
+  function renderProfileModalNotFound(els) {
+    clearProfileModalChrome(els);
+    els.body.innerHTML =
+      '<div class="consultly-profile-modal__state">Consultant not found.</div>';
+  }
+
+  function renderProfileModalError(els, onRetry) {
+    clearProfileModalChrome(els);
+    els.body.innerHTML =
+      '<div class="consultly-profile-modal__state">' +
+      "<p>We couldn’t load this consultant’s profile. Please try again shortly.</p>" +
+      '<button type="button" class="consultly-profile-modal__retry">Try again</button>' +
+      "</div>";
+    var btn = els.body.querySelector(".consultly-profile-modal__retry");
+    if (btn) btn.addEventListener("click", onRetry);
+  }
+
+  function profileActionButtonMarkup(kind, label, icon, amount, currencySymbol, disabled) {
+    return (
+      '<button type="button" class="consultly-profile-modal__action" data-action="' +
+      kind +
+      '"' +
+      (disabled
+        ? ' aria-disabled="true" title="' + escapeHtml(COMM_DISABLED_MESSAGE) + '"'
+        : "") +
+      ">" +
+      '<span class="consultly-profile-modal__action-icon">' +
+      icon +
+      "</span>" +
+      '<span class="consultly-profile-modal__action-label">' +
+      escapeHtml(label) +
+      "</span>" +
+      '<span class="consultly-profile-modal__action-amount">' +
+      escapeHtml(currencySymbol) +
+      escapeHtml(formatAmount(amount)) +
+      "/min</span>" +
+      "</button>"
+    );
+  }
+
+  function profileChipsMarkup(className, values) {
+    return values
+      .map(function (v) {
+        return '<span class="' + className + '">' + escapeHtml(v) + "</span>";
+      })
+      .join("");
+  }
+
+  function renderProfileModalContent(els, data, shop) {
+    var c = data.consultant || {};
+    var name = c.displayName || c.fullname || "Consultant";
+    var profession = c.profession || "Consultant";
+    var experience = parseInt(c.experience, 10) || 0;
+    var languages = parseLanguages(c.language);
+    var imgSrc = c.profileImage || DEFAULT_AVATAR;
+    var currencySymbol = data.shopCurrency || "$";
+
+    var statusHtml = c.isBusy
+      ? '<span class="consultly-profile-modal__status consultly-profile-modal__status--busy">Busy · ~5 min</span>'
+      : c.isActive
+        ? '<span class="consultly-profile-modal__status consultly-profile-modal__status--online">Available now</span>'
+        : '<span class="consultly-profile-modal__status consultly-profile-modal__status--offline">Offline</span>';
+
+    // ---- header (fixed, does not scroll) ----
+    els.header.innerHTML =
+      '<img class="consultly-profile-modal__avatar" src="' +
+      escapeHtml(imgSrc) +
+      '" alt="' +
+      escapeHtml(name) +
+      '" />' +
+      '<div class="consultly-profile-modal__header-info">' +
+      '<h1 class="consultly-profile-modal__name">' +
+      escapeHtml(name) +
+      "</h1>" +
+      '<p class="consultly-profile-modal__profession">' +
+      escapeHtml(profession) +
+      "</p>" +
+      statusHtml +
+      "</div>";
+
+    var avatarEl = els.header.querySelector(".consultly-profile-modal__avatar");
+    if (avatarEl) {
+      avatarEl.addEventListener(
+        "error",
+        function () {
+          avatarEl.src = DEFAULT_AVATAR;
+        },
+        { once: true },
+      );
+    }
+
+    // ---- body (the ONLY scrolling region) ----
+
+    // Intro: title/experience/languages as a compact meta line, same fields
+    // the card already shows, no fabricated "qualification" field (none
+    // exists) — profession already covers that role in the header above.
+    var introHtml =
+      '<section class="consultly-profile-modal__section consultly-profile-modal__section--intro">' +
+      '<div class="consultly-profile-modal__meta">' +
+      (experience > 0
+        ? '<span class="consultly-profile-modal__badge">' + experience + "+ yrs experience</span>"
+        : "") +
+      "</div>" +
+      (languages.length
+        ? '<div class="consultly-profile-modal__chip-row">' +
+          '<span class="consultly-profile-modal__chip-row-label">Speaks</span>' +
+          profileChipsMarkup("consultly-profile-modal__lang-chip", languages) +
+          "</div>"
+        : "") +
+      "</section>";
+
+    var aboutHtml = c.bio
+      ? '<section class="consultly-profile-modal__section">' +
+        '<h2 class="consultly-profile-modal__section-title">About</h2>' +
+        '<p class="consultly-profile-modal__about">' +
+        escapeHtml(c.bio) +
+        "</p>" +
+        "</section>"
+      : "";
+
+    // specialization is a single free-text schema field, but merchants can
+    // (and do) enter several, comma-separated — splitting it into chips is
+    // a display change of that same real field, never an invented list.
+    var specialties = c.specialization
+      ? String(c.specialization)
+          .split(",")
+          .map(function (s) {
+            return s.trim();
+          })
+          .filter(Boolean)
+      : [];
+    var expertiseHtml = specialties.length
+      ? '<section class="consultly-profile-modal__section">' +
+        '<h2 class="consultly-profile-modal__section-title">Expertise</h2>' +
+        '<div class="consultly-profile-modal__chip-row">' +
+        profileChipsMarkup("consultly-profile-modal__expertise-tag", specialties) +
+        "</div>" +
+        "</section>"
+      : "";
+
+    // No rating/review/session-count field exists anywhere in the API
+    // response — that whole section is omitted rather than shown empty or
+    // filled with an invented number (years of experience is already shown
+    // in the intro above, so it isn't repeated here as its own section).
+
+    els.body.innerHTML = introHtml + aboutHtml + expertiseHtml;
+
+    // ---- footer (fixed, does not scroll) ----
+    var buttons = "";
+    if (c.chatPerMinute != null && Number(c.chatPerMinute) > 0) {
+      buttons += profileActionButtonMarkup(
+        "chat", "Chat", ICONS.chat, c.chatPerMinute, currencySymbol, data.communicationDisabled,
+      );
+    }
+    if (c.voicePerMinute != null && Number(c.voicePerMinute) > 0) {
+      buttons += profileActionButtonMarkup(
+        "voice", "Call", ICONS.voice, c.voicePerMinute, currencySymbol, data.communicationDisabled,
+      );
+    }
+    if (c.videoPerMinute != null && Number(c.videoPerMinute) > 0) {
+      buttons += profileActionButtonMarkup(
+        "video", "Video", ICONS.video, c.videoPerMinute, currencySymbol, data.communicationDisabled,
+      );
+    }
+    els.footer.innerHTML = buttons
+      ? '<div class="consultly-profile-modal__actions">' + buttons + "</div>"
+      : "";
+
+    els.footer.querySelectorAll("[data-action]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var action = btn.getAttribute("data-action");
+        if (data.communicationDisabled) return; // aria-disabled, but guard anyway
+
+        if (action === "chat") {
+          // Chat overlay is a fixed, full-viewport iframe (z-index far above
+          // this modal) — closing the modal first avoids two stacked
+          // overlays competing for body-scroll-lock/ESC handling.
+          closeProfileModal();
+          openChatOverlay(c.id, shop);
+          return;
+        }
+
+        // Voice/video: unchanged — actually starting the call still happens
+        // via the same legacy bridge the real profile page's own buttons
+        // already redirect to (see buildLegacyCallBridgeUrl's comment).
+        if (!data.authenticated) {
+          window.location.href = buildLoginUrl(shop);
+          return;
+        }
+        window.location.href = buildLegacyCallBridgeUrl(shop, c.id);
+      });
+    });
+  }
+
+  function openProfileModal(consultantId, shop) {
+    if (!consultantId || !shop) return;
+
+    var els = ensureProfileModal();
+    profileModalPreviouslyFocused = document.activeElement;
+    profileModalBodyOverflow = document.body.style.overflow;
+
+    els.backdrop.removeAttribute("hidden");
+    document.body.style.overflow = "hidden";
+    if (!profileModalKeydownBound) {
+      document.addEventListener("keydown", handleProfileModalKeydown);
+      profileModalKeydownBound = true;
+    }
+    els.closeBtn.focus();
+
+    var fetchUrl = PROFILE_API_BASE + "/" + encodeURIComponent(consultantId);
+
+    function load() {
+      renderProfileModalLoading(els);
+      fetch(fetchUrl, { credentials: "same-origin", headers: { Accept: "application/json" } })
+        .then(function (res) {
+          if (res.status === 400 || res.status === 404) {
+            var notFoundErr = new Error("not_found");
+            notFoundErr.notFound = true;
+            throw notFoundErr;
+          }
+          if (!res.ok) throw new Error("Request failed with status " + res.status);
+          return res.json();
+        })
+        .then(function (data) {
+          if (!data || data.success !== true || !data.consultant) {
+            throw new Error("Unexpected response shape");
+          }
+          // The shopper may have already closed the modal while this
+          // request was in flight — don't paint into a closed/reused modal.
+          if (!isProfileModalOpen()) return;
+          renderProfileModalContent(els, data, shop);
+        })
+        .catch(function (err) {
+          if (!isProfileModalOpen()) return;
+          if (err && err.notFound) {
+            renderProfileModalNotFound(els);
+            return;
+          }
+          console.error("[consultly] failed to load consultant profile:", err);
+          renderProfileModalError(els, load);
+        });
+    }
+
+    load();
+  }
+
   function renderConsultants(container, root, consultants, ctx) {
     if (!consultants.length) {
       renderEmpty(root);
@@ -336,16 +833,23 @@
       );
     });
 
+    var consultantsById = {};
+    consultants.forEach(function (c) {
+      consultantsById[c.id] = c;
+    });
+
     root.querySelectorAll(".consultly-consultant").forEach(function (cardEl) {
       var consultantId = cardEl.getAttribute("data-consultant-id");
+      var consultant = consultantsById[consultantId];
+      if (consultant) {
+        applyProfessionHeaderColor(cardEl, consultant, ctx.professionColors);
+      }
 
       cardEl.addEventListener("click", function () {
-        var profileUrl = buildProfileUrl(consultantId);
         console.log("[CONSULTANT CARD] Card clicked");
         console.log("[CONSULTANT CARD] Consultant ID:", consultantId);
-        console.log("[CONSULTANT CARD] Profile URL:", profileUrl);
-        console.log("[CONSULTANT CARD] Navigating to:", profileUrl);
-        window.location.href = profileUrl;
+        console.log("[CONSULTANT CARD] Opening profile modal");
+        openProfileModal(consultantId, ctx.shop);
       });
 
       cardEl.querySelectorAll("[data-action]").forEach(function (btn) {
@@ -379,10 +883,12 @@
             return;
           }
 
-          // Voice/video: unchanged — actually starting the call still
-          // happens on the profile page (it holds the same temporary
-          // auth-bridge — see that block's consultant-profile.js comments).
-          window.location.href = buildProfileUrl(consultantId);
+          // Voice/video: opens the same profile modal shown on card click
+          // (instead of navigating to /pages/consultant-profile) — actually
+          // starting the call still happens from inside that modal, via the
+          // same legacy auth-bridge redirect the real profile page already
+          // uses (see buildLegacyCallBridgeUrl's comment).
+          openProfileModal(consultantId, ctx.shop);
         });
       });
     });
@@ -467,12 +973,22 @@
 
         var limited = limit > 0 ? mapped.slice(0, limit) : mapped;
 
+        // Admin-saved appearance (Admin Dashboard → Consultant Card
+        // Appearance) — null/empty unless the admin explicitly saved one.
+        // Shop-wide colors go on the container (inherited by every card via
+        // CSS var() cascade); profession-specific header colors need to be
+        // per-card, applied inside renderConsultants once each card element
+        // exists — see applyProfessionHeaderColor.
+        applyConsultantCardTheme(container, data.consultantCardTheme);
+
         renderConsultants(container, root, limited, {
           shop: shop,
           shopId: data.shopId,
           authenticated: Boolean(data.authenticated),
           communicationDisabled: Boolean(data.communicationDisabled),
           shopCurrency: data.shopCurrency,
+          professionColors:
+            (data.consultantCardTheme && data.consultantCardTheme.professionColors) || null,
           // TEMP (Theme Extension identity-sync test) — the app DB user id
           // for this shopper, already resolved server-side (see
           // proxyConsultantsJson / resolveStorefrontCustomer). Not used to

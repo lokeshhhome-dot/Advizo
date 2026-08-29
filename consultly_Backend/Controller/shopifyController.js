@@ -854,10 +854,14 @@ const proxyConsultantsJson = async (req, res) => {
     console.log("[THEME AUTH DEBUG] Shopify identity verified =", Boolean(userResult?.userId));
     console.log("[THEME AUTH DEBUG] DB user synced =", Boolean(userResult?.userId));
 
-    let shopDocId = userResult?.shop_id;
-    if (!shopDocId) {
-      shopDocId = (await getCachedShopDoc(shop))?._id;
-    }
+    // Always fetched (not only as a shop_id fallback) — this is also the
+    // source for consultantCardTheme below. getCachedShopDoc is TTL-cached
+    // (shopDocCache, 5 min; invalidated immediately on save by
+    // updateConsultantCardTheme), so this costs nothing extra in the common
+    // case where resolveStorefrontCustomer already warmed the same cache
+    // entry a moment ago.
+    const shopDoc = await getCachedShopDoc(shop);
+    const shopDocId = userResult?.shop_id || shopDoc?._id;
     if (!shopDocId) {
       return res
         .status(404)
@@ -883,6 +887,12 @@ const proxyConsultantsJson = async (req, res) => {
       shopId: String(shopDocId),
       findConsultant: consultants,
       communicationDisabled,
+      // Every field here is null/empty unless an admin explicitly saved one
+      // via updateConsultantCardTheme — the Theme Extension's own CSS
+      // already has the current look as fallback values, so this only ever
+      // narrows what's shown, never invents anything. Safe to expose: no
+      // secrets, just colors/radius/shadow-preset.
+      consultantCardTheme: shopDoc?.consultantCardTheme || null,
     });
   } catch (err) {
     console.error("[app-proxy] /consultly/consultants error:", err);

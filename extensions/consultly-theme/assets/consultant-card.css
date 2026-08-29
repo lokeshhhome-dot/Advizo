@@ -1,12 +1,16 @@
 /*
  * Consultly — Consultant Listing storefront styles.
  *
- * Ported from consultly_Frontend/src/components/ConsultantCards/ConsultantCards.css
- * (colors, spacing, card shape all preserved), rebuilt on namespaced
- * .consultly-consultant-card classes and native CSS Grid instead of
- * Bootstrap's .row/.col-*/.card/.btn — this file must not depend on
- * Bootstrap being present, and must not leak styles onto the merchant's
- * theme via bare element selectors.
+ * Card visual design: premium "consultant profile" card (soft green header
+ * band, overlapping avatar, compact info hierarchy) — colors/spacing kept
+ * within the .consultly-consultant-card namespace so nothing here can leak
+ * onto the merchant's theme. `.consultly-consultant` (the card root) and
+ * `.consultly-consultant__avatar` (the avatar <img>) are LOAD-BEARING class
+ * names read directly by consultant-card.js's querySelectorAll calls — they
+ * are kept on the new markup unchanged so no JS selector had to change.
+ * `[data-action]` on each channel button is the other JS-read hook, also
+ * unchanged. Every other class below is new/renamed freely since nothing in
+ * JS queries them by name.
  */
 
 .consultly-consultant-card {
@@ -14,21 +18,25 @@
     Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: #212529;
+  color: #10231c;
   position: relative;
+  /* Vertical breathing room only — this is the section's own top/bottom
+     padding; left/right stays 0 so it doesn't fight the theme's existing
+     horizontal section/container padding. */
+  padding: 40px 0;
 }
 
 .consultly-consultant-card__heading {
   font-size: 28px;
   font-weight: 700;
-  color: #212529;
+  color: #10231c;
   margin: 0 0 20px;
 }
 
 /* ---------- loading / empty / error states ---------- */
 
 .consultly-consultant-card__placeholder {
-  color: #6c757d;
+  color: #5c6b64;
   font-size: 14px;
   padding: 24px 0;
   text-align: center;
@@ -39,9 +47,9 @@
   max-width: 560px;
   margin: 0 auto;
   background: #ffffff;
-  border: 1px solid #eceef2;
+  border: 1px solid rgba(16, 35, 28, 0.1);
   border-radius: 16px;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  box-shadow: 0 1px 2px rgba(16, 35, 28, 0.05);
   padding: 32px 24px;
   text-align: center;
 }
@@ -49,14 +57,14 @@
 .consultly-consultant-card__empty-title {
   font-size: 16px;
   font-weight: 700;
-  color: #212529;
+  color: #10231c;
   margin: 0 0 8px;
 }
 
 .consultly-consultant-card__empty-text,
 .consultly-consultant-card__error p {
   font-size: 14px;
-  color: #6c757d;
+  color: #5c6b64;
   margin: 0;
   line-height: 1.6;
 }
@@ -65,290 +73,316 @@
 
 .consultly-consultant-card__grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0.75rem;
-}
-
-@media (min-width: 576px) {
-  .consultly-consultant-card__grid {
-    gap: 1rem;
-  }
-}
-
-@media (min-width: 768px) {
-  .consultly-consultant-card__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1.25rem;
-  }
-}
-
-@media (min-width: 992px) {
-  .consultly-consultant-card__grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1.5rem;
-  }
+  grid-template-columns: repeat(auto-fill, minmax(288px, 1fr));
+  gap: 1rem;
 }
 
 .consultly-consultant-card__item {
   min-width: 0;
+  display: flex;
 }
 
-/* ---------- card ---------- */
+/* ---------- card shell ---------- */
+
+/* Every customizable visual below reads a --consultant-card-* custom
+   property with the CURRENT hardcoded value as its CSS var() fallback —
+   e.g. background: var(--consultant-card-bg, #ffffff). A shop that has
+   never saved a Consultant Card theme (no properties set on the container)
+   renders IDENTICALLY to before this feature existed, since var() with an
+   unset property simply resolves to the fallback. consultant-card.js only
+   ever calls style.setProperty() for fields present in the admin's saved
+   config — see its own comment for how that stays "override only what was
+   explicitly set". */
 
 .consultly-consultant {
-  height: 100%;
+  width: 100%;
+  max-width: 288px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  background: var(--consultant-card-bg, #ffffff);
+  border: 1px solid var(--consultant-card-border, rgba(16, 35, 28, 0.1));
+  border-radius: var(--consultant-card-radius, 16px);
   overflow: hidden;
-  background: #ffffff;
-  border: 1px solid #eceef2;
-  border-radius: 18px;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 16px rgba(16, 24, 40, 0.04);
+  box-shadow: var(
+    --consultant-card-shadow,
+    0 1px 2px rgba(16, 35, 28, 0.05),
+    0 14px 34px -22px rgba(16, 35, 28, 0.3)
+  );
   cursor: pointer;
-  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.25s ease;
+  transition: box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s ease;
 }
 
 .consultly-consultant:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 2px 6px rgba(16, 24, 40, 0.05), 0 20px 40px rgba(16, 24, 40, 0.1);
-  border-color: #e2e5ea;
+  border-color: rgba(20, 86, 60, 0.35);
+  box-shadow: 0 2px 6px rgba(16, 35, 28, 0.06),
+    0 20px 40px -20px rgba(16, 35, 28, 0.4);
+} 
+
+/* ---------- header band + overlapping avatar ---------- */
+
+.consultly-consultant__header-band {
+  position: relative;
+  height: 64px;
+  background: var(--consultant-card-header-bg, linear-gradient(135deg, #dcece3, #eef5f0));
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 10px 12px;
+  box-sizing: border-box;
 }
 
-.consultly-consultant__body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 20px;
-}
-
-.consultly-consultant__header {
-  display: flex;
-  align-items: center;
-  gap: 14px;
+.consultly-consultant__category {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas,
+    "Liberation Mono", monospace;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--consultant-card-category-color, #14563c);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .consultly-consultant__avatar-wrap {
   position: relative;
   flex-shrink: 0;
+  margin: -30px 0 0 16px;
+  width: 66px;
+  height: 66px;
 }
 
 .consultly-consultant__avatar {
   display: block;
-  width: 72px;
-  height: 72px;
+  width: 66px;
+  height: 66px;
   object-fit: cover;
   border-radius: 50%;
   border: 3px solid #ffffff;
   background-color: #f3f4f6;
-  box-shadow: 0 0 0 1px #e7e9ee, 0 4px 10px rgba(16, 24, 40, 0.08);
+  box-shadow: 0 1px 2px rgba(16, 35, 28, 0.1);
 }
 
-.consultly-consultant-card__status-dot {
-  position: absolute;
-  bottom: 2px;
-  right: 2px;
-  width: 14px;
-  height: 14px;
-  background-color: #28a745;
-  border: 2px solid #ffffff;
-  border-radius: 50%;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
+/* ---------- body ---------- */
 
-.consultly-consultant__info {
+/* Deliberately margin-top: 0 here, NOT -30px. The -30px overlap already
+   happens once, on .avatar-wrap above — the avatar's natural flow position
+   is right after the 64px header, and pulling IT up by 30px is what makes
+   it overlap the header (30px of the 66px avatar sits over the header, 36px
+   hangs below into this body's area). Giving .body its own additional
+   -30px on top of that would pull the name text up by another 30px into
+   the avatar's already-shifted lower half — a real collision, not a
+   stylistic overlap. .body starts in normal flow, immediately after the
+   avatar's shifted bottom edge, so nothing behind the avatar is hidden. */
+.consultly-consultant__body {
   flex: 1;
-  min-width: 0;
+  padding: 0 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
 }
 
 .consultly-consultant__name {
-  font-size: 18px;
-  color: #111;
-  margin: 0 0 2px;
-  font-weight: 700;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--consultant-card-name-color, #10231c);
+  margin: 0;
   line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.consultly-consultant__meta {
+  font-size: 12px;
+  color: var(--consultant-card-supporting-color, #5c6b64);
+  margin: 0;
+  line-height: 1.5;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.consultly-consultant__profession {
-  color: #6c757d;
-  font-size: 14px;
-  margin: 0;
-  line-height: 1.5;
-}
+/* ---------- rating placeholder ---------- */
 
-.consultly-consultant__meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin-top: 8px;
-}
-
-.consultly-consultant-card__badge {
+/* Neutral "New" placeholder, not a star rating — there is no real
+   rating/session-count data anywhere in the API response, so no number is
+   shown here (see ratingMarkup's own comment in consultant-card.js). */
+.consultly-consultant__rating-badge {
+  align-self: flex-start;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  background-color: #faf6ec;
-  border: 1px solid #eee3c8;
-  color: #8a6a1f;
-  padding: 4px 10px;
-  border-radius: 20px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #f4f5f4;
+  color: #5c6b64;
   font-size: 11px;
   font-weight: 600;
-  white-space: nowrap;
-  line-height: 1.4;
   letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
-.consultly-consultant-card__badge svg {
+/* ---------- availability strip ---------- */
+
+.consultly-consultant__availability {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #10231c;
+}
+
+.consultly-consultant__availability--online {
+  background: #f4f8f6;
+}
+
+.consultly-consultant__availability--busy {
+  background: #fdf4e3;
+}
+
+.consultly-consultant__availability--offline {
+  background: #f4f5f4;
+  color: #5c6b64;
+}
+
+.consultly-consultant__availability-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
   flex-shrink: 0;
 }
 
-.consultly-consultant-card__badge--busy {
-  background-color: #feecec;
-  border-color: transparent;
-  color: #d93636;
+.consultly-consultant__availability--online .consultly-consultant__availability-dot {
+  background: var(--consultant-card-online, #2f9e6a);
 }
 
-.consultly-consultant-card__busy-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background-color: #d93636;
+.consultly-consultant__availability--busy .consultly-consultant__availability-dot {
+  background: var(--consultant-card-busy, #e0a30b);
 }
 
-.consultly-consultant__divider {
-  margin: 16px 0;
-  border: none;
-  border-top: 1px solid #eef0f2;
+.consultly-consultant__availability--offline .consultly-consultant__availability-dot {
+  background: var(--consultant-card-offline, #9aa5a0);
 }
 
-.consultly-consultant__languages {
-  color: #495057;
-  font-size: 14px;
-  margin: 0 0 16px;
-  line-height: 1.6;
+/* ---------- price ---------- */
+
+/* Real data has 3 independent per-minute rates (chat/voice/video), not one
+   price — this shows the lowest of the three real rates as the headline
+   number (never fabricated), with "From" only when the rates actually
+   differ so it never overstates a single flat rate as a range. */
+.consultly-consultant__price {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
 }
 
-.consultly-consultant__languages strong {
-  color: #000;
-  font-weight: 600;
-}
-
-.consultly-consultant__actions-title {
-  display: block;
+.consultly-consultant__price-from {
   font-size: 12px;
-  font-weight: 700;
-  color: #8a94a0;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 10px;
+  color: #7b8a83;
 }
 
-/* ---------- action buttons (chat / voice / video) ---------- */
+.consultly-consultant__price-amount {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--consultant-card-price-color, #10231c);
+}
 
+.consultly-consultant__price-unit {
+  font-size: 12px;
+  color: #7b8a83;
+}
+
+/* ---------- channel actions (chat / voice / video) ---------- */
+
+/* margin-top: auto pins this row to the bottom of the (flex:1) body — so
+   when consultants in the same grid row have different amounts of meta
+   text, every card's action buttons still land on the same baseline
+   instead of the row height varying with content length. */
 .consultly-consultant__actions {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  display: flex;
+  gap: 6px;
   margin-top: auto;
 }
 
 .consultly-consultant-card__action {
-  align-items: center;
-  background-color: #fafbfc;
-  border: 1px solid #e7e9ee;
-  border-radius: 7px;
-  cursor: pointer;
-  display: flex;
-  flex-direction: row;
-  gap: 6px;
-  justify-content: center;
+  flex: 1;
   min-width: 0;
-  padding: 4px 9px;
-  text-align: center;
-  transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 8px;
+  background: #ffffff;
+  border: 1px solid var(--consultant-card-button-border, rgba(16, 35, 28, 0.12));
+  border-radius: 8px;
   font: inherit;
-  color: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: #10231c;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
 
-.consultly-consultant-card__action:hover {
-  background-color: #ffffff;
-  border-color: #1a1a1a;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 18px rgba(16, 24, 40, 0.1);
+/* Chat and Call are independently colorable (admin-facing "Chat button
+   bg/text" and "Call button bg/text"); Video has no dedicated admin control
+   and simply keeps the base rule's default above. */
+.consultly-consultant-card__action--chat {
+  background: var(--consultant-card-chat-bg, #ffffff);
+  color: var(--consultant-card-chat-text, #10231c);
 }
 
-.consultly-consultant-card__action:active {
-  transform: translateY(0);
-  box-shadow: none;
+.consultly-consultant-card__action--voice {
+  background: var(--consultant-card-call-bg, #ffffff);
+  color: var(--consultant-card-call-text, #10231c);
+}
+
+/* :not([aria-disabled="true"]) — rather than a separate rule undoing the
+   hover afterwards — so a disabled button's own base color/background
+   (which vary per chat/call/video via the rules above) are simply never
+   touched, instead of trying to "restore" them with a value that would
+   have needed to duplicate whichever of those three applies. */
+.consultly-consultant-card__action:not([aria-disabled="true"]):hover {
+  border-color: var(--consultant-card-button-hover, #14563c);
+  color: var(--consultant-card-button-hover, #14563c);
+  background: #f4f8f6;
+}
+
+.consultly-consultant-card__action:not([aria-disabled="true"]):active {
+  background: #eef5f0;
 }
 
 /* aria-disabled (not the disabled attribute) so the click still fires and
-   the handler can explain why via a toast — same reasoning as the existing
-   React implementation. */
+   the handler can explain why via a toast — same reasoning as before. */
 .consultly-consultant-card__action[aria-disabled="true"] {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.consultly-consultant-card__action[aria-disabled="true"]:hover {
-  background-color: #fafbfc;
-  border-color: #e7e9ee;
-  transform: none;
-  box-shadow: none;
 }
 
 .consultly-consultant-card__action-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background-color: #eef0f3;
-  color: #4b5563;
-  transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.consultly-consultant-card__action:hover .consultly-consultant-card__action-icon {
-  background-color: #1a1a1a;
-  color: #ffffff;
-}
-
-.consultly-consultant-card__action[aria-disabled="true"]:hover .consultly-consultant-card__action-icon {
-  background-color: #eef0f3;
-  color: #4b5563;
+  flex-shrink: 0;
+  color: currentColor;
 }
 
 .consultly-consultant-card__action-icon svg {
-  flex-shrink: 0;
   width: 15px;
   height: 15px;
 }
 
-.consultly-consultant-card__action-price {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 2px;
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.consultly-consultant-card__currency {
-  font-size: 0.65em;
-  margin-right: 1px;
-  opacity: 0.85;
-}
-
-.consultly-consultant-card__action-unit {
-  font-size: 11px;
-  font-weight: 500;
-  color: #6b7280;
-  line-height: 1;
+.consultly-consultant-card__action-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -366,7 +400,7 @@
   min-width: 240px;
   max-width: 340px;
   font-size: 14px;
-  color: #212529;
+  color: #10231c;
   opacity: 0;
   transform: translateY(-10px);
   transition: all 0.3s ease;
@@ -384,61 +418,418 @@
     font-size: 22px;
   }
 
-  .consultly-consultant__name {
-    font-size: 16px;
+  .consultly-consultant-card__grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .consultly-consultant__avatar {
-    width: 70px;
-    height: 70px;
-  }
-
-  .consultly-consultant-card__badge {
-    font-size: 10px;
-    padding: 3px 8px;
-  }
-
-  .consultly-consultant__body {
-    padding: 18px;
-  }
-
-  .consultly-consultant__actions {
-    gap: 8px;
+  .consultly-consultant {
+    max-width: none;
   }
 
   .consultly-consultant-card__action {
-    padding: 12px 4px;
+    min-height: 44px;
   }
 }
 
 @media (max-width: 575.98px) {
-  .consultly-consultant__body {
-    padding: 16px;
-  }
-
-  .consultly-consultant__header {
-    gap: 12px;
-  }
-
-  .consultly-consultant__avatar {
-    width: 64px;
-    height: 64px;
+  .consultly-consultant-card {
+    padding: 28px 0;
   }
 
   .consultly-consultant__name {
     font-size: 16px;
   }
+}
 
-  .consultly-consultant__profession {
-    font-size: 13px;
+/* ==========================================================================
+   Consultant Profile modal
+   Opens in place of navigating to /pages/consultant-profile. Same content
+   consultant-profile.js already renders (name/image/experience/languages/
+   availability/about/expertise/consultation actions) — see that porting note
+   in consultant-card.js. Fully self-contained/scoped under
+   .consultly-profile-modal* so it can't leak onto the merchant's theme.
+   ========================================================================== */
+
+.consultly-profile-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 35, 28, 0.5);
+  z-index: 2147482000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  /* env() falls back to the 24px length when safe-area-inset isn't
+     supported/needed (desktop, older browsers) — max() keeps a sane
+     minimum gap either way. */
+  padding: max(24px, env(safe-area-inset-top))
+    max(24px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom))
+    max(24px, env(safe-area-inset-left));
+}
+
+.consultly-profile-modal-backdrop[hidden] {
+  display: none;
+}
+
+/* Natural (auto) height, capped by max-height — NOT a fixed height. A
+   consultant with little content (short/no bio, few chips) gets a modal
+   that hugs that content; only once total content exceeds max-height does
+   the flex layout below clamp .body and turn its own overflow-y:auto on.
+   Flex column with exactly one flexing/scrolling child (.body): header and
+   footer are flex-shrink:0 siblings, so they're never pushed off-screen and
+   the whole panel never scrolls as a unit. */
+.consultly-profile-modal {
+  position: relative;
+  width: 100%;
+  max-width: 840px;
+  max-height: min(90vh, 760px);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(16, 35, 28, 0.3);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  color: #10231c;
+  overflow: hidden;
+}
+
+.consultly-profile-modal__close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 1;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: #f4f5f4;
+  color: #10231c;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.consultly-profile-modal__close:hover {
+  background: #f4f8f6;
+  color: #14563c;
+}
+
+.consultly-profile-modal__state {
+  padding: 48px 16px;
+  text-align: center;
+  color: #5c6b64;
+  font-size: 14px;
+}
+
+.consultly-profile-modal__state p {
+  margin: 0 0 12px;
+  line-height: 1.6;
+}
+
+.consultly-profile-modal__retry {
+  background: #14563c;
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.consultly-profile-modal__retry:hover {
+  background: #0d3a28;
+}
+
+/* ---- header (fixed — flex-shrink:0, never scrolls) ---- */
+
+.consultly-profile-modal__header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 56px 20px 24px;
+  border-bottom: 1px solid rgba(16, 35, 28, 0.08);
+}
+
+.consultly-profile-modal__header:empty {
+  border-bottom: none;
+}
+
+.consultly-profile-modal__avatar {
+  display: block;
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 3px solid #ffffff;
+  background-color: #f3f4f6;
+  box-shadow: 0 0 0 1px rgba(16, 35, 28, 0.1);
+  flex-shrink: 0;
+}
+
+.consultly-profile-modal__header-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.consultly-profile-modal__name {
+  font-size: 20px;
+  font-weight: 600;
+  color: #10231c;
+  margin: 0 0 2px;
+  line-height: 1.25;
+  overflow-wrap: break-word;
+}
+
+.consultly-profile-modal__profession {
+  color: #5c6b64;
+  font-size: 13px;
+  margin: 0 0 8px;
+}
+
+.consultly-profile-modal__status {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.consultly-profile-modal__status--online {
+  background: #f4f8f6;
+  color: #14563c;
+}
+
+.consultly-profile-modal__status--busy {
+  background: #fdf4e3;
+  color: #8a5a12;
+}
+
+.consultly-profile-modal__status--offline {
+  background: #f4f5f4;
+  color: #5c6b64;
+}
+
+/* ---- body (the ONLY scrolling region) ---- */
+
+.consultly-profile-modal__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  padding: 20px 24px;
+}
+
+.consultly-profile-modal__body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.consultly-profile-modal__body::-webkit-scrollbar-thumb {
+  background: rgba(16, 35, 28, 0.15);
+  border-radius: 999px;
+}
+
+.consultly-profile-modal__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.consultly-profile-modal__badge {
+  display: inline-flex;
+  align-items: center;
+  background: #f4f5f4;
+  color: #5c6b64;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.consultly-profile-modal__chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.consultly-profile-modal__chip-row-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #10231c;
+  margin-right: 2px;
+}
+
+.consultly-profile-modal__lang-chip {
+  display: inline-block;
+  background: #f4f5f4;
+  color: #5c6b64;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+/* ---- sections (About / Expertise) ---- */
+
+.consultly-profile-modal__section {
+  border-top: 1px solid rgba(16, 35, 28, 0.08);
+  margin-top: 20px;
+  padding-top: 20px;
+}
+
+.consultly-profile-modal__section--intro {
+  border-top: none;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.consultly-profile-modal__section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #10231c;
+  margin: 0 0 10px;
+}
+
+.consultly-profile-modal__about {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #5c6b64;
+  margin: 0;
+  overflow-wrap: break-word;
+  white-space: pre-line;
+}
+
+.consultly-profile-modal__expertise-tag {
+  display: inline-block;
+  background: #f4f8f6;
+  color: #14563c;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ---- footer / consultation actions (fixed — flex-shrink:0, never scrolls,
+   effectively "sticky" since it's a flex sibling after the scrolling body,
+   not part of the scroll flow) ---- */
+
+.consultly-profile-modal__footer {
+  flex-shrink: 0;
+}
+
+.consultly-profile-modal__footer:empty {
+  display: none;
+}
+
+.consultly-profile-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid rgba(16, 35, 28, 0.08);
+}
+
+.consultly-profile-modal__action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #ffffff;
+  border: 1px solid rgba(16, 35, 28, 0.12);
+  border-radius: 8px;
+  padding: 12px 16px;
+  min-height: 44px;
+  cursor: pointer;
+  flex: 1 1 160px;
+  min-width: 0;
+  box-sizing: border-box;
+  font: inherit;
+  color: #10231c;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.consultly-profile-modal__action:hover {
+  border-color: #14563c;
+  color: #14563c;
+  background: #f4f8f6;
+}
+
+.consultly-profile-modal__action[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.consultly-profile-modal__action[aria-disabled="true"]:hover {
+  border-color: rgba(16, 35, 28, 0.12);
+  color: #10231c;
+  background: #ffffff;
+}
+
+.consultly-profile-modal__action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: currentColor;
+}
+
+.consultly-profile-modal__action-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.consultly-profile-modal__action-label {
+  font-size: 14px;
+  font-weight: 600;
+  flex: 1;
+  text-align: left;
+}
+
+.consultly-profile-modal__action-amount {
+  font-size: 12px;
+  color: #7b8a83;
+  white-space: nowrap;
+}
+
+/* ---- responsive ---- */
+
+@media (max-width: 767.98px) {
+  .consultly-profile-modal-backdrop {
+    padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+      max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   }
 
-  .consultly-consultant-card__action-icon {
-    width: 34px;
-    height: 34px;
+  .consultly-profile-modal {
+    width: 92vw;
+    max-width: none;
+    max-height: min(90vh, 760px);
   }
 
-  .consultly-consultant-card__action-price {
-    font-size: 13px;
+  .consultly-profile-modal__header {
+    padding: 20px 48px 16px 16px;
+  }
+
+  .consultly-profile-modal__body {
+    padding: 16px;
+  }
+
+  .consultly-profile-modal__actions {
+    padding: 12px 16px;
+  }
+
+  .consultly-profile-modal__action {
+    flex: 1 1 100%;
   }
 }

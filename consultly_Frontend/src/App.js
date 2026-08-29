@@ -42,6 +42,7 @@ const ManualDebetCreditBlance = lazy(
   () => import("./pages/ManualDebetCreditBlance"),
 );
 const AdminPercentage = lazy(() => import("./pages/AdminPercentage"));
+const ConsultantCardTheme = lazy(() => import("./pages/ConsultantCardTheme"));
 const RevenuManagement = lazy(() => import("./pages/RevenuManagement"));
 const ConsultantSupportInbox = lazy(() => import("./pages/ConsultantSupportInbox"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -246,6 +247,7 @@ export default function App() {
               />
               <Route path="/voucher-management" element={<VoucherTable />} />
               <Route path="/admin-percentage" element={<AdminPercentage />} />
+              <Route path="/consultant-card-theme" element={<ConsultantCardTheme />} />
               <Route
                 path="/revenue-management"
                 element={<RevenuManagement />}

@@ -1,5 +1,5 @@
 const express = require("express");
-const { adminController, voucherController, getTransactionController, getUserConsultantController, getShopAllUserController, getShopAllConsultantController, updateUserConsultantController, appEnableAndDisableController, checkAppBillingController, voucherHandlerController, updatesVoucherController, getWithdrawalRequest, updateConsultantWidthrawalRequest, declineWithdrawalRequest, updateAdminPercentage, updateMenuController, getConsultantSupportRequests, replyConsultantSupportRequest, markConsultantSupportRequestRead, completeWelcomeShown, _PlanDetails, getConsultantAd, } = require("../Controller/adminController");
+const { adminController, voucherController, getTransactionController, getUserConsultantController, getShopAllUserController, getShopAllConsultantController, updateUserConsultantController, appEnableAndDisableController, checkAppBillingController, voucherHandlerController, updatesVoucherController, getWithdrawalRequest, updateConsultantWidthrawalRequest, declineWithdrawalRequest, updateAdminPercentage, updateConsultantCardTheme, updateMenuController, getConsultantSupportRequests, replyConsultantSupportRequest, markConsultantSupportRequestRead, completeWelcomeShown, _PlanDetails, getConsultantAd, } = require("../Controller/adminController");
 const { verifyShopifyToken } = require("../MiddleWare/ShopifyMiddleware/verifyShopifyToken");
 const { sendEmail } = require("../MiddleWare/ShopifyMiddleware/nodemailer");
 const { getSetupGuideController, getMenuController } = require("../Controller/adminController");
@@ -32,6 +32,7 @@ adminRoute.get("/withdrawal-requests/:adminId", verifyShopifyToken, getWithdrawa
 adminRoute.put("/update/widthrwal/req/:adminId", verifyShopifyToken, updateConsultantWidthrawalRequest)
 adminRoute.put("/declin/widthrwal/req/:transactionId", verifyShopifyToken, declineWithdrawalRequest)
 adminRoute.put("/admin/update-percentage/:adminId", verifyShopifyToken, updateAdminPercentage)
+adminRoute.put("/admin/consultant-card-theme/:adminId", verifyShopifyToken, updateConsultantCardTheme)
 adminRoute.get("/is-setup-guide-open/:adminId", verifyShopifyToken, getSetupGuideController)
 adminRoute.put("/close-setup-guide/:adminId", verifyShopifyToken, updateMenuController)
 adminRoute.get("/menu/:adminId", verifyShopifyToken, getMenuController)

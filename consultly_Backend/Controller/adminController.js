@@ -14,6 +14,7 @@ const { getShopAccessToken } = require("../Utils/shopifyToken");
 const Subscription = require("../Modal/Subscription");
 const { ensureSubscription } = require("../services/subscriptionMinutes");
 const { invalidateThemeAssets } = require("../MiddleWare/ShopifyMiddleware/helperTheme");
+const { shopDocCache } = require("../Utils/ttlCache");
 
 const syncShopWelcomeProfile = async (adminDoc) => {
   if (!adminDoc) return adminDoc;
@@ -894,6 +895,215 @@ const updateAdminPercentage = async (req, res) => {
   }
 };
 
+// Only 6-digit hex — this is what <input type="color"> always emits, and
+// rejecting anything else (rgba(), named colors, "red;}body{display:none")
+// is what keeps a saved value from ever being able to inject arbitrary CSS
+// into the storefront when the Theme Extension writes it into a CSS custom
+// property.
+const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+const CARD_SHADOW_VALUES = ["none", "soft", "default", "strong"];
+const CONSULTANT_CARD_COLOR_FIELDS = [
+  "cardBackground",
+  "cardBorderColor",
+  "headerBackground",
+  "nameColor",
+  "categoryColor",
+  "supportingTextColor",
+  "priceColor",
+  "chatButtonBg",
+  "chatButtonText",
+  "callButtonBg",
+  "callButtonText",
+  "buttonBorderColor",
+  "buttonHoverColor",
+  "onlineColor",
+  "busyColor",
+  "offlineColor",
+];
+
+/**
+ * Normalizes + validates one submitted theme into { $set } fields, rejecting
+ * (not silently dropping) the whole request if any provided field is
+ * invalid — a partial silent drop could save a half-applied theme the admin
+ * never actually asked for. Fields the admin never touched are simply
+ * absent from req.body and are left completely alone (existing saved value,
+ * or the schema's own null default, is untouched) — this is what makes
+ * "only override what the admin explicitly set" work.
+ */
+const sanitizeConsultantCardTheme = (input) => {
+  const errors = [];
+  const set = {};
+
+  if (!input || typeof input !== "object") {
+    return { errors: ["Invalid theme payload"], set };
+  }
+
+  CONSULTANT_CARD_COLOR_FIELDS.forEach((field) => {
+    if (!(field in input)) return;
+    const value = input[field];
+    if (value === null || value === "") {
+      set[`consultantCardTheme.${field}`] = null; // explicit reset to default
+      return;
+    }
+    if (typeof value !== "string" || !HEX_COLOR_RE.test(value)) {
+      errors.push(`${field} must be a 6-digit hex color (e.g. #14563c)`);
+      return;
+    }
+    set[`consultantCardTheme.${field}`] = value;
+  });
+
+  if ("cardBorderRadius" in input) {
+    const raw = input.cardBorderRadius;
+    if (raw === null || raw === "") {
+      set["consultantCardTheme.cardBorderRadius"] = null;
+    } else {
+      const radius = Number(raw);
+      if (!Number.isFinite(radius) || radius < 0 || radius > 32) {
+        errors.push("cardBorderRadius must be a number between 0 and 32");
+      } else {
+        set["consultantCardTheme.cardBorderRadius"] = radius;
+      }
+    }
+  }
+
+  if ("cardShadow" in input) {
+    const raw = input.cardShadow;
+    if (raw === null || raw === "") {
+      set["consultantCardTheme.cardShadow"] = null;
+    } else if (!CARD_SHADOW_VALUES.includes(raw)) {
+      errors.push(`cardShadow must be one of: ${CARD_SHADOW_VALUES.join(", ")}`);
+    } else {
+      set["consultantCardTheme.cardShadow"] = raw;
+    }
+  }
+
+  if ("professionColors" in input) {
+    const raw = input.professionColors;
+    if (raw === null) {
+      set["consultantCardTheme.professionColors"] = {};
+    } else if (typeof raw !== "object" || Array.isArray(raw)) {
+      errors.push("professionColors must be an object of profession -> hex color");
+    } else {
+      const cleaned = {};
+      for (const key of Object.keys(raw)) {
+        const profession = String(key).trim().toLowerCase();
+        const value = raw[key];
+        if (!profession) continue;
+        if (typeof value !== "string" || !HEX_COLOR_RE.test(value)) {
+          errors.push(`professionColors.${key} must be a 6-digit hex color`);
+          continue;
+        }
+        cleaned[profession] = value;
+      }
+      set["consultantCardTheme.professionColors"] = cleaned;
+    }
+  }
+
+  return { errors, set };
+};
+
+const updateConsultantCardTheme = async (req, res) => {
+  try {
+    const { adminId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(adminId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid admin ID",
+      });
+    }
+
+    if (!(await assertAdminShopAccess(req, res, adminId))) return;
+
+    // "Reset to Default" sends { reset: true } — clears every field back to
+    // null in one request rather than requiring the admin UI to enumerate
+    // every field name itself.
+    if (req.body?.reset === true) {
+      const resetShop = await shopModel.findByIdAndUpdate(
+        adminId,
+        {
+          consultantCardTheme: {
+            cardBackground: null,
+            cardBorderColor: null,
+            cardBorderRadius: null,
+            cardShadow: null,
+            headerBackground: null,
+            nameColor: null,
+            categoryColor: null,
+            supportingTextColor: null,
+            priceColor: null,
+            chatButtonBg: null,
+            chatButtonText: null,
+            callButtonBg: null,
+            callButtonText: null,
+            buttonBorderColor: null,
+            buttonHoverColor: null,
+            onlineColor: null,
+            busyColor: null,
+            offlineColor: null,
+            professionColors: {},
+          },
+        },
+        { new: true },
+      );
+      if (!resetShop) {
+        return res.status(404).json({ success: false, message: "Admin / Shop not found" });
+      }
+      shopDocCache.delete(`shop:${resetShop.shop}`);
+      return res.status(200).json({
+        success: true,
+        message: "Consultant card appearance reset to default",
+        data: resetShop.consultantCardTheme,
+      });
+    }
+
+    const { errors, set } = sanitizeConsultantCardTheme(req.body);
+    if (errors.length) {
+      return res.status(400).json({
+        success: false,
+        message: errors[0],
+        errors,
+      });
+    }
+    if (!Object.keys(set).length) {
+      return res.status(400).json({
+        success: false,
+        message: "No valid theme fields provided",
+      });
+    }
+
+    const updatedShop = await shopModel.findByIdAndUpdate(
+      adminId,
+      { $set: set },
+      { new: true, runValidators: true },
+    );
+
+    if (!updatedShop) {
+      return res.status(404).json({
+        success: false,
+        message: "Admin / Shop not found",
+      });
+    }
+
+    // The storefront reads this shop doc through shopDocCache (5-minute TTL,
+    // see getShopDoc/getCachedShopDoc) — without this the admin's saved
+    // appearance wouldn't reach the storefront for up to 5 minutes.
+    shopDocCache.delete(`shop:${updatedShop.shop}`);
+
+    return res.status(200).json({
+      success: true,
+      message: "Consultant card appearance updated successfully",
+      data: updatedShop.consultantCardTheme,
+    });
+  } catch (error) {
+    console.error("Update consultant card theme error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 const getSetupGuideController = async (req, res) => {
   try {
     const { adminId } = req.params;
@@ -1301,6 +1511,7 @@ module.exports = {
   updateConsultantWidthrawalRequest,
   declineWithdrawalRequest,
   updateAdminPercentage,
+  updateConsultantCardTheme,
   getSetupGuideController,
   updateMenuController,
   getMenuController,
