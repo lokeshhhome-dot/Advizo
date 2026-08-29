@@ -1112,6 +1112,20 @@ const proxyShopifyViewProfile = async (req, res) => {
     : "";
   const iframeUrl = `${getTrustedConsultantAppUrl() || resolveFrontendUrl(req)}/view-profile?consultantId=${consultantId}&shopId=${shopId}&shop=${shop}${customerParams}${autoStartCallParam}`;
 
+  // The call overlay (openCallOverlay in consultant-card.js) loads this URL
+  // with autoStartCall set, inside a modal it renders on the theme page
+  // itself. renderShopifyPage scrapes and re-embeds the shop's OWN theme
+  // header/footer around the iframe — correct for a real "view profile"
+  // page visit, but it means that modal would show a second full storefront
+  // layout (header+footer) nested inside it. Redirect straight to the React
+  // app's own origin instead — same identity params, same destination page,
+  // just without the theme shell. Same pattern proxyShopifyStorefrontChat
+  // already uses for the chat overlay. The normal (non-call) profile-page
+  // flow below, reached without autoStartCall, is unaffected.
+  if (autoStartCall) {
+    return res.redirect(302, iframeUrl);
+  }
+
   return renderShopifyPage(req, res, iframeUrl, {
     title: "Consultant Profile",
   });
