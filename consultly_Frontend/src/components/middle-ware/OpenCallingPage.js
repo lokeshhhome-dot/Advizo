@@ -40,7 +40,21 @@ export const checkUserBalance = async ({
   }
 };
 
-export const openCallPage = async ({ receiverId, type, userId, shop, shopId, authToken = "" }) => {
+export const openCallPage = async ({
+  receiverId,
+  type,
+  userId,
+  shop,
+  shopId,
+  authToken = "",
+  // True when this call was started from the in-page call overlay (theme
+  // card → call modal) instead of the legacy full-page /view-profile flow.
+  // Keeps the call UI navigating inside that same overlay iframe (direct
+  // frontend URL, no shop app-proxy hop — which would otherwise wrap it in
+  // ANOTHER Shopify theme shell nested inside the overlay) instead of
+  // breaking out to the top-level tab like the legacy flow still does.
+  embedded = false,
+}) => {
   // Safari: window.open must run synchronously inside the click gesture —
   // after the awaits below it gets popup-blocked. Open the named window now
   // (blank) and navigate it once the Agora token is ready.
@@ -155,9 +169,16 @@ export const openCallPage = async ({ receiverId, type, userId, shop, shopId, aut
       userType: "client",
       returnUrl,
       authToken: resolvedAuthToken,
+      direct: embedded,
     });
     console.log("CALL URL =", callUrl);
-    window.top.location.href = callUrl
+    if (embedded) {
+      // Stay inside the current (overlay) iframe instead of breaking out to
+      // the top-level storefront tab.
+      window.location.href = callUrl;
+    } else {
+      window.top.location.href = callUrl;
+    }
     // console.log(callUrl);
     // if (callWin && !callWin.closed) {
     //   console.log("Navigating popup...");

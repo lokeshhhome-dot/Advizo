@@ -207,20 +207,67 @@
     );
   }
 
-  // TEMP (same auth-bridge gap as chat): actually STARTING a voice/video call
-  // still lives in the not-yet-migrated OpenCallingPage.js + Agora-token /
-  // Socket.IO flow — this legacy iframe page already has everything needed.
-  // Ported from consultant-profile.js's buildLegacyCallBridgeUrl (identical
-  // reasoning/destination) — these two asset files can't share code (no
-  // bundler between Theme Extension assets), so this is a direct copy, same
-  // as this file's own helpers were already duplicated the other way.
-  function buildLegacyCallBridgeUrl(shop, consultantId) {
+  // Actually STARTING a voice/video call still lives in the React app's
+  // OpenCallingPage.js + Agora-token / Socket.IO flow (identity resolved by
+  // proxyShopifyViewProfile, same as the chat overlay's proxyShopifyStorefrontChat)
+  // — this just points the call overlay iframe at it with autoStartCall set,
+  // so ViewProfile.js triggers the call immediately instead of showing its
+  // own profile UI. See openCallOverlay below.
+  function buildCallOverlayUrl(shop, consultantId, callType) {
     return (
       "https://" +
       shop +
       "/apps/consultly/view-profile?consultantId=" +
-      encodeURIComponent(consultantId)
+      encodeURIComponent(consultantId) +
+      "&autoStartCall=" +
+      encodeURIComponent(callType)
     );
+  }
+
+  // Same fixed, full-viewport overlay iframe pattern as the chat overlay
+  // above — voice/video calls open in a modal on the theme instead of
+  // navigating the page away. VideoCallingPage.js (loaded inside once the
+  // call starts) posts CONSULTLY_CALL_ENDED to window.top when the call ends
+  // instead of navigating, which is what closeCallOverlay below listens for.
+  var callOverlayIframe = null;
+  var callOverlayCloseListenerBound = false;
+
+  function closeCallOverlay() {
+    if (callOverlayIframe && callOverlayIframe.parentNode) {
+      callOverlayIframe.parentNode.removeChild(callOverlayIframe);
+    }
+    callOverlayIframe = null;
+  }
+
+  function ensureCallOverlayCloseListener() {
+    if (callOverlayCloseListenerBound) return;
+    callOverlayCloseListenerBound = true;
+    window.addEventListener("message", function (event) {
+      if (!event.data || event.data.type !== "CONSULTLY_CALL_ENDED") return;
+      closeCallOverlay();
+    });
+  }
+
+  function openCallOverlay(consultantId, shop, callType) {
+    if (!shop) {
+      console.error("[consultly] shop missing — cannot open call overlay");
+      return;
+    }
+    ensureCallOverlayCloseListener();
+    closeCallOverlay();
+
+    var src = buildCallOverlayUrl(shop, consultantId, callType);
+
+    var iframe = document.createElement("iframe");
+    iframe.src = src;
+    iframe.setAttribute(
+      "style",
+      "position:fixed;top:0;left:0;width:100vw;height:100vh;" +
+        "border:0;z-index:2147483000;background:#fff;",
+    );
+    iframe.setAttribute("allow", "microphone; camera; autoplay");
+    document.body.appendChild(iframe);
+    callOverlayIframe = iframe;
   }
 
   var ACTION_LABELS = { chat: "Chat", voice: "Call", video: "Video" };
@@ -738,14 +785,16 @@
           return;
         }
 
-        // Voice/video: unchanged — actually starting the call still happens
-        // via the same legacy bridge the real profile page's own buttons
-        // already redirect to (see buildLegacyCallBridgeUrl's comment).
+        // Voice/video: open the call overlay (same modal pattern as chat)
+        // instead of navigating the page away. Starting the call itself is
+        // unchanged — still the same generate-token/socket flow, now run
+        // inside that overlay instead of a full-page navigation.
         if (!data.authenticated) {
           window.location.href = buildLoginUrl(shop);
           return;
         }
-        window.location.href = buildLegacyCallBridgeUrl(shop, c.id);
+        closeProfileModal();
+        openCallOverlay(c.id, shop, action);
       });
     });
   }
@@ -882,9 +931,8 @@
 
           // Voice/video: opens the same profile modal shown on card click
           // (instead of navigating to /pages/consultant-profile) — actually
-          // starting the call still happens from inside that modal, via the
-          // same legacy auth-bridge redirect the real profile page already
-          // uses (see buildLegacyCallBridgeUrl's comment).
+          // starting the call happens from that modal's own action buttons,
+          // via openCallOverlay (see buildCallOverlayUrl's comment).
           openProfileModal(consultantId, ctx.shop);
         });
       });

@@ -1085,6 +1085,10 @@ const proxySHopifyConsultantChat = (req, res) => {
 const proxyShopifyViewProfile = async (req, res) => {
   const shop = req.query.shop;
   const consultantId = req.query.consultantId || "";
+  // Set only by the theme's call overlay (openCallOverlay in
+  // consultant-card.js) — "voice" or "video". Forwarded through unchanged so
+  // ViewProfile.js can skip its own profile UI and start the call immediately.
+  const autoStartCall = req.query.autoStartCall || "";
   let shopId = req.query.shopId || "";
   if (!shopId && shop) {
     const shopDoc = await getCachedShopDoc(shop);
@@ -1103,7 +1107,10 @@ const proxyShopifyViewProfile = async (req, res) => {
       `&authToken=${encodeURIComponent(customerSession.token || "")}`;
   }
 
-  const iframeUrl = `${getTrustedConsultantAppUrl() || resolveFrontendUrl(req)}/view-profile?consultantId=${consultantId}&shopId=${shopId}&shop=${shop}${customerParams}`;
+  const autoStartCallParam = autoStartCall
+    ? `&autoStartCall=${encodeURIComponent(autoStartCall)}`
+    : "";
+  const iframeUrl = `${getTrustedConsultantAppUrl() || resolveFrontendUrl(req)}/view-profile?consultantId=${consultantId}&shopId=${shopId}&shop=${shop}${customerParams}${autoStartCallParam}`;
 
   return renderShopifyPage(req, res, iframeUrl, {
     title: "Consultant Profile",

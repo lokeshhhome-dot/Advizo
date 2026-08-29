@@ -201,6 +201,28 @@ function VideoCallingPage() {
     channelName: channelNameParam,
   };
 
+  // This page is now also loaded inside a call MODAL (an iframe rendered on
+  // top of the Consultant Dashboard or the Shopify theme card) instead of
+  // always being a standalone tab/popup. Navigating window.top from inside
+  // that iframe would break out of the modal and drag the whole dashboard/
+  // storefront tab away with it — the exact "consultant gets redirected to
+  // the theme" bug this was built to fix. When framed, tell whichever parent
+  // opened the modal that the call ended instead of navigating anywhere;
+  // the modal owns closing itself. Standalone (window.top === window, the
+  // pre-existing popup/full-tab paths) keeps navigating exactly as before.
+  const exitCallView = (url) => {
+    if (window.self !== window.top) {
+      try {
+        window.parent.postMessage({ type: "CONSULTLY_CALL_ENDED" }, "*");
+      } catch (_) {}
+      try {
+        window.top.postMessage({ type: "CONSULTLY_CALL_ENDED" }, "*");
+      } catch (_) {}
+      return;
+    }
+    window.top.location.href = url;
+  };
+
   const cleanupCallUI = (redirect = true) => {
     setCallActive(false);
     stopTimer();
@@ -214,7 +236,7 @@ function VideoCallingPage() {
     if (redirect) {
       const returnUrl = params.get("returnUrl");
       if (returnUrl) {
-        window.top.location.href = decodeURIComponent(returnUrl);
+        exitCallView(decodeURIComponent(returnUrl));
       }
     }
   };
@@ -1139,7 +1161,14 @@ function VideoCallingPage() {
     const returnUrl = params.get("returnUrl");
     closeCallWindow(() => {
       if (returnUrl) {
-        window.top.location.href = decodeURIComponent(returnUrl);
+        exitCallView(decodeURIComponent(returnUrl));
+      } else if (window.self !== window.top) {
+        try {
+          window.parent.postMessage({ type: "CONSULTLY_CALL_ENDED" }, "*");
+        } catch (_) {}
+        try {
+          window.top.postMessage({ type: "CONSULTLY_CALL_ENDED" }, "*");
+        } catch (_) {}
       } else {
         navigate(-1);
       }

@@ -1,13 +1,13 @@
 // components/IncomingCallAlert.jsx
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { setIncomingCall } from "../Redux/slices/sokectSlice";
 import { socket } from "../Sokect-io/SokectConfig";
 import { checkMicPermission } from "../ConsultantCards/ConsultantCards";
 import TestRingtone from "../../pages/TestRingtone";
 import axios from "axios";
-import { openCallWindow, CALL_WINDOW_NAME } from "../../utils/callWindow";
 import { buildCallPageUrl } from "../../utils/buildCallPageUrl";
+import VideoCallModal from "./VideoCallModal";
 import userDefultProfile from "../../assets/avatar-or-person-sign-profile-picture-portrait-icon-user-profile-symbol.webp"
 
 export default function IncomingCallAlert() {
@@ -17,6 +17,11 @@ export default function IncomingCallAlert() {
     localStorage.getItem("consultant_u_Identity");
   const { incomingCall, callEnded } = useSelector((state) => state.socket);
   const { callAccepted } = useSelector((state) => state.socket);
+  // Holds the accepted call's iframe URL. Kept separate from `incomingCall`
+  // (which is cleared the moment the call is accepted) so the call modal
+  // stays mounted for the whole call instead of disappearing with the ring.
+  const [activeCallUrl, setActiveCallUrl] = useState(null);
+  const { callType, callerName } = incomingCall || {};
 
   useEffect(() => {
     if (callEnded?.callId && incomingCall) {
@@ -36,23 +41,13 @@ export default function IncomingCallAlert() {
     return () => clearTimeout(timer);
   }, [incomingCall, dispatch]);
 
-  if (!incomingCall) return null;
-
-  const { callerId, callType, channelName, callerName, shop } = incomingCall;
-
   const handleAccept = async () => {
+    if (!incomingCall) return;
+    const { callerId, channelName, shop } = incomingCall;
     localStorage.setItem("callAccepted", JSON.stringify(callAccepted));
     const shopId = localStorage.getItem("shop_o_Identity");
-    // Safari: window.open is only allowed synchronously INSIDE the click
-    // gesture — after the awaits below it gets popup-blocked. Open the named
-    // window now (blank) and point it at the call URL once the token arrives.
-    let callWin = null;
-    try {
-      callWin = window.open("", CALL_WINDOW_NAME);
-    } catch (_) { }
     const hasMicPermission = await checkMicPermission();
     if (!hasMicPermission) {
-      try { callWin?.close(); } catch (_) { }
       alert("Please grant microphone permission to start the call");
       return;
     }
@@ -82,7 +77,6 @@ export default function IncomingCallAlert() {
         callType: incomingCall.callType,
         shopId: shopId,
       });
-      dispatch(setIncomingCall(null));
       const callType = incomingCall.callType || "voice";
       const returnUrl = `https://${shop}/apps/consultly/consultant-dashboard`;
 
@@ -100,21 +94,20 @@ export default function IncomingCallAlert() {
         userType: "consultant",
         returnUrl,
         authToken: localStorage.getItem("token") || "",
+        // Renders inside VideoCallModal below (an iframe in the Consultant
+        // Dashboard) — must be the app's own URL, not the shop's App Proxy,
+        // or the call UI would come back wrapped in the storefront theme.
+        direct: true,
       });
 
-      if (callWin && !callWin.closed) {
-        callWin.location.href = callUrl;
-        try { callWin.focus(); } catch (_) { }
-      } else {
-        // Popup was blocked or closed — fall back to the old path.
-        openCallWindow(callUrl);
-      }
-    } else {
-      try { callWin?.close(); } catch (_) { }
+      dispatch(setIncomingCall(null));
+      setActiveCallUrl(callUrl);
     }
   };
 
   const handleReject = () => {
+    if (!incomingCall) return;
+    const { callerId, channelName } = incomingCall;
     socket.emit("reject-call", {
       callerId,
       receiverId: userId,
@@ -123,10 +116,15 @@ export default function IncomingCallAlert() {
     });
     dispatch(setIncomingCall(null));
   };
-  if (!incomingCall) return null;
 
   return (
     <>
+      <VideoCallModal
+        callUrl={activeCallUrl}
+        onClose={() => setActiveCallUrl(null)}
+      />
+      {incomingCall && (
+        <>
       <TestRingtone incomingCall={incomingCall} />
       <div
         style={{
@@ -220,6 +218,8 @@ export default function IncomingCallAlert() {
           </button>
         </div>
       </div>
+        </>
+      )}
     </>
   );
 }

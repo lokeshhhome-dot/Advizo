@@ -16,6 +16,12 @@ export const buildCallPageUrl = ({
   userType,
   returnUrl,
   authToken,
+  // When true, always build the direct frontend URL even if `shop` is known
+  // — used by the modal-based call flows (Consultant Dashboard's call modal,
+  // the theme's in-page call overlay) so the call UI loads with no Shopify
+  // theme chrome wrapped around it. Existing callers omit this and keep
+  // getting the shop app-proxy URL exactly as before.
+  direct = false,
 }) => {
   const params = new URLSearchParams();
   params.set("callerId", callerId);
@@ -36,7 +42,7 @@ export const buildCallPageUrl = ({
 
   const query = params.toString();
 
-  if (shop) {
+  if (shop && !direct) {
     return `https://${shop}/apps/consultly/video-calling-page?${query}`;
   }
 

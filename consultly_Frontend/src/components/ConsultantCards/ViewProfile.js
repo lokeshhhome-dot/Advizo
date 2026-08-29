@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../../components/ConsultantCards/ConsultantCards.css";
@@ -38,6 +38,12 @@ function ViewProfile() {
   // "logged out" is what redirected the customer to Shopify accounts.
   const customerIdParam = params.get("customerId");
   const authTokenParam = params.get("authToken");
+  // Set only by the theme's call overlay (openCallOverlay in
+  // consultant-card.js) — "voice" or "video". Skips the profile UI below and
+  // starts the call immediately instead, so the overlay never shows a full
+  // profile page, only a brief connecting state before the call itself.
+  const autoStartCall = params.get("autoStartCall");
+  const autoStartTriggeredRef = useRef(false);
   const [chatOpen, setChatOpen] = useState(false);
   useEffect(() => {
     setUserId(customerIdParam || localStorage.getItem("client_u_Identity"));
@@ -95,7 +101,7 @@ function ViewProfile() {
     );
   };
 
-  const startCall = async ({ receiverId, type }) => {
+  const startCall = async ({ receiverId, type, embedded = false }) => {
     if (communicationDisabled) {
       toastCtx?.showToast?.(COMM_DISABLED_TOAST, true);
       return;
@@ -115,8 +121,22 @@ function ViewProfile() {
       // Fresh JWT minted by the proxy for this page load; the stored copy may be
       // stale, and a wrong token silently breaks the call window's auth.
       authToken: authTokenParam || localStorage.getItem("token") || "",
+      embedded,
     });
   };
+
+  // Theme call overlay (openCallOverlay): this page loaded with
+  // ?autoStartCall=voice|video — start the call as soon as identity/consultant
+  // id are resolved, instead of waiting for a button click. Guarded by a ref
+  // (not state) so it fires exactly once even if userId/consultant_id settle
+  // across a couple of re-renders.
+  useEffect(() => {
+    if (!autoStartCall || autoStartTriggeredRef.current) return;
+    if (!userId || !consultant_id) return;
+    autoStartTriggeredRef.current = true;
+    startCall({ receiverId: consultant_id, type: autoStartCall, embedded: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStartCall, userId, consultant_id]);
 
   const renderStars = (rating) => {
     const fullStars = Math.floor(rating);
@@ -163,6 +183,40 @@ function ViewProfile() {
   const backToHome = () => {
     goToStorefront("/apps/consultly/");
   };
+
+  // Theme call overlay: show a brief connecting state instead of the full
+  // profile page while startCall's balance/status/mic checks and the token
+  // request run — openCallPage takes over (same-iframe navigation) as soon
+  // as the call is ready.
+  if (autoStartCall) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100vh",
+          gap: "12px",
+          fontFamily: "inherit",
+          color: "#10231c",
+        }}
+      >
+        <div
+          style={{
+            width: "40px",
+            height: "40px",
+            borderRadius: "50%",
+            border: "3px solid rgba(16, 35, 28, 0.15)",
+            borderTopColor: "#10231c",
+            animation: "consultly-spin 0.8s linear infinite",
+          }}
+        />
+        <style>{"@keyframes consultly-spin { to { transform: rotate(360deg); } }"}</style>
+        <p style={{ margin: 0, fontSize: "14px" }}>Connecting…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="view-profile-container">
