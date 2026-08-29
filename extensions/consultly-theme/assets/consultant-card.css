@@ -272,34 +272,6 @@
   background: var(--consultant-card-offline, #9aa5a0);
 }
 
-/* ---------- price ---------- */
-
-/* Real data has 3 independent per-minute rates (chat/voice/video), not one
-   price — this shows the lowest of the three real rates as the headline
-   number (never fabricated), with "From" only when the rates actually
-   differ so it never overstates a single flat rate as a range. */
-.consultly-consultant__price {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-}
-
-.consultly-consultant__price-from {
-  font-size: 12px;
-  color: #7b8a83;
-}
-
-.consultly-consultant__price-amount {
-  font-size: 17px;
-  font-weight: 600;
-  color: var(--consultant-card-price-color, #10231c);
-}
-
-.consultly-consultant__price-unit {
-  font-size: 12px;
-  color: #7b8a83;
-}
-
 /* ---------- channel actions (chat / voice / video) ---------- */
 
 /* margin-top: auto pins this row to the bottom of the (flex:1) body — so
@@ -312,15 +284,21 @@
   margin-top: auto;
 }
 
+/* flex-direction:column, not a single row — chat/voice/video are priced
+   independently in the real data (three separate per-minute rates), so
+   each button shows its own icon+label row plus its OWN real price
+   underneath, matching how the Consultant Profile modal already shows all
+   three. min-height (not a fixed height) so the price row doesn't clip. */
 .consultly-consultant-card__action {
   flex: 1;
   min-width: 0;
-  height: 36px;
+  min-height: 44px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 0 8px;
+  gap: 2px;
+  padding: 6px 6px;
   background: #ffffff;
   border: 1px solid var(--consultant-card-button-border, rgba(16, 35, 28, 0.12));
   border-radius: 8px;
@@ -329,12 +307,12 @@
   font-weight: 500;
   color: #10231c;
   cursor: pointer;
+  box-sizing: border-box;
   transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
 
-/* Chat and Call are independently colorable (admin-facing "Chat button
-   bg/text" and "Call button bg/text"); Video has no dedicated admin control
-   and simply keeps the base rule's default above. */
+/* Chat, Call, and Video are each independently colorable (admin-facing
+   "Chat/Call/Video button bg/text"). */
 .consultly-consultant-card__action--chat {
   background: var(--consultant-card-chat-bg, #ffffff);
   color: var(--consultant-card-chat-text, #10231c);
@@ -343,6 +321,11 @@
 .consultly-consultant-card__action--voice {
   background: var(--consultant-card-call-bg, #ffffff);
   color: var(--consultant-card-call-text, #10231c);
+}
+
+.consultly-consultant-card__action--video {
+  background: var(--consultant-card-video-bg, #ffffff);
+  color: var(--consultant-card-video-text, #10231c);
 }
 
 /* :not([aria-disabled="true"]) — rather than a separate rule undoing the
@@ -367,6 +350,12 @@
   cursor: not-allowed;
 }
 
+.consultly-consultant-card__action-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
 .consultly-consultant-card__action-icon {
   display: inline-flex;
   align-items: center;
@@ -384,6 +373,15 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Real per-channel rate — never a fabricated/derived number, and
+   intentionally its own color (--consultant-card-price-color) rather than
+   inheriting the button's own chat/call/video text color, matching the
+   dedicated "Price" field in the admin appearance settings. */
+.consultly-consultant-card__action-amount {
+  font-size: 11px;
+  color: var(--consultant-card-price-color, #7b8a83);
 }
 
 /* ---------- toast (communication-disabled notice) ---------- */
@@ -424,10 +422,6 @@
 
   .consultly-consultant {
     max-width: none;
-  }
-
-  .consultly-consultant-card__action {
-    min-height: 44px;
   }
 }
 

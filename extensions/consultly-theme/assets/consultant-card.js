@@ -60,6 +60,8 @@
     chatButtonText: "--consultant-card-chat-text",
     callButtonBg: "--consultant-card-call-bg",
     callButtonText: "--consultant-card-call-text",
+    videoButtonBg: "--consultant-card-video-bg",
+    videoButtonText: "--consultant-card-video-text",
     buttonBorderColor: "--consultant-card-button-border",
     buttonHoverColor: "--consultant-card-button-hover",
     onlineColor: "--consultant-card-online",
@@ -223,7 +225,10 @@
 
   var ACTION_LABELS = { chat: "Chat", voice: "Call", video: "Video" };
 
-  function actionButtonMarkup(kind, icon, disabled) {
+  // Each channel (chat/voice/video) has its own independent per-minute rate
+  // in the real data — the button shows that channel's own real price, never
+  // a shared/derived number. Same rates the Consultant Profile modal shows.
+  function actionButtonMarkup(kind, icon, amount, currencySymbol, disabled) {
     return (
       '<button type="button" class="consultly-consultant-card__action consultly-consultant-card__action--' +
       kind +
@@ -234,44 +239,19 @@
         ? ' aria-disabled="true" title="' + escapeHtml(COMM_DISABLED_MESSAGE) + '"'
         : "") +
       ">" +
+      '<span class="consultly-consultant-card__action-row">' +
       '<span class="consultly-consultant-card__action-icon">' +
       icon +
       "</span>" +
       '<span class="consultly-consultant-card__action-label">' +
       ACTION_LABELS[kind] +
       "</span>" +
-      "</button>"
-    );
-  }
-
-  // Real data has 3 independent per-minute rates (chat/voice/video), not one
-  // price — this is the lowest of the three real rates, never a fabricated
-  // number. "From" only appears when the rates actually differ, so a single
-  // flat rate is never misrepresented as a range.
-  function priceMarkup(consultant, currencySymbol) {
-    var prices = [consultant.chatPrice, consultant.audioPrice, consultant.videoPrice].filter(
-      function (p) {
-        return p > 0;
-      },
-    );
-    if (!prices.length) return "";
-
-    var min = Math.min.apply(null, prices);
-    var max = Math.max.apply(null, prices);
-    var fromLabel =
-      max > min
-        ? '<span class="consultly-consultant__price-from">From</span>'
-        : "";
-
-    return (
-      '<div class="consultly-consultant__price">' +
-      fromLabel +
-      '<span class="consultly-consultant__price-amount">' +
-      escapeHtml(currencySymbol) +
-      escapeHtml(formatAmount(min)) +
       "</span>" +
-      '<span class="consultly-consultant__price-unit">/min</span>' +
-      "</div>"
+      '<span class="consultly-consultant-card__action-amount">' +
+      escapeHtml(currencySymbol) +
+      escapeHtml(formatAmount(amount)) +
+      "/min</span>" +
+      "</button>"
     );
   }
 
@@ -355,11 +335,28 @@
         : "") +
       ratingMarkup() +
       availabilityMarkup(consultant) +
-      priceMarkup(consultant, currencySymbol) +
       '<div class="consultly-consultant__actions">' +
-      actionButtonMarkup("chat", ICONS.chat, communicationDisabled) +
-      actionButtonMarkup("voice", ICONS.voice, communicationDisabled) +
-      actionButtonMarkup("video", ICONS.video, communicationDisabled) +
+      actionButtonMarkup(
+        "chat",
+        ICONS.chat,
+        consultant.chatPrice,
+        currencySymbol,
+        communicationDisabled,
+      ) +
+      actionButtonMarkup(
+        "voice",
+        ICONS.voice,
+        consultant.audioPrice,
+        currencySymbol,
+        communicationDisabled,
+      ) +
+      actionButtonMarkup(
+        "video",
+        ICONS.video,
+        consultant.videoPrice,
+        currencySymbol,
+        communicationDisabled,
+      ) +
       "</div>" +
       "</div>" +
       "</div>" +

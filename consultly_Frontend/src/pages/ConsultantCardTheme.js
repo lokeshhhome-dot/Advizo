@@ -24,6 +24,8 @@ const DEFAULTS = {
   chatButtonText: "#10231c",
   callButtonBg: "#ffffff",
   callButtonText: "#10231c",
+  videoButtonBg: "#ffffff",
+  videoButtonText: "#10231c",
   onlineColor: "#2f9e6a",
   busyColor: "#e0a30b",
   offlineColor: "#9aa5a0",
@@ -58,12 +60,14 @@ const COLOR_FIELD_GROUPS = [
   },
   {
     title: "Action buttons",
-    subtitle: "Chat and Call keep their existing behavior — only color changes.",
+    subtitle: "Chat, Call, and Video keep their existing behavior — only color changes.",
     fields: [
       { key: "chatButtonBg", label: "Chat background" },
       { key: "chatButtonText", label: "Chat text" },
       { key: "callButtonBg", label: "Call background" },
       { key: "callButtonText", label: "Call text" },
+      { key: "videoButtonBg", label: "Video background" },
+      { key: "videoButtonText", label: "Video text" },
       { key: "buttonBorderColor", label: "Button border" },
       { key: "buttonHoverColor", label: "Button hover" },
     ],
@@ -93,6 +97,8 @@ const EMPTY_FORM = {
   chatButtonText: "",
   callButtonBg: "",
   callButtonText: "",
+  videoButtonBg: "",
+  videoButtonText: "",
   buttonBorderColor: "",
   buttonHoverColor: "",
   onlineColor: "",
@@ -504,12 +510,6 @@ function ConsultantCardTheme() {
                         />
                         Online
                       </span>
-                      <span
-                        className={styles.previewPrice}
-                        style={{ color: form.priceColor || DEFAULTS.priceColor }}
-                      >
-                        $5/min
-                      </span>
                       <div className={styles.previewActions}>
                         <span
                           className={styles.previewAction}
@@ -520,6 +520,12 @@ function ConsultantCardTheme() {
                           }}
                         >
                           Chat
+                          <span
+                            className={styles.previewActionAmount}
+                            style={{ color: form.priceColor || DEFAULTS.priceColor }}
+                          >
+                            $3/min
+                          </span>
                         </span>
                         <span
                           className={styles.previewAction}
@@ -530,6 +536,28 @@ function ConsultantCardTheme() {
                           }}
                         >
                           Call
+                          <span
+                            className={styles.previewActionAmount}
+                            style={{ color: form.priceColor || DEFAULTS.priceColor }}
+                          >
+                            $5/min
+                          </span>
+                        </span>
+                        <span
+                          className={styles.previewAction}
+                          style={{
+                            background: form.videoButtonBg || DEFAULTS.videoButtonBg,
+                            color: form.videoButtonText || DEFAULTS.videoButtonText,
+                            borderColor: form.buttonBorderColor || undefined,
+                          }}
+                        >
+                          Video
+                          <span
+                            className={styles.previewActionAmount}
+                            style={{ color: form.priceColor || DEFAULTS.priceColor }}
+                          >
+                            $8/min
+                          </span>
                         </span>
                       </div>
                     </div>

@@ -104,6 +104,8 @@ const shop = new mongoose.Schema({
         chatButtonText: { type: String, default: null },
         callButtonBg: { type: String, default: null },
         callButtonText: { type: String, default: null },
+        videoButtonBg: { type: String, default: null },
+        videoButtonText: { type: String, default: null },
         buttonBorderColor: { type: String, default: null },
         buttonHoverColor: { type: String, default: null },
         onlineColor: { type: String, default: null },
