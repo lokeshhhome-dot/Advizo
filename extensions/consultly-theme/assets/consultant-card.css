@@ -633,6 +633,30 @@
   border-radius: 999px;
 }
 
+/* ---- call state ----
+   Call/Video Call reuse this SAME modal (backdrop/panel/close button/ESC/
+   body-scroll-lock) instead of a separate overlay — this modifier only
+   changes sizing so the call iframe has real, definite space to fill. The
+   base .consultly-profile-modal is "natural height, capped" (no children
+   have an intrinsic height); an iframe has no natural height of its own, so
+   without an explicit height here it would collapse toward 0. */
+.consultly-profile-modal--call {
+  height: min(90vh, 760px);
+}
+
+.consultly-profile-modal--call .consultly-profile-modal__body {
+  padding: 0;
+  overflow: hidden;
+}
+
+.consultly-profile-modal__call-iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #000;
+}
+
 .consultly-profile-modal__meta {
   display: flex;
   flex-wrap: wrap;

@@ -224,19 +224,21 @@
     );
   }
 
-  // Same fixed, full-viewport overlay iframe pattern as the chat overlay
-  // above — voice/video calls open in a modal on the theme instead of
-  // navigating the page away. VideoCallingPage.js (loaded inside once the
-  // call starts) posts CONSULTLY_CALL_ENDED to window.top when the call ends
-  // instead of navigating, which is what closeCallOverlay below listens for.
-  var callOverlayIframe = null;
+  // Call/Video Call open in the SAME modal as the Consultant Profile
+  // (ensureProfileModal's backdrop/panel/close-button/ESC/body-scroll-lock
+  // below) — not a separate full-viewport iframe. That bespoke overlay had
+  // no chrome (no backdrop, no rounded panel, no close button), so visually
+  // it looked exactly like a page navigation even though the URL never
+  // changed. Reusing the profile modal's own shell fixes that and matches
+  // the explicit "same modal as Consultant Profile" requirement.
+  //
+  // VideoCallingPage.js (loaded inside once the call starts) posts
+  // CONSULTLY_CALL_ENDED to window.top when the call ends instead of
+  // navigating, which is what closeCallOverlay below listens for.
   var callOverlayCloseListenerBound = false;
 
   function closeCallOverlay() {
-    if (callOverlayIframe && callOverlayIframe.parentNode) {
-      callOverlayIframe.parentNode.removeChild(callOverlayIframe);
-    }
-    callOverlayIframe = null;
+    closeProfileModal();
   }
 
   function ensureCallOverlayCloseListener() {
@@ -253,21 +255,23 @@
       console.error("[consultly] shop missing — cannot open call overlay");
       return;
     }
+    console.log("[CALL FLOW] Existing profile modal pattern detected");
+    console.log("[CALL FLOW] Opening call modal");
+    console.log("[CALL FLOW] Call mode =", callType);
+
     ensureCallOverlayCloseListener();
-    closeCallOverlay();
+    var els = ensureProfileModal();
 
-    var src = buildCallOverlayUrl(shop, consultantId, callType);
-
+    clearProfileModalChrome(els);
+    els.panel.classList.add("consultly-profile-modal--call");
+    els.body.innerHTML = "";
     var iframe = document.createElement("iframe");
-    iframe.src = src;
-    iframe.setAttribute(
-      "style",
-      "position:fixed;top:0;left:0;width:100vw;height:100vh;" +
-        "border:0;z-index:2147483000;background:#fff;",
-    );
+    iframe.src = buildCallOverlayUrl(shop, consultantId, callType);
+    iframe.className = "consultly-profile-modal__call-iframe";
     iframe.setAttribute("allow", "microphone; camera; autoplay");
-    document.body.appendChild(iframe);
-    callOverlayIframe = iframe;
+    els.body.appendChild(iframe);
+
+    showProfileModalShell(els);
   }
 
   var ACTION_LABELS = { chat: "Chat", voice: "Call", video: "Video" };
@@ -572,6 +576,28 @@
     if (evt.key === "Escape" || evt.key === "Esc") closeProfileModal();
   }
 
+  // Shared "show the modal shell" step for both openProfileModal and
+  // openCallOverlay — same backdrop/scroll-lock/ESC-binding/focus handling
+  // either way. Only captures the pre-modal focus target the FIRST time
+  // (i.e. when the modal isn't already open) — the profile modal's own
+  // Call/Video buttons call this again to switch the SAME open modal from
+  // profile content to a call, and re-capturing focus there would capture
+  // the just-clicked button instead of whatever was focused before the
+  // modal originally opened.
+  function showProfileModalShell(els) {
+    if (!isProfileModalOpen()) {
+      profileModalPreviouslyFocused = document.activeElement;
+      profileModalBodyOverflow = document.body.style.overflow;
+    }
+    els.backdrop.removeAttribute("hidden");
+    document.body.style.overflow = "hidden";
+    if (!profileModalKeydownBound) {
+      document.addEventListener("keydown", handleProfileModalKeydown);
+      profileModalKeydownBound = true;
+    }
+    els.closeBtn.focus();
+  }
+
   function closeProfileModal() {
     if (!isProfileModalOpen()) return;
     profileModalEls.backdrop.setAttribute("hidden", "hidden");
@@ -587,6 +613,15 @@
       profileModalPreviouslyFocused.focus();
     }
     profileModalPreviouslyFocused = null;
+
+    // If a call was showing, tear the iframe down too — merely hiding the
+    // modal (via the close button, Escape, or a backdrop click) would leave
+    // an active Agora/Socket.IO session running invisibly in the background
+    // instead of actually ending the call.
+    if (profileModalEls.panel.classList.contains("consultly-profile-modal--call")) {
+      profileModalEls.panel.classList.remove("consultly-profile-modal--call");
+      profileModalEls.body.innerHTML = "";
+    }
   }
 
   // Clears header/footer too — without this, re-opening the modal for a
@@ -785,15 +820,14 @@
           return;
         }
 
-        // Voice/video: open the call overlay (same modal pattern as chat)
-        // instead of navigating the page away. Starting the call itself is
-        // unchanged — still the same generate-token/socket flow, now run
-        // inside that overlay instead of a full-page navigation.
+        // Voice/video: switch this SAME modal from profile content to the
+        // call (openCallOverlay reuses ensureProfileModal's shell) instead
+        // of navigating the page away. Starting the call itself is
+        // unchanged — still the same generate-token/socket flow.
         if (!data.authenticated) {
           window.location.href = buildLoginUrl(shop);
           return;
         }
-        closeProfileModal();
         openCallOverlay(c.id, shop, action);
       });
     });
@@ -803,16 +837,10 @@
     if (!consultantId || !shop) return;
 
     var els = ensureProfileModal();
-    profileModalPreviouslyFocused = document.activeElement;
-    profileModalBodyOverflow = document.body.style.overflow;
-
-    els.backdrop.removeAttribute("hidden");
-    document.body.style.overflow = "hidden";
-    if (!profileModalKeydownBound) {
-      document.addEventListener("keydown", handleProfileModalKeydown);
-      profileModalKeydownBound = true;
-    }
-    els.closeBtn.focus();
+    // Defensive: if the shared modal was last showing a call, make sure its
+    // call-sizing modifier doesn't leak into this normal profile view.
+    els.panel.classList.remove("consultly-profile-modal--call");
+    showProfileModalShell(els);
 
     var fetchUrl = PROFILE_API_BASE + "/" + encodeURIComponent(consultantId);
 
@@ -900,6 +928,13 @@
 
       cardEl.querySelectorAll("[data-action]").forEach(function (btn) {
         btn.addEventListener("click", function (evt) {
+          // These are plain type="button" elements (never a submit/anchor),
+          // so there is no default browser action to prevent — but calling
+          // this defensively costs nothing and guards against any future
+          // markup change. stopPropagation is the one doing real work here:
+          // without it this click would bubble to the card's own "click"
+          // listener above and open the profile too.
+          evt.preventDefault();
           evt.stopPropagation();
 
           var action = btn.getAttribute("data-action");
@@ -929,19 +964,18 @@
             return;
           }
 
-          // Voice/video clicked directly on the card: open the call overlay
-          // immediately — no intermediate Consultant Profile modal/page.
-          // (Clicking the card itself, or the Profile modal's own Call/Video
-          // buttons, still goes through openProfileModal/openCallOverlay as
-          // before — this only changes the card's OWN action buttons.)
+          // Voice/video clicked directly on the card: open the call modal
+          // immediately — no intermediate Consultant Profile modal/page, no
+          // navigation of any kind. (Clicking the card itself, or the
+          // Profile modal's own Call/Video buttons, still goes through
+          // openProfileModal/openCallOverlay as before — this only changes
+          // the card's OWN action buttons.)
           console.log(
-            "[CALL FLOW DEBUG] " +
-              (action === "video" ? "video" : "customer") +
-              " call button clicked",
+            "[CALL FLOW] Consultant card " +
+              (action === "video" ? "Video" : "Call") +
+              " clicked",
           );
-          console.log("[CALL FLOW DEBUG] profile navigation prevented");
-          console.log("[CALL FLOW DEBUG] call mode =", action);
-          console.log("[CALL FLOW DEBUG] opening customer call modal");
+          console.log("[CALL FLOW] Navigation prevented");
           openCallOverlay(consultantId, ctx.shop, action);
         });
       });
