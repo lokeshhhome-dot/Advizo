@@ -42,6 +42,133 @@
   text-align: center;
 }
 
+.consultly-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- skeleton cards ----------
+   Deliberately built from the SAME structural classes as the real card
+   (.consultly-consultant / __header-band / __avatar-wrap / __body /
+   __actions below) with only the inner content swapped for neutral
+   .consultly-skeleton blocks — so its width/height/radius/gap can never
+   drift out of sync with the real card, and swapping one for the other
+   causes no layout shift. */
+
+.consultly-consultant--skeleton {
+  cursor: default;
+}
+
+.consultly-skeleton {
+  display: block;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #e7e4da 0%, #f4f2ea 50%, #e7e4da 100%);
+  background-size: 200% 100%;
+  animation: consultlySkeletonShimmer 1.5s ease-in-out infinite;
+}
+
+/* Sits on the tinted header band, not the white body — a darker/translucent
+   sweep reads correctly there instead of a mismatched pale patch. */
+.consultly-skeleton--category {
+  width: 72px;
+  height: 10px;
+  margin-top: 2px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    rgba(16, 35, 28, 0.1) 0%,
+    rgba(16, 35, 28, 0.2) 50%,
+    rgba(16, 35, 28, 0.1) 100%
+  );
+  background-size: 200% 100%;
+}
+
+.consultly-skeleton--avatar {
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  border: 3px solid #ffffff;
+  box-sizing: border-box;
+}
+
+.consultly-skeleton--name {
+  width: 68%;
+  height: 14px;
+}
+
+.consultly-skeleton--meta {
+  width: 48%;
+  height: 11px;
+}
+
+.consultly-skeleton--badge {
+  align-self: flex-start;
+  width: 46px;
+  height: 18px;
+  border-radius: 6px;
+}
+
+.consultly-skeleton--availability {
+  align-self: flex-start;
+  width: 62%;
+  height: 22px;
+  border-radius: 9px;
+}
+
+.consultly-skeleton--action {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  border-radius: 8px;
+}
+
+@keyframes consultlySkeletonShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ---------- staggered entrance for REAL cards only ----------
+   Plays automatically on insertion (CSS animations run when an element
+   first enters the DOM) — no JS-toggled class needed. Skeleton items are
+   excluded so the 3 loading placeholders appear together, immediately,
+   with a stable layout instead of staggering in. consultant-card.js sets
+   animation-delay per real item for the actual stagger timing. */
+.consultly-consultant-card__item:not(.consultly-consultant-card__item--skeleton) {
+  animation: consultlyCardEnter 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes consultlyCardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .consultly-skeleton {
+    animation: none;
+  }
+
+  .consultly-consultant-card__item:not(.consultly-consultant-card__item--skeleton) {
+    animation: none;
+  }
+}
+
 .consultly-consultant-card__empty,
 .consultly-consultant-card__error {
   max-width: 560px;

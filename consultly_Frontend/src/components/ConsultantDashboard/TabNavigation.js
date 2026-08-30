@@ -109,8 +109,23 @@ function TabNavigation() {
       window.parent.postMessage({ type: "AGORA_IFRAME_HEIGHT", height }, "*");
     }
   };
+  // Dashboard-ready signal for the static Advizo boot loader (see
+  // public/index.html). By the time this component exists, auth has already
+  // been restored (ConsultantProtectedRoute guarantees that) — this effect's
+  // settle is the remaining "initial dashboard data resolved" + "first
+  // usable screen rendered" milestone the loader is waiting on. Guarded so
+  // it only ever fires once per app boot, even if this effect re-runs later
+  // (e.g. after a profile update re-fetches the same data).
+  const bootReadyFired = useRef(false);
   useEffect(() => {
-    dispatch(fetchConsultantById({ shop_id: shopId, consultant_id: userId }));
+    if (!shopId || !userId) return;
+    dispatch(fetchConsultantById({ shop_id: shopId, consultant_id: userId })).finally(() => {
+      if (bootReadyFired.current) return;
+      bootReadyFired.current = true;
+      requestAnimationFrame(() => {
+        window.__advizoReady?.();
+      });
+    });
   }, [shopId, userId]);
 
   useEffect(() => {

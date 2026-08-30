@@ -501,6 +501,54 @@
     );
   }
 
+  // Skeleton reuses the REAL card's own structural classes
+  // (.consultly-consultant / __header-band / __avatar-wrap / __body /
+  // __actions) and only swaps the inner content for neutral
+  // .consultly-skeleton blocks — so its width/height/radius/gap is
+  // guaranteed identical to the real card (same CSS controls both), instead
+  // of maintaining a second, independent set of measurements that could
+  // drift out of sync and cause layout shift when real cards replace it.
+  function skeletonCardMarkup() {
+    return (
+      '<div class="consultly-consultant-card__item consultly-consultant-card__item--skeleton" aria-hidden="true">' +
+      '<div class="consultly-consultant consultly-consultant--skeleton">' +
+      '<div class="consultly-consultant__header-band">' +
+      '<span class="consultly-skeleton consultly-skeleton--category"></span>' +
+      "</div>" +
+      '<div class="consultly-consultant__avatar-wrap">' +
+      '<span class="consultly-skeleton consultly-skeleton--avatar"></span>' +
+      "</div>" +
+      '<div class="consultly-consultant__body">' +
+      '<span class="consultly-skeleton consultly-skeleton--name"></span>' +
+      '<span class="consultly-skeleton consultly-skeleton--meta"></span>' +
+      '<span class="consultly-skeleton consultly-skeleton--badge"></span>' +
+      '<span class="consultly-skeleton consultly-skeleton--availability"></span>' +
+      '<div class="consultly-consultant__actions">' +
+      '<span class="consultly-skeleton consultly-skeleton--action"></span>' +
+      '<span class="consultly-skeleton consultly-skeleton--action"></span>' +
+      '<span class="consultly-skeleton consultly-skeleton--action"></span>' +
+      "</div>" +
+      "</div>" +
+      "</div>" +
+      "</div>"
+    );
+  }
+
+  // Shown immediately (before the consultants fetch even starts) so the
+  // section reserves its real card-grid space from the first paint instead
+  // of a bare loading line. Real cards' own loading state IS this function
+  // having run — no separate timer, no fake progress.
+  function renderSkeleton(root) {
+    var html =
+      '<span class="consultly-visually-hidden">Loading consultants…</span>' +
+      '<div class="consultly-consultant-card__grid">';
+    for (var i = 0; i < 3; i++) {
+      html += skeletonCardMarkup();
+    }
+    html += "</div>";
+    root.innerHTML = html;
+  }
+
   function renderEmpty(root) {
     root.innerHTML =
       '<div class="consultly-consultant-card__empty">' +
@@ -983,6 +1031,16 @@
     html += "</div>";
     root.innerHTML = html;
 
+    // Staggered entrance: the actual fade/translateY animation lives in CSS
+    // (.consultly-consultant-card__item, keyed off insertion — see
+    // consultant-card.css) and plays automatically once each item is
+    // inserted into the DOM above. This only staggers WHEN each one starts,
+    // capped after the first 8 so a long list doesn't make anyone wait
+    // longer for a "smooth" effect than for the data itself.
+    root.querySelectorAll(".consultly-consultant-card__item").forEach(function (item, i) {
+      item.style.animationDelay = Math.min(i, 8) * 70 + "ms";
+    });
+
     root.querySelectorAll(".consultly-consultant__avatar").forEach(function (img) {
       img.addEventListener(
         "error",
@@ -1074,6 +1132,11 @@
 
     var root = container.querySelector(".consultly-consultant-card__root");
     if (!root) return;
+
+    // Replaces the static "loading…" text the Liquid block renders before
+    // this script runs at all — occupies the real card-grid area immediately
+    // instead of a large empty section while the fetch below is in flight.
+    renderSkeleton(root);
 
     var apiUrl = container.getAttribute("data-api-url");
     var shop = container.getAttribute("data-shop");
