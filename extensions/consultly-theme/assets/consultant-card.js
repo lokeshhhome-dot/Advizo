@@ -273,6 +273,67 @@
 
     showProfileModalShell(els);
   }
+  // openCallOverlay above is kept working but unused by the button handlers
+  // below — it's the previous iframe-based call modal, left in place as a
+  // rollback path since the native widget below can't be tested end-to-end
+  // from outside a live storefront.
+
+  // ---------- Native call modal (no iframe) ----------
+  //
+  // Loads consultly-call-widget.js (built from consultly_CallWidget/, a
+  // separate small bundle that reuses the React app's own callSlice.js/
+  // SokectConfig.js/ringingTune.js verbatim — same Agora client, same
+  // Socket.IO connection, not a second calling implementation) and asks it
+  // to open the call UI directly on this page. No iframe, no navigation,
+  // no Consultant Profile intermediate step.
+  var callWidgetScriptPromise = null;
+  function ensureCallWidgetScript(shop) {
+    if (window.ConsultlyCallWidget) return Promise.resolve();
+    if (callWidgetScriptPromise) return callWidgetScriptPromise;
+    callWidgetScriptPromise = new Promise(function (resolve, reject) {
+      var script = document.createElement("script");
+      // Redirects to the widget's real (React app) origin — see
+      // proxyShopifyCallWidgetScript's comment. Never hardcode that origin
+      // here directly.
+      script.src = "https://" + shop + "/apps/consultly/call-widget.js";
+      script.async = true;
+      script.onload = function () {
+        resolve();
+      };
+      script.onerror = function () {
+        callWidgetScriptPromise = null;
+        reject(new Error("Failed to load call widget script"));
+      };
+      document.head.appendChild(script);
+    });
+    return callWidgetScriptPromise;
+  }
+
+  function openNativeCallModal(consultantId, shop, callType, consultantName, consultantAvatar) {
+    console.log(
+      "[CALL MODAL] Consultant card " + (callType === "video" ? "Video" : "Call") + " clicked",
+    );
+    if (!shop) {
+      console.error("[CALL MODAL] shop missing — cannot open call modal");
+      return;
+    }
+    ensureCallWidgetScript(shop)
+      .then(function () {
+        if (!window.ConsultlyCallWidget) {
+          throw new Error("Call widget script loaded but did not register itself");
+        }
+        window.ConsultlyCallWidget.open({
+          shop: shop,
+          consultantId: consultantId,
+          callType: callType,
+          consultantName: consultantName,
+          consultantAvatar: consultantAvatar,
+        });
+      })
+      .catch(function (err) {
+        console.error("[CALL MODAL] failed to open:", err);
+      });
+  }
 
   var ACTION_LABELS = { chat: "Chat", voice: "Call", video: "Video" };
 
@@ -820,15 +881,15 @@
           return;
         }
 
-        // Voice/video: switch this SAME modal from profile content to the
-        // call (openCallOverlay reuses ensureProfileModal's shell) instead
-        // of navigating the page away. Starting the call itself is
-        // unchanged — still the same generate-token/socket flow.
+        // Voice/video: close this modal and open the native call modal
+        // directly — starting the call itself is unchanged, still the same
+        // generate-token/socket flow, just presented without an iframe.
         if (!data.authenticated) {
           window.location.href = buildLoginUrl(shop);
           return;
         }
-        openCallOverlay(c.id, shop, action);
+        closeProfileModal();
+        openNativeCallModal(c.id, shop, action, name, imgSrc);
       });
     });
   }
@@ -964,19 +1025,19 @@
             return;
           }
 
-          // Voice/video clicked directly on the card: open the call modal
-          // immediately — no intermediate Consultant Profile modal/page, no
-          // navigation of any kind. (Clicking the card itself, or the
-          // Profile modal's own Call/Video buttons, still goes through
-          // openProfileModal/openCallOverlay as before — this only changes
-          // the card's OWN action buttons.)
-          console.log(
-            "[CALL FLOW] Consultant card " +
-              (action === "video" ? "Video" : "Call") +
-              " clicked",
-          );
+          // Voice/video clicked directly on the card: open the native call
+          // modal immediately — no intermediate Consultant Profile modal/
+          // page, no navigation, no iframe. (Clicking the card itself still
+          // opens the profile via openProfileModal — this only changes the
+          // card's OWN action buttons.)
           console.log("[CALL FLOW] Navigation prevented");
-          openCallOverlay(consultantId, ctx.shop, action);
+          openNativeCallModal(
+            consultantId,
+            ctx.shop,
+            action,
+            consultant ? consultant.name : "",
+            consultant ? consultant.image : "",
+          );
         });
       });
     });

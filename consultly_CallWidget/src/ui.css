@@ -1,0 +1,185 @@
+.consultly-call-widget-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 20, 18, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2147483000;
+  padding: 24px;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+}
+
+.consultly-call-widget-backdrop[hidden] {
+  display: none;
+}
+
+.consultly-call-widget-panel {
+  position: relative;
+  width: 420px;
+  max-width: 100%;
+  height: 680px;
+  max-height: calc(100vh - 48px);
+  background: linear-gradient(180deg, #161b23, #0e1116);
+  color: #f4f6f8;
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+}
+
+.consultly-call-widget-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f4f6f8;
+  cursor: pointer;
+}
+
+.consultly-call-widget-close:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.consultly-call-widget-stage {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px 24px;
+  box-sizing: border-box;
+}
+
+.consultly-call-widget-remote-video {
+  position: absolute;
+  inset: 0;
+  background: #000;
+}
+
+.consultly-call-widget-avatar-wrap {
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 3px solid rgba(255, 255, 255, 0.16);
+}
+
+.consultly-call-widget-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.consultly-call-widget-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  font-weight: 600;
+  color: #f4f6f8;
+}
+
+.consultly-call-widget-name {
+  margin: 8px 0 0;
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.consultly-call-widget-status {
+  margin: 0;
+  font-size: 14px;
+  color: rgba(244, 246, 248, 0.64);
+}
+
+.consultly-call-widget-status--live {
+  color: #4ade80;
+  font-weight: 600;
+}
+
+.consultly-call-widget-calltype {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(244, 246, 248, 0.5);
+}
+
+.consultly-call-widget-local-video {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  width: 100px;
+  height: 136px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.consultly-call-widget-controls {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 18px 18px calc(18px + env(safe-area-inset-bottom, 0px));
+}
+
+.consultly-call-widget-control {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #f4f6f8;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.consultly-call-widget-control:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.consultly-call-widget-control--end {
+  background: #ef4444;
+  width: 60px;
+  height: 60px;
+}
+
+.consultly-call-widget-control--end:hover {
+  background: #dc2626;
+}
+
+@media (max-width: 599px) {
+  .consultly-call-widget-backdrop {
+    padding: 0;
+  }
+
+  .consultly-call-widget-panel {
+    width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+}

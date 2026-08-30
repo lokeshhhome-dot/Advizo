@@ -13,6 +13,8 @@ const { installShopifyApp,
     proxyCustomerProfileJson,
     proxyShopifyCallAccepted,
     proxyShopifyStorefrontChat,
+    proxyShopifyCallIdentity,
+    proxyShopifyCallWidgetScript,
     exchangeChatSession
 } = require('../Controller/shopifyController');
 
@@ -60,6 +62,12 @@ shopifyRoute.get('/consultly/chats', verifyAppProxy, proxyShopifyStorefrontChat)
 // old /consultly/profile iframe launcher (proxyProfileSection, removed).
 shopifyRoute.get('/consultly/customer/me', verifyAppProxy, proxyCustomerProfileJson);
 shopifyRoute.get('/consultly/video-calling-page', verifyAppProxy, proxyShopifyCallAccepted);
+// JSON identity endpoint for the Theme Extension's native call widget
+// (consultly_CallWidget) — see proxyShopifyCallIdentity's own comment.
+shopifyRoute.get('/consultly/call/identity', verifyAppProxy, proxyShopifyCallIdentity);
+// Redirects to the built widget bundle's real (React app) origin — see
+// proxyShopifyCallWidgetScript's own comment.
+shopifyRoute.get('/consultly/call-widget.js', verifyAppProxy, proxyShopifyCallWidgetScript);
 
 // NOT an App Proxy route — called directly by the React app (UserChat.js)
 // over plain HTTPS, from the CONSULTANT_APP_URL origin, not from a Shopify

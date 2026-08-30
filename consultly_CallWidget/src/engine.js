@@ -1,0 +1,335 @@
+// Call orchestration — balance/status checks, token generation, Agora
+// join/publish (via the SAME callSlice.js the dashboard uses), and the
+// exact ring/accept/reject/end Socket.IO protocol VideoCallingPage.js and
+// IncommingCallAlert.js already use server-side. This file does not
+// reimplement Agora or invent new socket events; it drives the existing
+// ones from the caller/"client" role, matching:
+//   - IncommingCallAlert.js (the receiver's accept flow this mirrors)
+//   - VideoCallingPage.js's ring effect (line ~843) and accept/end handling
+//   - sokectProvider.js (the authoritative list of call-related event names)
+import { store } from "./store";
+import {
+  startCall as startCallThunk,
+  endCall as endCallThunk,
+  toggleMute as toggleMuteAction,
+  toggleVideo as toggleVideoAction,
+  getLocalVideoTrack,
+  getRemoteVideoTrack,
+} from "../../consultly_Frontend/src/components/Redux/slices/callSlice";
+import {
+  getSocket,
+  connectAndRegisterSocket,
+} from "../../consultly_Frontend/src/components/Sokect-io/SokectConfig";
+import {
+  initRingtone,
+  playRingtone,
+  stopRingtone,
+} from "../../consultly_Frontend/src/components/ringTone/ringingTune";
+
+const BACKEND_HOST = (process.env.REACT_APP_BACKEND_HOST || "").replace(/\/+$/, "");
+
+// The ringtone mp3 lives on the React app's own origin (public/sounds/...),
+// not the shop's — initRingtone() defaults to a path-relative URL that only
+// resolves correctly when the page itself is that origin. This widget's
+// page IS the shop, so it must pass the absolute URL explicitly.
+const WIDGET_SCRIPT_ORIGIN = (() => {
+  try {
+    return new URL(document.currentScript?.src || "").origin;
+  } catch (_) {
+    return "";
+  }
+})();
+
+function authHeaders(authToken) {
+  return { Authorization: `Bearer ${authToken || ""}` };
+}
+
+async function fetchJson(url, options) {
+  const res = await fetch(url, options);
+  let data = null;
+  try {
+    data = await res.json();
+  } catch (_) {
+    data = null;
+  }
+  return { ok: res.ok, status: res.status, data };
+}
+
+// Same identity resolution every other App Proxy route in this project uses
+// (resolveStorefrontCustomer), returned as JSON instead of a redirect/page —
+// see proxyShopifyCallIdentity in shopifyController.js.
+async function fetchIdentity(shop) {
+  const { data } = await fetchJson(
+    `https://${shop}/apps/consultly/call/identity?shop=${encodeURIComponent(shop)}`,
+    { credentials: "include", headers: { Accept: "application/json" } },
+  );
+  return data || { success: false };
+}
+
+// Same endpoint/params OpenCallingPage.js's checkUserBalance uses.
+async function checkBalance({ userId, consultantId, callType, authToken }) {
+  try {
+    const { data } = await fetchJson(
+      `${BACKEND_HOST}/users/shopify/users/checked-balance/${userId}/${consultantId}?callType=${encodeURIComponent(callType)}`,
+      { headers: authHeaders(authToken) },
+    );
+    return data?.data ?? false;
+  } catch (_) {
+    return false;
+  }
+}
+
+// Same endpoint/params CheckUserStatus.js's checkUserStatus uses.
+async function checkStatus({ consultantId, shop }) {
+  try {
+    const { data } = await fetchJson(
+      `${BACKEND_HOST}/users/check/user/available/${consultantId}?shop=${encodeURIComponent(shop)}`,
+      { headers: { Accept: "application/json" } },
+    );
+    return data || { success: false };
+  } catch (_) {
+    return { success: false, message: "Unable to check user status" };
+  }
+}
+
+// Same endpoint/body OpenCallingPage.js's openCallPage posts to.
+async function generateToken({ channelName, uid, receiverId, callType, authToken }) {
+  const { ok, data } = await fetchJson(`${BACKEND_HOST}/call/generate-token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(authToken) },
+    body: JSON.stringify({ channelName, uid, receiverId, callType }),
+  });
+  if (!ok || !data?.token) throw new Error("Token missing from API");
+  return data;
+}
+
+// Best-effort end-of-call notification: socket ack with a REST fallback,
+// exactly matching VideoCallingPage.js's emitCallEndedToServer.
+function emitCallEndedToServer(payload) {
+  const socket = getSocket();
+  const endViaRest = async () => {
+    try {
+      const { data } = await fetchJson(`${BACKEND_HOST}/call/end-session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      return data || { success: false, reason: "rest_failed" };
+    } catch (_) {
+      return { success: false, reason: "rest_failed" };
+    }
+  };
+  return new Promise((resolve) => {
+    if (!payload?.channelName) {
+      resolve({ success: false, reason: "missing_channel" });
+      return;
+    }
+    const timeout = setTimeout(async () => resolve(await endViaRest()), 2500);
+    const finish = async (response) => {
+      clearTimeout(timeout);
+      if (response?.success) {
+        resolve(response);
+        return;
+      }
+      resolve(await endViaRest());
+    };
+    if (!socket.connected) {
+      socket.connect();
+      socket.once("connect", () => socket.emit("call-ended", payload, finish));
+      return;
+    }
+    socket.emit("call-ended", payload, finish);
+  });
+}
+
+/**
+ * Starts a customer-initiated call and drives it end to end.
+ *
+ * @param {{shop:string, consultantId:string, callType:"voice"|"video", onState:(s:object)=>void}} args
+ * onState is called with {status, message?} where status is one of:
+ * "checking" | "ringing" | "connected" | "ended" | "missed" | "rejected" |
+ * "declined" | "failed" | "unauthenticated" | "unavailable" | "no-balance".
+ * @returns {{toggleMute:()=>boolean, toggleCamera:()=>boolean, hangUp:(reason?:string)=>void, isVideo:boolean}}
+ */
+export function startCustomerCall({ shop, consultantId, callType, onState }) {
+  const isVideo = callType === "video";
+  let ended = false;
+  let channelName = "";
+  let callerId = "";
+  let shopId = "";
+  let transactionId = "";
+  let startedAt = 0;
+  let ringAcked = false;
+  let ringAttempts = 0;
+  let ringRetryId = null;
+  const socket = getSocket();
+
+  const cleanupListeners = () => {
+    socket.off("call-accepted-started", onAcceptedStarted);
+    socket.off("call-missed", onMissed);
+    socket.off("call-ended-rejected", onRejected);
+    socket.off("callEnded", onServerEnded);
+    if (ringRetryId) clearInterval(ringRetryId);
+  };
+
+  const hangUp = (reason = "user_cut_call") => {
+    if (ended) return;
+    ended = true;
+    cleanupListeners();
+    stopRingtone();
+    store.dispatch(endCallThunk());
+    if (channelName) {
+      emitCallEndedToServer({
+        callerId,
+        receiverId: consultantId,
+        channelName,
+        callType,
+        transactionId: transactionId || undefined,
+        shopId: shopId || undefined,
+        clientDurationSeconds: startedAt
+          ? Math.max(0, Math.round((Date.now() - startedAt) / 1000))
+          : 0,
+        endby: reason,
+      });
+    }
+    onState({ status: "ended" });
+  };
+
+  function onAcceptedStarted(data) {
+    transactionId = data?.transactionId || "";
+    shopId = data?.shopId || "";
+    startedAt = Date.now();
+    stopRingtone();
+    onState({ status: "connected" });
+  }
+
+  function onMissed() {
+    if (ended) return;
+    ended = true;
+    cleanupListeners();
+    stopRingtone();
+    store.dispatch(endCallThunk());
+    onState({ status: "missed" });
+  }
+
+  function onRejected() {
+    if (ended) return;
+    ended = true;
+    cleanupListeners();
+    stopRingtone();
+    store.dispatch(endCallThunk());
+    onState({ status: "declined" });
+  }
+
+  function onServerEnded() {
+    if (ended) return;
+    ended = true;
+    cleanupListeners();
+    stopRingtone();
+    store.dispatch(endCallThunk());
+    onState({ status: "ended" });
+  }
+
+  (async () => {
+    onState({ status: "checking" });
+
+    const identity = await fetchIdentity(shop);
+    if (!identity?.authenticated) {
+      onState({ status: "unauthenticated" });
+      return;
+    }
+    const userId = identity.customerId;
+    const authToken = identity.authToken;
+    callerId = userId;
+
+    const balance = await checkBalance({ userId, consultantId, callType, authToken });
+    if (!balance) {
+      onState({ status: "no-balance" });
+      return;
+    }
+
+    const status = await checkStatus({ consultantId, shop });
+    if (!status?.success) {
+      onState({
+        status: "unavailable",
+        message: status?.message || "This user is not available to talk with you",
+      });
+      return;
+    }
+
+    let tokenData;
+    try {
+      channelName = `channel-${userId.slice(-6)}-${consultantId.slice(-6)}`;
+      const uid = Math.floor(Math.random() * 1000000);
+      tokenData = await generateToken({
+        channelName,
+        uid,
+        receiverId: consultantId,
+        callType,
+        authToken,
+      });
+
+      connectAndRegisterSocket(
+        { callerId, receiverId: consultantId, channelName },
+        callerId,
+      );
+
+      socket.on("call-accepted-started", onAcceptedStarted);
+      socket.on("call-missed", onMissed);
+      socket.on("call-ended-rejected", onRejected);
+      socket.on("callEnded", onServerEnded);
+
+      const ringPayload = { callerId, receiverId: consultantId, channelName, callType, shop };
+      const sendRing = () => {
+        if (ringAcked || ended || ringAttempts >= 6) return;
+        ringAttempts += 1;
+        socket.emit("call-user", ringPayload, () => {
+          ringAcked = true;
+        });
+      };
+      if (socket.connected) sendRing();
+      else socket.once("connect", sendRing);
+      ringRetryId = setInterval(() => {
+        if (ringAcked || ended || ringAttempts >= 6) {
+          clearInterval(ringRetryId);
+          return;
+        }
+        if (socket.connected) sendRing();
+      }, 3000);
+
+      await store
+        .dispatch(
+          startCallThunk({
+            token: tokenData.token,
+            channel: channelName,
+            uid,
+            appId: tokenData.appId,
+            callType,
+          }),
+        )
+        .unwrap();
+
+      initRingtone(`${WIDGET_SCRIPT_ORIGIN}/sounds/ringing_tone.mp3`);
+      playRingtone();
+      onState({ status: "ringing" });
+    } catch (err) {
+      cleanupListeners();
+      onState({ status: "failed", message: err?.message || "Call failed. Please try again." });
+    }
+  })();
+
+  return {
+    isVideo,
+    toggleMute: () => {
+      store.dispatch(toggleMuteAction());
+      return store.getState().call.muted;
+    },
+    toggleCamera: () => {
+      store.dispatch(toggleVideoAction());
+      return store.getState().call.videoEnabled;
+    },
+    hangUp,
+    getLocalVideoTrack,
+    getRemoteVideoTrack,
+  };
+}

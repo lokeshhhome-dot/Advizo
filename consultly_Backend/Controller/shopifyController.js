@@ -1131,6 +1131,60 @@ const proxyShopifyViewProfile = async (req, res) => {
   });
 };
 
+/**
+ * JSON identity endpoint for the Theme Extension's native call widget
+ * (consultly_CallWidget) — resolves the Shopify customer the exact same way
+ * every other proxy handler in this file does (resolveStorefrontCustomer:
+ * logged_in_customer_id first, app-JWT-cookie fallback), then hands back
+ * {customerId, authToken, shopId} as JSON instead of a page/redirect. The
+ * widget attaches authToken as a Bearer header on its own calls to
+ * /call/generate-token and the balance/status checks — the exact same JWT
+ * ViewProfile.js already receives via a URL param for the same purpose,
+ * just returned in a response body instead (never logged, never a URL/
+ * referrer/history entry). Anonymous shoppers get authenticated:false, not
+ * an error — the widget's caller shows a login prompt instead of crashing.
+ */
+const proxyShopifyCallIdentity = async (req, res) => {
+  const shop = req.query.shop;
+  if (!shop) {
+    return res.status(400).json({ success: false, message: "Missing shop" });
+  }
+
+  let shopId = req.query.shopId || "";
+  if (!shopId) {
+    const shopDoc = await getCachedShopDoc(shop);
+    shopId = shopDoc?._id?.toString() || "";
+  }
+
+  const customerSession = await resolveStorefrontCustomer(req, shop);
+  if (customerSession?.userId) {
+    setAppSessionCookie(res, customerSession.token);
+  }
+
+  res.set("Cache-Control", "no-store");
+  return res.status(200).json({
+    success: true,
+    authenticated: Boolean(customerSession?.userId),
+    customerId: customerSession?.userId || null,
+    authToken: customerSession?.userId ? customerSession.token || "" : "",
+    shopId: shopId || null,
+  });
+};
+
+/**
+ * Loads the call widget script — consultant-card.js hits this instead of
+ * hardcoding the React app's real domain, same reasoning as every other
+ * proxy handler here that resolves getTrustedConsultantAppUrl() server-side
+ * (view-profile, chat, video-calling-page): if that URL ever changes, only
+ * this one place needs updating, not the deployed theme asset. Browsers
+ * follow a redirect on a <script src> exactly like any other resource
+ * fetch, so this is a transparent extra hop, not a page navigation.
+ */
+const proxyShopifyCallWidgetScript = (req, res) => {
+  const target = `${getTrustedConsultantAppUrl() || resolveFrontendUrl(req)}/consultly-call-widget.js`;
+  return res.redirect(302, target);
+};
+
 // proxyShopifyChatSection (old /consultly/chats-c App Proxy iframe launcher)
 // removed — the storefront Chat button now opens ConsultantChatModal/
 // UserChat as a normal in-page React modal (ConsultantCards.js,
@@ -1470,5 +1524,7 @@ module.exports = {
   proxyCustomerProfileJson,
   proxyShopifyCallAccepted,
   proxyShopifyStorefrontChat,
+  proxyShopifyCallIdentity,
+  proxyShopifyCallWidgetScript,
   exchangeChatSession,
 };
