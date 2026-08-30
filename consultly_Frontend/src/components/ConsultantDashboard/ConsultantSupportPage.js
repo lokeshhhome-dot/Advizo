@@ -1,17 +1,20 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Badge, BlockStack, Text, Banner } from "@shopify/polaris";
-import ConsultantPageLayout from "./common/ConsultantPageLayout";
+import { HiOutlineLifebuoy, HiOutlineXMark } from "react-icons/hi2";
+import PageHeader from "./common/PageHeader";
+import RecordList, { RecordRow } from "./common/RecordList";
+import StatusPill from "./common/StatusPill";
 import ConsultantSupportModal from "./ConsultantSupportModal";
 import PortalModal from "../middle-ware/PortalModal";
 import axios from "axios";
 import { getConsultantToken } from "../../utils/consultantAuth";
 import { isDummyConsultant } from "../../utils/isDummyConsultant";
 import { useSelector } from "react-redux";
+import styles from "./ConsultantSupportPage.module.css";
 
 const statusTone = (status) => {
   if (status === "replied") return "success";
-  if (status === "closed") return "subdued";
-  return "attention";
+  if (status === "closed") return "neutral";
+  return "warning";
 };
 
 export default function ConsultantSupportPage() {
@@ -23,8 +26,7 @@ export default function ConsultantSupportPage() {
   const { consultantOverview } = useSelector((state) => state.consultants);
   const consultant = consultantOverview?.consultant;
   const shopId =
-    localStorage.getItem("shop_o_Identity") ||
-    localStorage.getItem("shop_o_Identity__");
+    localStorage.getItem("shop_o_Identity") || localStorage.getItem("shop_o_Identity__");
   const isDummyAccount = isDummyConsultant(consultant);
 
   const fetchRequests = useCallback(async () => {
@@ -38,9 +40,7 @@ export default function ConsultantSupportPage() {
       );
       setRequests(response.data?.data || []);
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Unable to load your support requests.",
-      );
+      setError(err.response?.data?.message || "Unable to load your support requests.");
       setRequests([]);
     } finally {
       setLoading(false);
@@ -51,7 +51,6 @@ export default function ConsultantSupportPage() {
     fetchRequests();
   }, [fetchRequests]);
 
-  // Lock background scroll while the request-detail modal is open.
   useEffect(() => {
     if (selectedRequest) {
       document.body.style.overflow = "hidden";
@@ -65,9 +64,7 @@ export default function ConsultantSupportPage() {
 
   const openRequest = async (request) => {
     setSelectedRequest(request);
-
     if (!request.consultantHasUnreadReply) return;
-
     try {
       const token = getConsultantToken();
       await axios.put(
@@ -77,9 +74,7 @@ export default function ConsultantSupportPage() {
       );
       setRequests((prev) =>
         prev.map((item) =>
-          item._id === request._id
-            ? { ...item, consultantHasUnreadReply: false }
-            : item,
+          item._id === request._id ? { ...item, consultantHasUnreadReply: false } : item,
         ),
       );
     } catch (_) {
@@ -88,84 +83,46 @@ export default function ConsultantSupportPage() {
   };
 
   return (
-    <>
-      <ConsultantPageLayout
-        title="Support center"
-        subtitle="Send queries to admin and read replies here."
+    <div>
+      <PageHeader
+        title="Support"
+        description="Send queries to your shop admin and read replies here."
+        actions={
+          <button type="button" className={styles.newRequestBtn} onClick={() => setShowNewModal(true)}>
+            New support request
+          </button>
+        }
+      />
+
+      {isDummyAccount ? (
+        <div className={styles.infoBanner}>
+          Demo consultant account: use support requests to reach the shop admin for activation or setup help.
+        </div>
+      ) : null}
+
+      <RecordList
+        items={requests}
         loading={loading}
         error={error}
-        isEmpty={!loading && !error && requests.length === 0}
-        emptyHeading="No support requests yet"
-        emptyDescription="Create your first support request and the shop admin will reply here."
-        emptyAction={{
-          content: "Contact admin",
-          onAction: () => setShowNewModal(true),
-        }}
-        primaryAction={{
-          content: "New support request",
-          onAction: () => setShowNewModal(true),
-        }}
-        flush={false}
-      >
-        <BlockStack gap="300">
-          {isDummyAccount ? (
-            <Banner tone="info">
-              <p>
-                Demo consultant account: use support requests to reach the shop
-                admin for activation or setup help.
-              </p>
-            </Banner>
-          ) : null}
-
-          {requests.map((request) => (
-            <button
-              key={request._id}
-              type="button"
-              onClick={() => openRequest(request)}
-              style={{
-                width: "100%",
-                textAlign: "left",
-                border: "1px solid #e5e7eb",
-                borderRadius: "12px",
-                background: "#fff",
-                padding: "14px 16px",
-                cursor: "pointer",
-              }}
-            >
-              <BlockStack gap="200">
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: "12px",
-                    alignItems: "center",
-                  }}
-                >
-                  <Text as="span" variant="bodyMd" fontWeight="semibold">
-                    {request.subject}
-                  </Text>
-                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                    {request.consultantHasUnreadReply ? (
-                      <Badge tone="attention">New reply</Badge>
-                    ) : null}
-                    <Badge tone={statusTone(request.status)}>
-                      {request.status}
-                    </Badge>
-                  </div>
-                </div>
-                <Text as="p" variant="bodySm" tone="subdued">
-                  {request.message}
-                </Text>
-                <Text as="p" variant="bodySm" tone="subdued">
-                  {request.createdAt
-                    ? new Date(request.createdAt).toLocaleString()
-                    : ""}
-                </Text>
-              </BlockStack>
-            </button>
-          ))}
-        </BlockStack>
-      </ConsultantPageLayout>
+        onRetry={fetchRequests}
+        emptyIcon={<HiOutlineLifebuoy />}
+        emptyTitle="No support requests yet"
+        emptyText="Create your first support request and the shop admin will reply here."
+        renderItem={(request) => (
+          <button type="button" className={styles.rowButton} onClick={() => openRequest(request)}>
+            <RecordRow
+              title={request.subject}
+              subtitle={request.message}
+              trailing={
+                <>
+                  {request.consultantHasUnreadReply ? <StatusPill tone="danger">New reply</StatusPill> : null}
+                  <StatusPill tone={statusTone(request.status)}>{request.status}</StatusPill>
+                </>
+              }
+            />
+          </button>
+        )}
+      />
 
       <ConsultantSupportModal
         open={showNewModal}
@@ -178,113 +135,44 @@ export default function ConsultantSupportPage() {
 
       {selectedRequest ? (
         <PortalModal>
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15, 23, 42, 0.45)",
-            zIndex: 1000,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "20px",
-          }}
-          onClick={() => setSelectedRequest(null)}
-        >
-          <div
-            style={{
-              width: "100%",
-              maxWidth: "640px",
-              background: "#fff",
-              borderRadius: "14px",
-              padding: "20px",
-              maxHeight: "80vh",
-              overflowY: "auto",
-              boxShadow: "0 20px 50px rgba(15, 23, 42, 0.3)",
-            }}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <BlockStack gap="400">
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: "12px",
-                  alignItems: "center",
-                }}
-              >
-                <Text as="h2" variant="headingMd">
-                  {selectedRequest.subject}
-                </Text>
+          <div className={styles.detailOverlay} onClick={() => setSelectedRequest(null)}>
+            <div className={styles.detailPanel} onClick={(e) => e.stopPropagation()}>
+              <div className={styles.detailHeader}>
+                <h2 className={styles.detailTitle}>{selectedRequest.subject}</h2>
                 <button
                   type="button"
+                  className={styles.detailClose}
                   onClick={() => setSelectedRequest(null)}
-                  style={{
-                    border: "none",
-                    background: "transparent",
-                    fontSize: "22px",
-                    cursor: "pointer",
-                  }}
+                  aria-label="Close"
                 >
-                  ×
+                  <HiOutlineXMark />
                 </button>
               </div>
 
-              <BlockStack gap="200">
-                <Text as="h3" variant="headingSm">
-                  Your message
-                </Text>
-                <div
-                  style={{
-                    padding: "12px",
-                    borderRadius: "10px",
-                    background: "#f8fafc",
-                    border: "1px solid #e5e7eb",
-                    whiteSpace: "pre-wrap",
-                  }}
-                >
-                  {selectedRequest.message}
-                </div>
-              </BlockStack>
+              <div className={styles.detailBody}>
+                <h3 className={styles.detailSubhead}>Your message</h3>
+                <div className={styles.messageBox}>{selectedRequest.message}</div>
 
-              {selectedRequest.replies?.length ? (
-                <BlockStack gap="300">
-                  <Text as="h3" variant="headingSm">
-                    Admin replies
-                  </Text>
-                  {selectedRequest.replies.map((reply, index) => (
-                    <div
-                      key={`${reply.repliedAt}-${index}`}
-                      style={{
-                        padding: "12px",
-                        borderRadius: "10px",
-                        background: "#ecfdf5",
-                        border: "1px solid #86efac",
-                        whiteSpace: "pre-wrap",
-                      }}
-                    >
-                      <Text as="p" variant="bodySm" tone="subdued">
-                        Admin •{" "}
-                        {reply.repliedAt
-                          ? new Date(reply.repliedAt).toLocaleString()
-                          : ""}
-                      </Text>
-                      <Text as="p" variant="bodyMd">
-                        {reply.message}
-                      </Text>
-                    </div>
-                  ))}
-                </BlockStack>
-              ) : (
-                <Banner tone="info">
-                  <p>Waiting for admin reply. Check back here later.</p>
-                </Banner>
-              )}
-            </BlockStack>
+                {selectedRequest.replies?.length ? (
+                  <>
+                    <h3 className={styles.detailSubhead}>Admin replies</h3>
+                    {selectedRequest.replies.map((reply, index) => (
+                      <div className={styles.replyBox} key={`${reply.repliedAt}-${index}`}>
+                        <div className={styles.replyMeta}>
+                          Admin · {reply.repliedAt ? new Date(reply.repliedAt).toLocaleString() : ""}
+                        </div>
+                        <div className={styles.replyText}>{reply.message}</div>
+                      </div>
+                    ))}
+                  </>
+                ) : (
+                  <div className={styles.waitingBanner}>Waiting for admin reply. Check back here later.</div>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
         </PortalModal>
       ) : null}
-    </>
+    </div>
   );
 }

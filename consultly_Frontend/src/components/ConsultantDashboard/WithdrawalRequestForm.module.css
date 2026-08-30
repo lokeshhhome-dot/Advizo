@@ -1,0 +1,99 @@
+.balanceCard {
+    background: var(--ds-brand-soft);
+    border-radius: var(--ds-r-md);
+    padding: 18px 22px;
+    margin-bottom: 16px;
+}
+
+.balanceLabel {
+    font-size: 12.5px;
+    font-weight: 650;
+    color: var(--ds-brand-strong);
+}
+
+.balanceValue {
+    margin-top: 4px;
+    font-size: 28px;
+    font-weight: 780;
+    letter-spacing: -0.02em;
+    color: var(--ds-brand-strong);
+}
+
+.formCard {
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-r-md);
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 480px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.label {
+    font-size: 12px;
+    font-weight: 650;
+    color: var(--ds-text-muted);
+}
+
+.input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 13px;
+    border: 1px solid var(--ds-border-strong);
+    border-radius: var(--ds-r-sm);
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--ds-text);
+    background: var(--ds-surface);
+    outline: none;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.input:focus {
+    border-color: var(--ds-brand);
+    box-shadow: 0 0 0 3px var(--ds-brand-soft);
+}
+
+.textarea {
+    resize: vertical;
+    min-height: 76px;
+}
+
+.formActions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.submitBtn {
+    padding: 10px 20px;
+    border-radius: var(--ds-r-sm);
+    border: none;
+    background: var(--ds-brand);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 650;
+    cursor: pointer;
+    min-height: 44px;
+    transition: background 0.18s ease;
+}
+
+.submitBtn:hover { background: var(--ds-brand-strong); }
+.submitBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.errorBanner {
+    padding: 12px 16px;
+    border-radius: var(--ds-r-md);
+    background: var(--ds-danger-soft);
+    border: 1px solid rgba(177, 68, 58, 0.25);
+    color: var(--ds-danger);
+    font-size: 13px;
+    font-weight: 550;
+    margin-bottom: 16px;
+}

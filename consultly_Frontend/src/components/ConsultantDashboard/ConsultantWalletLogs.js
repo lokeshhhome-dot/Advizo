@@ -1,21 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { IndexTable, Text, Badge } from "@shopify/polaris";
-import ConsultantPageLayout from "./common/ConsultantPageLayout";
-import ConsultantIndexTable from "./common/ConsultantIndexTable";
+import { HiOutlineBanknotes } from "react-icons/hi2";
+import PageHeader from "./common/PageHeader";
+import EarningsTabs from "./common/EarningsTabs";
+import RecordList, { RecordRow } from "./common/RecordList";
+import StatusPill from "./common/StatusPill";
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchVoucherData } from "../Redux/slices/UserSlices";
 import { getConsultantToken } from "../../utils/consultantAuth";
 import MoneyValue from "../Helper/MoneyValue";
+import styles from "./ConsultantWalletLogs.module.css";
 
-const walletHeadings = [
-  { title: "Name" },
-  { title: "Amount" },
-  { title: "Type" },
-  { title: "Direction" },
-  { title: "Status" },
-  { title: "Date" },
-];
+const directionTone = (direction) => (direction === "credit" ? "success" : "danger");
+const statusTone = (status) => (status === "success" ? "success" : "warning");
 
 const ConsultantWalletLogs = () => {
   const [walletLogs, setWalletLogs] = useState([]);
@@ -39,89 +36,70 @@ const ConsultantWalletLogs = () => {
     }
   }, [shopId, dispatch, token, shop]);
 
+  const fetchLogs = async () => {
+    if (!userId || !shopId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_BACKEND_HOST}/api-consultant/find-consultant/wallet/history/${userId}/${shopId}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      setWalletLogs(response.data.data || []);
+    } catch (err) {
+      setError(
+        err.response?.data?.message || "Unable to load wallet history. Please try again.",
+      );
+      setWalletLogs([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const getWalletLogs = async () => {
-      if (!userId || !shopId) return;
-
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await axios.get(
-          `${process.env.REACT_APP_BACKEND_HOST}/api-consultant/find-consultant/wallet/history/${userId}/${shopId}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
-        );
-        setWalletLogs(response.data.data || []);
-      } catch (err) {
-        setError(
-          err.response?.data?.message ||
-            "Unable to load wallet history. Please try again.",
-        );
-        setWalletLogs([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    getWalletLogs();
+    fetchLogs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, shopId, token]);
 
-  const renderRow = (row, index) => (
-    <IndexTable.Row id={row._id || index} key={row._id || index} position={index}>
-      <IndexTable.Cell>
-        <Text as="span" variant="bodyMd" fontWeight="semibold">
-          {row.userId?.fullname || "—"}
-        </Text>
-      </IndexTable.Cell>
-      <IndexTable.Cell>
-        <Text as="span" variant="bodyMd" tone="subdued">
-          <MoneyValue currency={voucherData?.shopCurrency}>
-            {row.amount?.toFixed(2) || "0.00"}
-          </MoneyValue>
-        </Text>
-      </IndexTable.Cell>
-      <IndexTable.Cell>
-        <Text as="span" variant="bodyMd" tone="subdued">
-          {row.transactionType || "—"}
-        </Text>
-      </IndexTable.Cell>
-      <IndexTable.Cell>
-        <Badge tone={row.direction === "credit" ? "success" : "critical"}>
-          {row.direction || "—"}
-        </Badge>
-      </IndexTable.Cell>
-      <IndexTable.Cell>
-        <Badge tone={row.status === "success" ? "success" : "attention"}>
-          {row.status || "—"}
-        </Badge>
-      </IndexTable.Cell>
-      <IndexTable.Cell>
-        <Text as="span" variant="bodyMd" tone="subdued">
-          {row.createdAt ? new Date(row.createdAt).toLocaleString() : "—"}
-        </Text>
-      </IndexTable.Cell>
-    </IndexTable.Row>
-  );
-
   return (
-    <ConsultantPageLayout
-      title="Earnings & billing"
-      subtitle="Track credits, debits, and wallet activity."
-      loading={loading}
-      error={error}
-      isEmpty={!loading && !error && walletLogs.length === 0}
-      emptyHeading="No transactions yet"
-      emptyDescription="Wallet activity will appear here after your first consultation payment."
-    >
-      <ConsultantIndexTable
-        headings={walletHeadings}
-        resourceName={{ singular: "transaction", plural: "transactions" }}
-        data={walletLogs}
-        loading={loading}
-        renderRow={renderRow}
+    <div>
+      <PageHeader
+        title="Earnings"
+        description="Balance, transactions, and withdrawal activity in one place."
+        tabs={<EarningsTabs />}
       />
-    </ConsultantPageLayout>
+      <RecordList
+        items={walletLogs}
+        loading={loading}
+        error={error}
+        onRetry={fetchLogs}
+        emptyIcon={<HiOutlineBanknotes />}
+        emptyTitle="No transactions yet"
+        emptyText="Wallet activity will appear here after your first consultation payment."
+        renderItem={(row) => (
+          <RecordRow
+            leading={
+              <span className={`${styles.dirIcon} ${row.direction === "credit" ? styles.dirIconCredit : styles.dirIconDebit}`}>
+                {row.direction === "credit" ? "+" : "−"}
+              </span>
+            }
+            title={row.userId?.fullname || row.transactionType || "Transaction"}
+            subtitle={row.createdAt ? new Date(row.createdAt).toLocaleString() : "—"}
+            trailing={
+              <>
+                <span className={styles.amount}>
+                  <MoneyValue currency={voucherData?.shopCurrency}>
+                    {row.amount?.toFixed(2) || "0.00"}
+                  </MoneyValue>
+                </span>
+                <StatusPill tone={directionTone(row.direction)}>{row.direction || "—"}</StatusPill>
+                <StatusPill tone={statusTone(row.status)}>{row.status || "—"}</StatusPill>
+              </>
+            }
+          />
+        )}
+      />
+    </div>
   );
 };
 

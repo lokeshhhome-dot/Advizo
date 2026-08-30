@@ -37,6 +37,7 @@ const ChatsPage = () => {
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState(null);
   const [showRequestModal, setShowRequestModal] = useState(false);
+  const [unreadOnly, setUnreadOnly] = useState(false);
   const [chatAccepted, setChatAccepted] = useState(null);
   const lastNotificationMessageId = useRef(null);
   const lastProcessedMessageId = useRef(null);
@@ -184,9 +185,6 @@ const ChatsPage = () => {
       partnerName: selectedConversation?.sender?.fullname || "User",
     });
 
-  const filteredConversations = chatList.filter((conv) =>
-    conv.sender?.fullname?.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
   useEffect(() => {
     if (selectedConversation) {
       setSelectChatUser(selectedConversation.sender.id);
@@ -341,9 +339,22 @@ const ChatsPage = () => {
   const isRequestModalOpen = chatList.filter(
     (conversation) => conversation.isRequest === false,
   );
-  const isRequestModalClose = chatList.filter(
+  const isRequestModalCloseAll = chatList.filter(
     (conversation) => conversation.isRequest === true,
   );
+  // Search + "unread only" are purely additive, client-side view filters over
+  // the same real list above — they never change which conversations count
+  // as requests vs. active.
+  const isRequestModalClose = isRequestModalCloseAll.filter((conversation) => {
+    if (unreadOnly && !(conversation.unreadCount > 0)) return false;
+    if (
+      searchQuery &&
+      !conversation.sender?.fullname?.toLowerCase().includes(searchQuery.toLowerCase())
+    ) {
+      return false;
+    }
+    return true;
+  });
 
   const handleChatSelect = (chatData) => {
     setChaterIds(chatData);
@@ -545,12 +556,6 @@ const ChatsPage = () => {
   return (
     <Fragment>
       <div className={styles.pageContainer}>
-        <div className={styles.headerSection}>
-          <h1 className={styles.pageTitle}>Messages</h1>
-          <p className={styles.pageDescription}>
-            Communicate with clients and manage your conversations.
-          </p>
-        </div>
         <div className={styles.chatLayout}>
           {/* Conversations Sidebar */}
           <div
@@ -588,28 +593,35 @@ const ChatsPage = () => {
                 </div>
               </div>
 
-              <div
-                style={{
-                  width: "100%",
-                  display: "flex",
-                  justifyContent: "end",
-                }}
-              >
-                {isRequestModalOpen.length > 0 && (
-                  <p
-                    onClick={() => setShowRequestModal(!showRequestModal)}
-                    style={{
-                      fontSize: "14px",
-                      fontWeight: "600",
-                      padding: "10px",
-                      cursor: "pointer",
-                    }}
+              <div className={styles.filterBar}>
+                <div className={styles.filterTabs}>
+                  <button
+                    type="button"
+                    className={`${styles.filterTab} ${!showRequestModal ? styles.filterTabActive : ""}`}
+                    onClick={() => setShowRequestModal(false)}
                   >
-                    {" "}
-                    <span style={{ color: "#63ba77" }}> New Request</span> (
-                    {isRequestModalOpen.length})
-                  </p>
-                )}
+                    Active
+                  </button>
+                  {isRequestModalOpen.length > 0 && (
+                    <button
+                      type="button"
+                      className={`${styles.filterTab} ${showRequestModal ? styles.filterTabActive : ""}`}
+                      onClick={() => setShowRequestModal(true)}
+                    >
+                      Requests <span className={styles.filterTabCount}>{isRequestModalOpen.length}</span>
+                    </button>
+                  )}
+                </div>
+                {!showRequestModal ? (
+                  <button
+                    type="button"
+                    className={`${styles.unreadToggle} ${unreadOnly ? styles.unreadToggleActive : ""}`}
+                    onClick={() => setUnreadOnly((v) => !v)}
+                    aria-pressed={unreadOnly}
+                  >
+                    Unread only
+                  </button>
+                ) : null}
               </div>
               {showRequestModal ? (
                 isRequestModalOpen?.map((conversation) => {
@@ -669,21 +681,13 @@ const ChatsPage = () => {
                                 >
                                   <button
                                     type="button"
-                                    style={{
-                                      padding: "5px 12px",
-                                      backgroundColor: "green",
-                                      color: "#fff",
-                                      border: "none",
-                                      borderRadius: "4px",
-                                      cursor: "pointer",
-                                      fontSize: "12px",
-                                    }}
+                                    className={styles.acceptRequestBtn}
                                     onClick={() => {
                                       updateUser(conversation);
                                       setShowRequestModal(!showRequestModal);
                                     }}
                                   >
-                                    add
+                                    Add
                                   </button>
                                   <button
                                     type="button"
@@ -732,7 +736,7 @@ const ChatsPage = () => {
                 })
               ) : (
                 <div className={styles.conversationsList}>
-                  {isRequestModalClose.length === 0 ? (
+                  {isRequestModalCloseAll.length === 0 ? (
                     <div className={styles.emptyState}>
                       <div>
                         <svg
@@ -751,7 +755,7 @@ const ChatsPage = () => {
                         </p>
                       </div>
                     </div>
-                  ) : filteredConversations.length === 0 ? (
+                  ) : isRequestModalClose.length === 0 ? (
                     <div className={styles.emptyState}>
                       <div>
                         <svg
@@ -787,13 +791,6 @@ const ChatsPage = () => {
                       return (
                         <Fragment>
                           <div
-                            style={{
-                              backgroundColor: shouldDisable
-                                ? "transparent"
-                                : "rgba(74, 144, 226, 0.1)",
-                              margin: "4px",
-                              borderRadius: "11px",
-                            }}
                             key={conversation.id}
                             onClick={() => {
                               if (shouldDisable) return;

@@ -1,21 +1,14 @@
 import React, { useState, useEffect, Fragment } from "react";
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  Card,
-  TextField,
-  Button,
-  BlockStack,
-  Text,
-  InlineStack,
-} from "@shopify/polaris";
 import { fetchConsultantById } from "../Redux/slices/ConsultantSlices";
-import { formatAmountHelper } from "../Helper/Helper";
 import MoneyValue from "../Helper/MoneyValue";
 import ReactToast from "../AlertModel/ReactToast";
 import { fetchVoucherData } from "../Redux/slices/UserSlices";
-import ConsultantPageLayout from "./common/ConsultantPageLayout";
+import PageHeader from "./common/PageHeader";
+import EarningsTabs from "./common/EarningsTabs";
 import { getConsultantToken } from "../../utils/consultantAuth";
+import styles from "./WithdrawalRequestForm.module.css";
 
 const WithdrawalRequestForm = () => {
   const dispatch = useDispatch();
@@ -83,7 +76,7 @@ const WithdrawalRequestForm = () => {
 
   const balance = consultantOverview?.consultant?.walletBalance || 0;
   const currency = voucherData?.shopCurrency || "";
-  console.log("balance", balance)
+
   return (
     <Fragment>
       <ReactToast
@@ -92,54 +85,50 @@ const WithdrawalRequestForm = () => {
         onClose={() => setShowToast(false)}
         duration={3000}
       />
-      <ConsultantPageLayout
-        title="Request withdrawal"
-        subtitle="Transfer available balance to your payout method."
-        error={error}
-      >
-        <BlockStack gap="400">
-          <Card>
-            <BlockStack gap="200">
-              <Text as="p" variant="bodySm" tone="subdued">
-                Available balance
-              </Text>
-              <Text as="p" variant="headingLg" tone="success">
-                <MoneyValue currency={currency} amount={balance} />
-              </Text>
-            </BlockStack>
-          </Card>
+      <PageHeader
+        title="Earnings"
+        description="Balance, transactions, and withdrawal activity in one place."
+        tabs={<EarningsTabs />}
+      />
 
-          <Card>
-            <BlockStack gap="400">
-              <TextField
-                label="Amount"
-                type="number"
-                value={amount}
-                onChange={setAmount}
-                autoComplete="off"
-                placeholder="Enter withdrawal amount"
-              />
-              <TextField
-                label="Note"
-                value={note}
-                onChange={setNote}
-                multiline={3}
-                autoComplete="off"
-                placeholder="Optional message for the store admin"
-              />
-              <InlineStack align="end">
-                <Button
-                  variant="primary"
-                  loading={loading}
-                  onClick={handleSubmit}
-                >
-                  Request withdrawal
-                </Button>
-              </InlineStack>
-            </BlockStack>
-          </Card>
-        </BlockStack>
-      </ConsultantPageLayout>
+      {error ? <div className={styles.errorBanner}>{error}</div> : null}
+
+      <div className={styles.balanceCard}>
+        <span className={styles.balanceLabel}>Available balance</span>
+        <div className={styles.balanceValue}>
+          <MoneyValue currency={currency} amount={balance} />
+        </div>
+      </div>
+
+      <div className={styles.formCard}>
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="wd-amount">Amount</label>
+          <input
+            id="wd-amount"
+            className={styles.input}
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="Enter withdrawal amount"
+          />
+        </div>
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="wd-note">Note</label>
+          <textarea
+            id="wd-note"
+            className={`${styles.input} ${styles.textarea}`}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={3}
+            placeholder="Optional message for the store admin"
+          />
+        </div>
+        <div className={styles.formActions}>
+          <button type="button" className={styles.submitBtn} onClick={handleSubmit} disabled={loading}>
+            {loading ? "Submitting…" : "Request withdrawal"}
+          </button>
+        </div>
+      </div>
     </Fragment>
   );
 };

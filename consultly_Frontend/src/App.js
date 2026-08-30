@@ -63,6 +63,9 @@ const TabNavigation = lazy(
 const DashboardPage = lazy(
   () => import("./components/ConsultantDashboard/DashboardPage"),
 );
+const ConsultantProfilePage = lazy(
+  () => import("./components/ConsultantDashboard/ConsultantProfilePage"),
+);
 const ChatsPage = lazy(
   () => import("./components/ConsultantDashboard/ChatsPage"),
 );
@@ -289,6 +292,7 @@ export default function App() {
             >
               <Route index element={<DashboardPage />} />
               <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="profile" element={<ConsultantProfilePage />} />
               <Route path="chats/:chatId?" element={<ChatsPage />} />
               <Route path="call-chat-logs" element={<CallLogsConsultant />} />
               <Route

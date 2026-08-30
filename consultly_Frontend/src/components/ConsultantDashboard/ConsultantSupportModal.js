@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { Modal, TextField, FormLayout, Banner } from "@shopify/polaris";
 import axios from "axios";
+import PortalModal from "../middle-ware/PortalModal";
 import { getConsultantToken } from "../../utils/consultantAuth";
+import styles from "./ConsultantSupportModal.module.css";
 
 export default function ConsultantSupportModal({
   open,
@@ -33,17 +34,8 @@ export default function ConsultantSupportModal({
       const token = getConsultantToken();
       const response = await axios.post(
         `${process.env.REACT_APP_BACKEND_HOST}/api-consultant/support-request`,
-        {
-          subject: subject.trim(),
-          message: message.trim(),
-          shopId,
-          isDummyAccount,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
+        { subject: subject.trim(), message: message.trim(), shopId, isDummyAccount },
+        { headers: { Authorization: `Bearer ${token}` } },
       );
 
       setSuccess(response.data?.message || "Support request sent to admin.");
@@ -51,10 +43,7 @@ export default function ConsultantSupportModal({
       setMessage("");
       onSubmitted?.();
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-          "Unable to send support request. Please try again.",
-      );
+      setError(err.response?.data?.message || "Unable to send support request. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -66,76 +55,74 @@ export default function ConsultantSupportModal({
     onClose();
   };
 
+  if (!open) return null;
+
   return (
-    <Modal
-      open={open}
-      onClose={handleClose}
-      title="Contact shop admin"
-      primaryAction={{
-        content: loading ? "Sending..." : "Send to admin",
-        onAction: handleSubmit,
-        loading,
-        disabled: loading || Boolean(success),
-      }}
-      secondaryActions={[
-        {
-          content: "Cancel",
-          onAction: handleClose,
-          disabled: loading,
-        },
-      ]}
-    >
-      <Modal.Section>
-        <FormLayout>
-          {isDummyAccount ? (
-            <Banner tone="info">
-              <p>
-                You are on a demo consultant account. Use this form to reach the
-                shop admin for setup help or account activation.
-              </p>
-            </Banner>
-          ) : null}
+    <PortalModal>
+      <div className={styles.overlay} onClick={handleClose}>
+        <div className={styles.panel} onClick={(e) => e.stopPropagation()}>
+          <div className={styles.header}>
+            <h2 className={styles.title}>Contact shop admin</h2>
+            <button type="button" className={styles.closeBtn} onClick={handleClose} aria-label="Close">
+              ×
+            </button>
+          </div>
 
-          {error ? (
-            <Banner tone="critical">
-              <p>{error}</p>
-            </Banner>
-          ) : null}
+          <div className={styles.body}>
+            {isDummyAccount ? (
+              <div className={styles.infoBanner}>
+                You are on a demo consultant account. Use this form to reach the shop admin for setup help or
+                account activation.
+              </div>
+            ) : null}
+            {error ? <div className={styles.errorBanner}>{error}</div> : null}
+            {success ? <div className={styles.successBanner}>{success}</div> : null}
 
-          {success ? (
-            <Banner tone="success">
-              <p>{success}</p>
-            </Banner>
-          ) : null}
+            <div className={styles.field}>
+              <label className={styles.label}>Your name</label>
+              <input className={styles.input} value={consultant?.fullname || ""} disabled />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Your email</label>
+              <input className={styles.input} value={consultant?.email || ""} disabled />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="support-subject">Subject</label>
+              <input
+                id="support-subject"
+                className={styles.input}
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+              />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="support-message">Message</label>
+              <textarea
+                id="support-message"
+                className={`${styles.input} ${styles.textarea}`}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                rows={4}
+                placeholder="Describe what you need help with..."
+              />
+            </div>
+          </div>
 
-          <TextField
-            label="Your name"
-            value={consultant?.fullname || ""}
-            disabled
-            autoComplete="name"
-          />
-          <TextField
-            label="Your email"
-            value={consultant?.email || ""}
-            disabled
-            autoComplete="email"
-          />
-          <TextField
-            label="Subject"
-            value={subject}
-            onChange={setSubject}
-            autoComplete="off"
-          />
-          <TextField
-            label="Message"
-            value={message}
-            onChange={setMessage}
-            multiline={4}
-            autoComplete="off"
-            placeholder="Describe what you need help with..."
-          />
-        </FormLayout>
-      </Modal.Section>
-    </Modal>
+          <div className={styles.footer}>
+            <button type="button" className={styles.cancelBtn} onClick={handleClose} disabled={loading}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className={styles.submitBtn}
+              onClick={handleSubmit}
+              disabled={loading || Boolean(success)}
+            >
+              {loading ? "Sending…" : "Send to admin"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </PortalModal>
   );
 }

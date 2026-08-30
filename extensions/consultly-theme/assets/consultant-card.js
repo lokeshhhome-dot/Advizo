@@ -930,14 +930,14 @@
 
     var fetchUrl = PROFILE_API_BASE + "/" + encodeURIComponent(consultantId);
 
-    function load() {
+    function load() { 
       renderProfileModalLoading(els);
       fetch(fetchUrl, { credentials: "same-origin", headers: { Accept: "application/json" } })
         .then(function (res) {
           if (res.status === 400 || res.status === 404) {
             var notFoundErr = new Error("not_found");
             notFoundErr.notFound = true;
-            throw notFoundErr;
+            throw notFoundErr; 
           }
           if (!res.ok) throw new Error("Request failed with status " + res.status);
           return res.json();
@@ -945,7 +945,7 @@
         .then(function (data) {
           if (!data || data.success !== true || !data.consultant) {
             throw new Error("Unexpected response shape");
-          }
+          }    
           // The shopper may have already closed the modal while this
           // request was in flight — don't paint into a closed/reused modal.
           if (!isProfileModalOpen()) return;

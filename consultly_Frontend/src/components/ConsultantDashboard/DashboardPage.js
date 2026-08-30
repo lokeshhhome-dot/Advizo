@@ -3,36 +3,34 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import axios from "axios";
 import {
-  HiOutlineWallet,
-  HiOutlineUsers,
-  HiOutlineBolt,
-  HiOutlineInbox,
   HiOutlineChatBubbleLeftRight,
   HiOutlineArrowDownTray,
-  HiOutlineClipboardDocumentList,
-  HiOutlineArrowTrendingUp,
-  HiOutlineUserGroup,
+  HiOutlineArrowRight,
+  HiOutlineInbox,
+  HiOutlinePhoneXMark,
+  HiOutlineSparkles,
 } from "react-icons/hi2";
 import { fetchConsultantById } from "../Redux/slices/ConsultantSlices";
 import { getConsultantToken } from "../../utils/consultantAuth";
 import { useConsultantIdentity } from "../../utils/useConsultantIdentity";
+import { useConsultantNotifications } from "./useConsultantNotifications";
+import { preloadProfileImage, getProfileImageUrl } from "../../utils/getProfileImageUrl";
 import styles from "./DashboardOverview.module.css";
-import { preloadProfileImage } from "../../utils/getProfileImageUrl";
-import ProfileAvatar from "../common/ProfileAvatar";
-
 
 /* ---------------------------------------------------------------------------
    Pure helpers — kept outside the component so they never re-create on render.
-   All metrics below are derived ONLY from data the API actually returns
-   (consultation list + consultant.walletBalance). No fabricated numbers.
+   Every number below is derived ONLY from data the API actually returns
+   (consultation list, wallet balance, real notifications). No fabricated
+   numbers, and no invented "today's scheduled sessions" — this product has
+   no session-scheduling/calendar concept, only chat-based consultations and
+   a separate call-history log, so the activity feed below is built from
+   real timestamped events instead.
 --------------------------------------------------------------------------- */
 
 const WEEKS = 8;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-const AVATAR_COLORS = [
-  "#4a6cf7", "#12b76a", "#f79009", "#0ea5e9", "#a855f7", "#ec4899", "#14b8a6",
-];
+const AVATAR_COLORS = ["#4a6cf7", "#12b76a", "#f79009", "#0ea5e9", "#a855f7", "#ec4899", "#14b8a6"];
 
 const avatarColor = (name = "") => {
   let sum = 0;
@@ -41,31 +39,26 @@ const avatarColor = (name = "") => {
 };
 
 const initials = (name = "") =>
-  name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0] || "")
-    .join("") || "?";
+  name.trim().split(/\s+/).slice(0, 2).map((w) => w[0] || "").join("") || "?";
 
 const formatAmount = (num) => {
   if (!num) return "0.00";
-  return Number(num).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  return Number(num).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
-const formatDate = (value) => {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+const relativeTime = (value) => {
+  if (!value) return "";
+  const diff = Date.now() - new Date(value).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 };
 
-/** Bucket consultations into the last 8 ISO weeks by createdAt. */
 const buildWeeklyTrend = (consultations) => {
   const now = Date.now();
   const buckets = new Array(WEEKS).fill(0);
@@ -78,99 +71,20 @@ const buildWeeklyTrend = (consultations) => {
   return buckets;
 };
 
-/* Lightweight inline-SVG area chart — zero dependencies, no re-render cost. */
-const TrendChart = ({ data }) => {
-  const W = 560;
-  const H = 180;
-  const PAD = 8;
+/* Small inline sparkline — a supporting visual inside a stat, not a headline
+   chart panel. */
+const Sparkline = ({ data }) => {
+  const W = 120;
+  const H = 34;
   const max = Math.max(1, ...data);
-  const stepX = (W - PAD * 2) / Math.max(1, data.length - 1);
-  const points = data.map((v, i) => {
-    const x = PAD + i * stepX;
-    const y = H - PAD - (v / max) * (H - PAD * 2);
-    return [x, y];
-  });
-  const line = points.map(([x, y]) => `${x},${y}`).join(" ");
-  const area = `${PAD},${H - PAD} ${line} ${W - PAD},${H - PAD}`;
-
+  const stepX = W / Math.max(1, data.length - 1);
+  const points = data.map((v, i) => [i * stepX, H - (v / max) * H]).map(([x, y]) => `${x},${y}`).join(" ");
   return (
-    <svg
-      className={styles.chartSvg}
-      viewBox={`0 0 ${W} ${H}`}
-      preserveAspectRatio="none"
-      role="img"
-      aria-label="Consultations over the last 8 weeks"
-    >
-      <defs>
-        <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--ds-brand)" stopOpacity="0.22" />
-          <stop offset="100%" stopColor="var(--ds-brand)" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <polygon points={area} fill="url(#trendFill)" />
-      <polyline
-        points={line}
-        fill="none"
-        stroke="var(--ds-brand)"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      {points.map(([x, y], i) => (
-        <circle
-          key={i}
-          cx={x}
-          cy={y}
-          r={i === points.length - 1 ? 4 : 2.5}
-          fill="var(--ds-brand)"
-          stroke="var(--ds-surface)"
-          strokeWidth="2"
-        />
-      ))}
+    <svg className={styles.sparkline} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
+      <polyline points={points} fill="none" stroke="var(--ds-brand)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 };
-
-/* Donut for active vs inactive split — pure SVG. */
-const Donut = ({ active, total }) => {
-  const R = 52;
-  const C = 2 * Math.PI * R;
-  const ratio = total ? active / total : 0;
-  return (
-    <div className={styles.donutWrap}>
-      <svg viewBox="0 0 132 132" width="132" height="132">
-        <circle cx="66" cy="66" r={R} fill="none" stroke="var(--ds-border)" strokeWidth="14" />
-        <circle
-          cx="66"
-          cy="66"
-          r={R}
-          fill="none"
-          stroke="var(--ds-success)"
-          strokeWidth="14"
-          strokeLinecap="round"
-          strokeDasharray={`${C * ratio} ${C}`}
-          transform="rotate(-90 66 66)"
-        />
-      </svg>
-      <div className={styles.donutCenter}>
-        <span className={styles.donutValue}>{Math.round(ratio * 100)}%</span>
-        <span className={styles.donutLabel}>active</span>
-      </div>
-    </div>
-  );
-};
-
-const weekLabels = () => {
-  const now = Date.now();
-  const labels = [];
-  for (let i = WEEKS - 1; i >= 0; i -= 1) {
-    const d = new Date(now - i * 7 * DAY_MS);
-    labels.push(d.toLocaleDateString("en-US", { month: "short", day: "numeric" }));
-  }
-  return labels;
-};
-
-/* ------------------------------ Component ------------------------------ */
 
 const DashboardPage = () => {
   const [userId, setUserId] = useState(null);
@@ -186,8 +100,8 @@ const DashboardPage = () => {
   const isOnline = useSelector((state) => state.socket?.isConnected);
   const shop = localStorage.getItem("shop");
   const token = getConsultantToken();
+  const { notifications } = useConsultantNotifications();
 
-  // Server-derived identity (Redux via verifyToken) with localStorage fallback.
   const identity = useConsultantIdentity();
   useEffect(() => {
     setUserId(identity.consultantId);
@@ -195,7 +109,6 @@ const DashboardPage = () => {
   }, [identity.consultantId, identity.shopId]);
   useEffect(() => {
     if (shopId && userId) {
-      console.log("fetchConsultantById is not calling ")
       dispatch(fetchConsultantById({ shop_id: shopId, consultant_id: userId, token, shop }));
     }
   }, [shopId, userId, dispatch, token, shop]);
@@ -211,10 +124,7 @@ const DashboardPage = () => {
       );
       setUserData(response.data?.payload || []);
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-        "Unable to load consultation data. Please try again.",
-      );
+      setError(err.response?.data?.message || "Unable to load consultation data. Please try again.");
       setUserData([]);
     } finally {
       setLoading(false);
@@ -225,374 +135,242 @@ const DashboardPage = () => {
     loadConsultations();
   }, [loadConsultations]);
 
-  // Wallet balance comes from the authenticated self-overview endpoint —
-  // the public consultant endpoint (used for consultantOverview) never
-  // exposes walletBalance, so reading it from there always showed 0.
   useEffect(() => {
     if (!userId || !token) return;
     let cancelled = false;
     axios
-      .get(
-        `${process.env.REACT_APP_BACKEND_HOST}/api-consultant/me/overview/${userId}`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      )
-      .then((response) => {
-        if (!cancelled && response.data?.success) {
-          setWalletInfo(response.data.data);
-        }
+      .get(`${process.env.REACT_APP_BACKEND_HOST}/api-consultant/me/overview/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
       })
-      .catch((err) => {
-        console.error("Failed to load wallet balance:", err);
-      });
+      .then((response) => {
+        if (!cancelled && response.data?.success) setWalletInfo(response.data.data);
+      })
+      .catch((err) => console.error("Failed to load wallet balance:", err));
     return () => {
       cancelled = true;
     };
   }, [userId, token]);
 
   const consultant = consultantOverview?.consultant;
-  const currency =
-    walletInfo?.currency || consultantOverview?.shopCurrency || "$";
-  const walletBalance =
-    walletInfo?.walletBalance ?? consultant?.walletBalance ?? 0;
+  const currency = walletInfo?.currency || consultantOverview?.shopCurrency || "$";
+  const walletBalance = walletInfo?.walletBalance ?? consultant?.walletBalance ?? 0;
   const consultantName = consultant?.fullname || "Consultant";
-  const profileImage = consultant?.profileImage;
-
-  /* All heavy derivations memoized — the list can be large. */
-  const metrics = useMemo(() => {
-    const consultations = Array.isArray(userData) ? userData : [];
-    const now = Date.now();
-    const totalClients = consultations.length;
-    const activeClients = consultations.filter((c) => c.userId?.isActive).length;
-    const pendingRequests = consultations.filter((c) => c.userId?.isRequest).length;
-    const newThisWeek = consultations.filter(
-      (c) => c.createdAt && now - new Date(c.createdAt).getTime() < 7 * DAY_MS,
-    ).length;
-
-    const trend = buildWeeklyTrend(consultations);
-    const prevWeek = trend[WEEKS - 2] || 0;
-    const thisWeek = trend[WEEKS - 1] || 0;
-
-    // Consultation-type breakdown (real userType field)
-    const typeMap = {};
-    consultations.forEach((c) => {
-      const t = c.userId?.userType || "Other";
-      typeMap[t] = (typeMap[t] || 0) + 1;
-    });
-
-    const recent = [...consultations]
-      .sort(
-        (a, b) =>
-          new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime(),
-      )
-      .slice(0, 6);
-
-    return {
-      consultations,
-      totalClients,
-      activeClients,
-      pendingRequests,
-      newThisWeek,
-      trend,
-      prevWeek,
-      thisWeek,
-      typeMap,
-      recent,
-    };
-  }, [userData]);
-
-  const isEmpty = !loading && !error && metrics.totalClients === 0;
-
-  const todayLabel = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
-  const rawProfileImage = consultantOverview?.consultant?.profileImage;
+  const rawProfileImage = consultant?.profileImage;
 
   useEffect(() => {
     if (rawProfileImage) preloadProfileImage(rawProfileImage);
   }, [rawProfileImage]);
 
-  /* --------------------------- Loading skeleton --------------------------- */
+  const metrics = useMemo(() => {
+    const consultations = Array.isArray(userData) ? userData : [];
+    const now = Date.now();
+    const totalClients = consultations.length;
+    const activeClients = consultations.filter((c) => c.userId?.isActive).length;
+    const pending = consultations.filter((c) => c.userId?.isRequest);
+    const newThisWeek = consultations.filter(
+      (c) => c.createdAt && now - new Date(c.createdAt).getTime() < 7 * DAY_MS,
+    ).length;
+    const trend = buildWeeklyTrend(consultations);
+    const recent = [...consultations]
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+      .slice(0, 8);
+    return { consultations, totalClients, activeClients, pending, newThisWeek, trend, recent };
+  }, [userData]);
+
+  const missedCalls = useMemo(
+    () => notifications.filter((n) => n.type === "missed_call"),
+    [notifications],
+  );
+
+  // Recent consultations + missed-call notifications merged into one
+  // real, timestamped feed — this stands in for "today's activity" since
+  // the product has no scheduled-session/calendar concept to show instead.
+  const activityFeed = useMemo(() => {
+    const fromConsultations = metrics.recent.map((c) => ({
+      key: `c-${c._id}`,
+      kind: c.userId?.isRequest ? "request" : "consultation",
+      name: c.userId?.fullname || "Client",
+      avatar: c.userId?.profileImage,
+      detail: c.userId?.isRequest ? "New conversation request" : c.userId?.userType || "Consultation",
+      at: c.createdAt,
+    }));
+    const fromCalls = missedCalls.map((n) => ({
+      key: `m-${n.id}`,
+      kind: "missed_call",
+      name: n.title || "Client",
+      avatar: n.profileImage,
+      detail: "Missed call",
+      at: n.createdAt,
+    }));
+    return [...fromConsultations, ...fromCalls]
+      .sort((a, b) => new Date(b.at || 0).getTime() - new Date(a.at || 0).getTime())
+      .slice(0, 8);
+  }, [metrics.recent, missedCalls]);
+
+  const isEmpty = !loading && !error && metrics.totalClients === 0 && activityFeed.length === 0;
+  const greetingHour = new Date().getHours();
+  const greeting = greetingHour < 12 ? "Good morning" : greetingHour < 18 ? "Good afternoon" : "Good evening";
+  const todayLabel = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
   if (loading && !metrics.totalClients) {
     return (
       <div className={styles.dashboard}>
-        <div className={`${styles.skeleton} ${styles.skBlock}`} style={{ height: 108 }} />
-        <div className={styles.kpiGrid}>
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className={`${styles.skeleton} ${styles.skBlock}`} style={{ height: 116 }} />
-          ))}
-        </div>
-        <div className={styles.mainGrid}>
-          <div className={`${styles.skeleton} ${styles.skBlock}`} style={{ height: 280 }} />
-          <div className={`${styles.skeleton} ${styles.skBlock}`} style={{ height: 280 }} />
-        </div>
+        <div className={`${styles.skeleton} ${styles.skBlock}`} style={{ height: 64 }} />
+        <div className={`${styles.skeleton} ${styles.skBlock}`} style={{ height: 40 }} />
+        <div className={`${styles.skeleton} ${styles.skBlock}`} style={{ height: 96 }} />
+        <div className={`${styles.skeleton} ${styles.skBlock}`} style={{ height: 260 }} />
       </div>
     );
   }
 
   return (
     <div className={styles.dashboard}>
-      {/* -------------------------------- HERO -------------------------------- */}
-      <section className={styles.hero}>
-        <div className={styles.heroLeft}>
-          <div className={styles.heroAvatar}>
-            <ProfileAvatar
-              src={rawProfileImage}
-              alt={consultantName}
-              size={60}
-              radius={16}
-              eager
-              fallback={
-                <div
-                  className={styles.avatar}
-                  style={{ width: 60, height: 60, borderRadius: 16, background: avatarColor(consultantName) }}
-                >
-                  {initials(consultantName)}
-                </div>
-              }
-            />
-            <span
-              className={`${styles.heroStatusDot} ${isOnline ? styles.dotOnline : styles.dotOffline}`}
-              title={isOnline ? "Online" : "Offline"}
-            />
+      {/* ------------------------------- GREETING ------------------------------ */}
+      <section className={styles.greeting}>
+        <div>
+          <div className={styles.greetingStatusRow}>
+            <span className={`${styles.statusDot} ${isOnline ? styles.dotOnline : styles.dotOffline}`} />
+            <span className={styles.greetingStatusText}>
+              {isOnline ? "Available for consultations" : "Offline"}
+            </span>
           </div>
-          <div style={{ minWidth: 0 }}>
-            <p className={styles.heroGreeting}>Welcome back</p>
-            <h1 className={styles.heroName}>{consultantName}</h1>
-            <div className={styles.heroMeta}>
-              <span
-                className={`${styles.statusPill} ${isOnline ? styles.statusPillOnline : styles.statusPillOffline}`}
-              >
-                <span className={styles.pulse} />
-                {isOnline ? "Available for consultations" : "Offline"}
-              </span>
-              <span className={styles.heroDate}>{todayLabel}</span>
-            </div>
-          </div>
+          <h1 className={styles.greetingTitle}>
+            {greeting}, {consultantName.split(" ")[0]}
+          </h1>
+          <p className={styles.greetingDate}>{todayLabel}</p>
         </div>
-
-        <div className={styles.heroActions}>
-          <button
-            type="button"
-            className={`${styles.btn} ${styles.btnPrimary}`}
-            onClick={() => navigate("/consultant-dashboard/chats")}
-          >
+        <div className={styles.greetingActions}>
+          <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={() => navigate("/consultant-dashboard/chats")}>
             <HiOutlineChatBubbleLeftRight />
-            Open chats
+            Open conversations
           </button>
-          <button
-            type="button"
-            className={`${styles.btn} ${styles.btnGhost}`}
-            onClick={() => navigate("/consultant-dashboard/withdrawal-request")}
-          >
+          <button type="button" className={`${styles.btn} ${styles.btnGhost}`} onClick={() => navigate("/consultant-dashboard/withdrawal-request")}>
             <HiOutlineArrowDownTray />
             Withdraw
           </button>
         </div>
       </section>
 
-      {/* ------------------------------- ERROR ------------------------------- */}
       {error ? (
         <div className={styles.errorBanner}>
           <span>{error}</span>
-          <button type="button" onClick={loadConsultations}>
-            Retry
-          </button>
+          <button type="button" onClick={loadConsultations}>Retry</button>
         </div>
       ) : null}
 
-      {/* ------------------------------- KPIs -------------------------------- */}
-      <div className={styles.kpiGrid}>
-        <div className={`${styles.kpi} ${styles.kpiFeatured}`}>
-          <div className={styles.kpiTop}>
-            <span className={styles.kpiLabel}>Total Earning </span>
-            <span className={styles.kpiIcon}>
-              <HiOutlineWallet />
-            </span>
-          </div>
-          <div className={styles.kpiValue}>
-            <span className={styles.kpiCurrency}>{currency}</span>
-            {formatAmount(walletBalance)}
-          </div>
-          <div className={styles.kpiFoot}>Available to withdraw</div>
-        </div>
-
-        <div className={styles.kpi}>
-          <div className={styles.kpiTop}>
-            <span className={styles.kpiLabel}>Total clients</span>
-            <span className={`${styles.kpiIcon} ${styles.iconBrand}`}>
-              <HiOutlineUsers />
-            </span>
-          </div>
-          <div className={styles.kpiValue}>{metrics.totalClients}</div>
-          <div className={styles.kpiFoot}>
-            {metrics.newThisWeek > 0 ? (
-              <>
-                <span className={styles.trendUp}>+{metrics.newThisWeek}</span> new this week
-              </>
-            ) : (
-              <span className={styles.trendFlat}>No new clients this week</span>
-            )}
-          </div>
-        </div>
-
-        <div className={styles.kpi}>
-          <div className={styles.kpiTop}>
-            <span className={styles.kpiLabel}>Active clients</span>
-            <span className={`${styles.kpiIcon} ${styles.iconSuccess}`}>
-              <HiOutlineBolt />
-            </span>
-          </div>
-          <div className={styles.kpiValue}>{metrics.activeClients}</div>
-          <div className={styles.kpiFoot}>
-            {metrics.totalClients
-              ? `${Math.round((metrics.activeClients / metrics.totalClients) * 100)}% of your clients`
-              : "—"}
-          </div>
-        </div>
-
-        <div className={styles.kpi}>
-          <div className={styles.kpiTop}>
-            <span className={styles.kpiLabel}>Pending requests</span>
-            <span className={`${styles.kpiIcon} ${styles.iconWarning}`}>
-              <HiOutlineInbox />
-            </span>
-          </div>
-          <div className={styles.kpiValue}>{metrics.pendingRequests}</div>
-          <div className={styles.kpiFoot}>
-            {metrics.pendingRequests > 0 ? "Awaiting your response" : "You're all caught up"}
-          </div>
-        </div>
+      {/* ---------------------------- LIVE ACTIVITY LINE ------------------------ */}
+      <div className={styles.liveLine}>
+        <span className={styles.liveLabel}>
+          <HiOutlineSparkles /> Live activity
+        </span>
+        <button type="button" className={styles.liveStat} onClick={() => navigate("/consultant-dashboard/chats")}>
+          <strong>{metrics.pending.length}</strong> conversation{metrics.pending.length === 1 ? "" : "s"} waiting
+        </button>
+        <span className={styles.liveDivider} />
+        <button type="button" className={styles.liveStat} onClick={() => navigate("/consultant-dashboard/call-chat-logs")}>
+          <strong>{missedCalls.length}</strong> missed call{missedCalls.length === 1 ? "" : "s"}
+        </button>
+        <span className={styles.liveDivider} />
+        <span className={styles.liveStat}>
+          <strong>{metrics.newThisWeek}</strong> new this week
+        </span>
       </div>
 
-      {/* ---------------------------- MAIN GRID ------------------------------ */}
-      <div className={styles.mainGrid}>
-        {/* Trend */}
-        <section className={styles.panel}>
-          <div className={styles.panelHead}>
-            <div>
-              <h2 className={styles.panelTitle}>Consultation activity</h2>
-              <p className={styles.panelSub}>New consultations · last 8 weeks</p>
-            </div>
-            <span className={`${styles.kpiIcon} ${styles.iconBrand}`}>
-              <HiOutlineArrowTrendingUp />
-            </span>
-          </div>
-          <div className={styles.chartWrap}>
-            <TrendChart data={metrics.trend} />
-            <div className={styles.chartAxis}>
-              {weekLabels().map((l, i) =>
-                i === 0 || i === WEEKS - 1 || i === Math.floor(WEEKS / 2) ? (
-                  <span key={i}>{l}</span>
-                ) : (
-                  <span key={i} aria-hidden="true" />
-                ),
-              )}
-            </div>
-          </div>
-        </section>
-
-        {/* Breakdown */}
-        <section className={styles.panel}>
-          <div className={styles.panelHead}>
-            <div>
-              <h2 className={styles.panelTitle}>Client breakdown</h2>
-              <p className={styles.panelSub}>Active vs. inactive</p>
-            </div>
-            <span className={`${styles.kpiIcon} ${styles.iconInfo}`}>
-              <HiOutlineUserGroup />
-            </span>
-          </div>
-          <div className={styles.panelBody}>
-            <div className={styles.breakdown}>
-              <Donut active={metrics.activeClients} total={metrics.totalClients} />
-              <div className={styles.legend}>
-                <div className={styles.legendRow}>
-                  <span className={styles.legendDot} style={{ background: "var(--ds-success)" }} />
-                  <span className={styles.legendLabel}>Active</span>
-                  <span className={styles.legendValue}>{metrics.activeClients}</span>
-                </div>
-                <div className={styles.legendRow}>
-                  <span className={styles.legendDot} style={{ background: "var(--ds-border-strong)" }} />
-                  <span className={styles.legendLabel}>Inactive</span>
-                  <span className={styles.legendValue}>
-                    {metrics.totalClients - metrics.activeClients}
-                  </span>
-                </div>
-                <div className={styles.legendRow}>
-                  <span className={styles.legendDot} style={{ background: "var(--ds-warning)" }} />
-                  <span className={styles.legendLabel}>Requests</span>
-                  <span className={styles.legendValue}>{metrics.pendingRequests}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      {/* --------------------------- RECENT CLIENTS -------------------------- */}
-      <section className={styles.panel}>
-        <div className={styles.panelHead}>
-          <div>
-            <h2 className={styles.panelTitle}>Recent clients</h2>
-            <p className={styles.panelSub}>Your latest consultations</p>
-          </div>
-          <button
-            type="button"
-            className={`${styles.btn} ${styles.btnGhost}`}
-            style={{ padding: "7px 12px" }}
-            onClick={() => navigate("/consultant-dashboard/call-chat-logs")}
-          >
-            <HiOutlineClipboardDocumentList />
-            View all
-          </button>
-        </div>
-
-        {isEmpty ? (
-          <div className={styles.emptyState}>
-            <span className={styles.emptyIcon}>
-              <HiOutlineUserGroup />
-            </span>
-            <div className={styles.emptyTitle}>No consultations yet</div>
-            <p className={styles.emptyText}>
-              When customers connect with you from the storefront, their consultations
-              will appear here.
-            </p>
-          </div>
+      {/* ------------------------------ NEEDS ATTENTION -------------------------- */}
+      <section className={styles.section}>
+        <h2 className={styles.sectionLabel}>Needs your attention</h2>
+        {metrics.pending.length === 0 ? (
+          <p className={styles.calmNote}>Nothing waiting on you right now — you're all caught up.</p>
         ) : (
-          <div className={styles.list}>
-            {metrics.recent.map((c) => {
+          <div className={styles.attentionList}>
+            {metrics.pending.slice(0, 5).map((c) => {
               const name = c.userId?.fullname || "Client";
               return (
-                <div className={styles.listItem} key={c._id}>
+                <div className={styles.attentionRow} key={c._id}>
                   <div className={styles.avatar} style={{ background: avatarColor(name) }}>
                     {initials(name)}
                   </div>
-                  <div className={styles.listMain}>
-                    <div className={styles.listName}>{name}</div>
-                    <div className={styles.listSub}>{c.userId?.userType || "Consultation"}</div>
+                  <div className={styles.attentionMain}>
+                    <div className={styles.attentionName}>{name}</div>
+                    <div className={styles.attentionSub}>Wants to start a conversation</div>
                   </div>
-                  <div className={styles.listSide}>
-                    <span className={styles.listDate}>{formatDate(c.createdAt)}</span>
-                    {c.userId?.isRequest ? (
-                      <span className={`${styles.tag} ${styles.tagWarning}`}>
-                        <span className={styles.tagDot} />
-                        Request
-                      </span>
-                    ) : c.userId?.isActive ? (
-                      <span className={`${styles.tag} ${styles.tagSuccess}`}>
-                        <span className={styles.tagDot} />
-                        Active
-                      </span>
-                    ) : (
-                      <span className={`${styles.tag} ${styles.tagMuted}`}>Inactive</span>
-                    )}
-                  </div>
+                  <button type="button" className={styles.attentionAction} onClick={() => navigate("/consultant-dashboard/chats")}>
+                    Review <HiOutlineArrowRight />
+                  </button>
                 </div>
               );
             })}
+          </div>
+        )}
+      </section>
+
+      {/* -------------------------------- PERFORMANCE ---------------------------- */}
+      <section className={styles.section}>
+        <h2 className={styles.sectionLabel}>Performance</h2>
+        <div className={styles.statRow}>
+          <div className={`${styles.stat} ${styles.statFeatured}`}>
+            <span className={styles.statLabel}>Earnings</span>
+            <div className={styles.statValue}>
+              <span className={styles.statCurrency}>{currency}</span>
+              {formatAmount(walletBalance)}
+            </div>
+            <span className={styles.statFoot}>Available to withdraw</span>
+          </div>
+          <span className={styles.statDivider} />
+          <div className={styles.stat}>
+            <span className={styles.statLabel}>Total clients</span>
+            <div className={styles.statValueRow}>
+              <div className={styles.statValue}>{metrics.totalClients}</div>
+              <Sparkline data={metrics.trend} />
+            </div>
+            <span className={styles.statFoot}>Last 8 weeks</span>
+          </div>
+          <span className={styles.statDivider} />
+          <div className={styles.stat}>
+            <span className={styles.statLabel}>Active clients</span>
+            <div className={styles.statValue}>{metrics.activeClients}</div>
+            <span className={styles.statFoot}>
+              {metrics.totalClients ? `${Math.round((metrics.activeClients / metrics.totalClients) * 100)}% of your clients` : "—"}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* ------------------------------ ACTIVITY FEED ---------------------------- */}
+      <section className={styles.section}>
+        <h2 className={styles.sectionLabel}>Recent activity</h2>
+        {isEmpty ? (
+          <div className={styles.emptyState}>
+            <span className={styles.emptyIcon}>
+              <HiOutlineInbox />
+            </span>
+            <div className={styles.emptyTitle}>No activity yet</div>
+            <p className={styles.emptyText}>
+              When customers connect with you from the storefront, their conversations and calls will show up here.
+            </p>
+          </div>
+        ) : (
+          <div className={styles.timeline}>
+            {activityFeed.map((item) => (
+              <div className={styles.timelineRow} key={item.key}>
+                <span className={`${styles.timelineDot} ${item.kind === "missed_call" ? styles.timelineDotDanger : item.kind === "request" ? styles.timelineDotWarning : styles.timelineDotBrand}`} />
+                <div className={styles.timelineAvatar}>
+                  {item.avatar ? (
+                    <img src={getProfileImageUrl(item.avatar)} alt="" />
+                  ) : (
+                    <span style={{ background: avatarColor(item.name) }}>{initials(item.name)}</span>
+                  )}
+                </div>
+                <div className={styles.timelineMain}>
+                  <span className={styles.timelineName}>{item.name}</span>
+                  <span className={styles.timelineDetail}>
+                    {item.kind === "missed_call" ? <HiOutlinePhoneXMark /> : null}
+                    {item.detail}
+                  </span>
+                </div>
+                <span className={styles.timelineTime}>{relativeTime(item.at)}</span>
+              </div>
+            ))}
           </div>
         )}
       </section>

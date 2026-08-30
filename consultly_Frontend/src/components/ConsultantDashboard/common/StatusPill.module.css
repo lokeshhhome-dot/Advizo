@@ -1,0 +1,17 @@
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 650;
+    text-transform: capitalize;
+    white-space: nowrap;
+}
+
+.success { color: var(--ds-success); background: var(--ds-success-soft); }
+.warning { color: var(--ds-warning); background: var(--ds-warning-soft); }
+.danger { color: var(--ds-danger); background: var(--ds-danger-soft); }
+.info { color: var(--ds-info); background: var(--ds-info-soft); }
+.neutral { color: var(--ds-text-muted); background: var(--ds-surface-2); }

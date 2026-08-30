@@ -4,6 +4,17 @@
    shell surface consumes these variables, so light/dark flip together and
    spacing/radius/elevation stay consistent across the whole product.
 
+   Palette direction: warm off-white surfaces, deep forest-green text/accent
+   instead of the previous cool gray-blue background + generic SaaS blue
+   accent (#eef1f6 / #4a6cf7) — deliberately not another blue admin-panel
+   look, and it shares its brand green (#14563c) with the Theme Extension's
+   own Consultant Card, so the storefront card and the consultant's own
+   workspace read as the same product rather than two unrelated ones.
+   Variable NAMES are unchanged from the previous palette on purpose — every
+   already-tokenized module (DashboardOverview, ChatsPage, ConsultantProfilePage,
+   common/RecordList, common/PageHeader, TabNavigation) picks up this new
+   palette with zero changes of its own.
+
    Theme resolution order:
      1. system preference  (@media prefers-color-scheme)
      2. explicit override  ([data-theme="dark"] / [data-theme="light"])  -> wins
@@ -11,35 +22,36 @@
 
 :root {
   /* Palette — light */
-  --ds-bg: #eef1f6;
+  --ds-bg: #f6f4ee;
   --ds-surface: #ffffff;
-  --ds-surface-2: #f8fafc;
-  --ds-sidebar: #ffffff;
-  --ds-header: #ffffff;
-  --ds-border: #e5e7eb;
-  --ds-border-strong: #d5dbe3;
-  --ds-text: #0f172a;
-  --ds-text-muted: #64748b;
-  --ds-text-subtle: #94a3b8;
-  --ds-overlay: rgba(15, 23, 42, 0.5);
+  --ds-surface-2: #f1efe6;
+  --ds-sidebar: #fbfaf5;
+  --ds-header: #fbfaf5;
+  --ds-border: #e6e1d3;
+  --ds-border-strong: #d6cfb9;
+  --ds-text: #16241d;
+  --ds-text-muted: #5c6b62;
+  --ds-text-subtle: #8b9991;
+  --ds-overlay: rgba(16, 27, 21, 0.5);
 
-  --ds-brand: #4a6cf7;
-  --ds-brand-strong: #3b57d6;
-  --ds-brand-soft: #eef1fe;
+  --ds-brand: #14563c;
+  --ds-brand-strong: #0d3f2c;
+  --ds-brand-soft: #e9f2ec;
 
-  --ds-success: #12b76a;
-  --ds-success-soft: #e7f7ef;
-  --ds-warning: #f79009;
-  --ds-warning-soft: #fdf2e3;
-  --ds-danger: #f04438;
-  --ds-danger-soft: #fdecea;
-  --ds-info: #0ea5e9;
-  --ds-info-soft: #e6f6fe;
+  --ds-success: #1f9d5c;
+  --ds-success-soft: #e6f6ee;
+  --ds-warning: #b8811a;
+  --ds-warning-soft: #faf0dc;
+  --ds-danger: #b1443a;
+  --ds-danger-soft: #f8ebe9;
+  --ds-info: #3d7ea6;
+  --ds-info-soft: #e9f2f6;
 
-  /* Elevation */
-  --ds-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
-  --ds-shadow-md: 0 4px 14px rgba(15, 23, 42, 0.07);
-  --ds-shadow-lg: 0 12px 30px rgba(15, 23, 42, 0.10);
+  /* Elevation — restrained on purpose: this is a workspace, not a stack of
+     floating cards, so shadows stay quiet even where a surface has one. */
+  --ds-shadow-sm: 0 1px 2px rgba(22, 36, 29, 0.05);
+  --ds-shadow-md: 0 3px 10px rgba(22, 36, 29, 0.06);
+  --ds-shadow-lg: 0 10px 26px rgba(22, 36, 29, 0.09);
 
   /* Radius */
   --ds-r-sm: 10px;
@@ -50,23 +62,23 @@
 /* ---- Dark: follow the OS unless an explicit theme is set ---- */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --ds-bg: #0b1120;
-    --ds-surface: #111827;
-    --ds-surface-2: #0f1626;
-    --ds-sidebar: #0f1626;
-    --ds-header: #0f1626;
-    --ds-border: #1f2937;
-    --ds-border-strong: #2a3547;
-    --ds-text: #e5e9f0;
-    --ds-text-muted: #94a3b8;
-    --ds-text-subtle: #64748b;
+    --ds-bg: #10160f;
+    --ds-surface: #17201a;
+    --ds-surface-2: #131b13;
+    --ds-sidebar: #131b13;
+    --ds-header: #131b13;
+    --ds-border: #263129;
+    --ds-border-strong: #33413a;
+    --ds-text: #eaf1ec;
+    --ds-text-muted: #9db0a4;
+    --ds-text-subtle: #6c8177;
     --ds-overlay: rgba(0, 0, 0, 0.6);
 
-    --ds-brand-soft: #1a2338;
-    --ds-success-soft: #0f2a1f;
-    --ds-warning-soft: #2a1f10;
-    --ds-danger-soft: #2a1514;
-    --ds-info-soft: #0d2230;
+    --ds-brand-soft: #1a2b23;
+    --ds-success-soft: #14301f;
+    --ds-warning-soft: #2e2410;
+    --ds-danger-soft: #301c19;
+    --ds-info-soft: #10262f;
 
     --ds-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
     --ds-shadow-md: 0 4px 14px rgba(0, 0, 0, 0.45);
@@ -79,46 +91,46 @@
    use Polaris (light-only). Remove data-theme="light" from the wrapper to let
    the app follow the OS once those pages are migrated off Polaris. ---- */
 [data-theme="light"] {
-  --ds-bg: #eef1f6;
+  --ds-bg: #f6f4ee;
   --ds-surface: #ffffff;
-  --ds-surface-2: #f8fafc;
-  --ds-sidebar: #ffffff;
-  --ds-header: #ffffff;
-  --ds-border: #e5e7eb;
-  --ds-border-strong: #d5dbe3;
-  --ds-text: #0f172a;
-  --ds-text-muted: #64748b;
-  --ds-text-subtle: #94a3b8;
-  --ds-overlay: rgba(15, 23, 42, 0.5);
-  --ds-brand-soft: #eef1fe;
-  --ds-success-soft: #e7f7ef;
-  --ds-warning-soft: #fdf2e3;
-  --ds-danger-soft: #fdecea;
-  --ds-info-soft: #e6f6fe;
-  --ds-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
-  --ds-shadow-md: 0 4px 14px rgba(15, 23, 42, 0.07);
-  --ds-shadow-lg: 0 12px 30px rgba(15, 23, 42, 0.10);
+  --ds-surface-2: #f1efe6;
+  --ds-sidebar: #fbfaf5;
+  --ds-header: #fbfaf5;
+  --ds-border: #e6e1d3;
+  --ds-border-strong: #d6cfb9;
+  --ds-text: #16241d;
+  --ds-text-muted: #5c6b62;
+  --ds-text-subtle: #8b9991;
+  --ds-overlay: rgba(16, 27, 21, 0.5);
+  --ds-brand-soft: #e9f2ec;
+  --ds-success-soft: #e6f6ee;
+  --ds-warning-soft: #faf0dc;
+  --ds-danger-soft: #f8ebe9;
+  --ds-info-soft: #e9f2f6;
+  --ds-shadow-sm: 0 1px 2px rgba(22, 36, 29, 0.05);
+  --ds-shadow-md: 0 3px 10px rgba(22, 36, 29, 0.06);
+  --ds-shadow-lg: 0 10px 26px rgba(22, 36, 29, 0.09);
 }
 
 /* ---- Dark: explicit opt-in (wins over OS) ---- */
 [data-theme="dark"] {
-  --ds-bg: #0b1120;
-  --ds-surface: #111827;
-  --ds-surface-2: #0f1626;
-  --ds-sidebar: #0f1626;
-  --ds-header: #0f1626;
-  --ds-border: #1f2937;
-  --ds-border-strong: #2a3547;
-  --ds-text: #e5e9f0;
-  --ds-text-muted: #94a3b8;
-  --ds-text-subtle: #64748b;
+  --ds-bg: #10160f;
+  --ds-surface: #17201a;
+  --ds-surface-2: #131b13;
+  --ds-sidebar: #131b13;
+  --ds-header: #131b13;
+  --ds-border: #263129;
+  --ds-border-strong: #33413a;
+  --ds-text: #eaf1ec;
+  --ds-text-muted: #9db0a4;
+  --ds-text-subtle: #6c8177;
   --ds-overlay: rgba(0, 0, 0, 0.6);
 
-  --ds-brand-soft: #1a2338;
-  --ds-success-soft: #0f2a1f;
-  --ds-warning-soft: #2a1f10;
-  --ds-danger-soft: #2a1514;
-  --ds-info-soft: #0d2230;
+  --ds-brand-soft: #1a2b23;
+  --ds-success-soft: #14301f;
+  --ds-warning-soft: #2e2410;
+  --ds-danger-soft: #301c19;
+  --ds-info-soft: #10262f;
 
   --ds-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --ds-shadow-md: 0 4px 14px rgba(0, 0, 0, 0.45);
