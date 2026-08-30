@@ -335,6 +335,31 @@
       });
   }
 
+  // Best-effort warm-up: once the browser is idle, load the (tiny) bootstrap
+  // and let it start fetching the heavy engine chunk in the background, so
+  // by the time the customer actually clicks Call/Video both are already
+  // cached. Never runs before the browser is idle (requestIdleCallback, with
+  // a delayed setTimeout fallback for Safari) and never blocks or retries
+  // aggressively — a failed prefetch just means ensureEngineLoaded() inside
+  // the widget does the real fetch when the button is actually clicked.
+  function scheduleCallWidgetPrefetch(shop) {
+    if (!shop) return;
+    function run() {
+      ensureCallWidgetScript(shop)
+        .then(function () {
+          if (window.ConsultlyCallWidget && typeof window.ConsultlyCallWidget.prefetchEngine === "function") {
+            window.ConsultlyCallWidget.prefetchEngine();
+          }
+        })
+        .catch(function () {});
+    }
+    if (typeof window.requestIdleCallback === "function") {
+      window.requestIdleCallback(run, { timeout: 4000 });
+    } else {
+      window.setTimeout(run, 2000);
+    }
+  }
+
   var ACTION_LABELS = { chat: "Chat", voice: "Call", video: "Video" };
 
   // Each channel (chat/voice/video) has its own independent per-minute rate
@@ -1146,6 +1171,8 @@
           // below and any future Theme JS that needs it directly.
           customerId: data.customerId || null,
         });
+
+        scheduleCallWidgetPrefetch(shop);
 
         // TEMPORARY debug (Theme Extension identity-sync test) — booleans
         // only, never the DB id value itself. This is the browser seeing

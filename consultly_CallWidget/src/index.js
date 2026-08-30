@@ -1,9 +1,10 @@
-// Entry point — bundled to dist/consultly-call-widget.js and loaded by the
-// Theme Extension (consultant-card.js) as a plain <script>. Exposes
-// window.ConsultlyCallWidget.open({...}); everything else here is wiring
-// between engine.js (Agora/Socket.IO orchestration, reusing callSlice.js/
-// SokectConfig.js verbatim) and ui.js (the modal DOM).
-import { startCustomerCall } from "./engine";
+// Bootstrap entry — bundled to consultly-call-widget.js, the file the
+// Theme Extension loads as a plain <script> on every consultant-card page
+// view. Deliberately does NOT import engine.js: that would pull in Agora
+// (~1.3MB) + Socket.IO + Redux + callSlice.js, none of which are needed
+// just to render the modal shell. This file only knows how to open/close
+// the modal (ui.js — pure DOM/CSS, a few KB) and how to fetch the engine
+// chunk (consultly-call-engine.js, engine-entry.js's output) on demand.
 import { openCallModal } from "./ui";
 
 const TERMINAL_STATES = new Set([
@@ -25,6 +26,7 @@ const AUTO_CLOSE_DELAY_MS = 1800;
 let activeSession = null;
 let activeModal = null;
 let mediaListenersBound = false;
+let engineLoadPromise = null;
 
 function bindMediaListeners(modal) {
   if (mediaListenersBound) return;
@@ -41,6 +43,48 @@ function closeActive() {
   activeModal?.close();
   activeModal = null;
   activeSession = null;
+}
+
+// Sibling file next to this bootstrap script (same origin, same directory —
+// consultly_Frontend/public/) — no extra backend route needed to locate it,
+// unlike the bootstrap's own App-Proxy redirect (that one exists because
+// the THEME needs to reach this file without hardcoding its real origin;
+// once we're already executing on that origin, a relative sibling path is
+// simplest and never goes stale independently of this file).
+function engineChunkUrl() {
+  try {
+    return new URL("consultly-call-engine.js", document.currentScript?.src || location.href).href;
+  } catch (_) {
+    return "consultly-call-engine.js";
+  }
+}
+
+function ensureEngineLoaded() {
+  if (window.ConsultlyCallEngine) return Promise.resolve();
+  if (engineLoadPromise) return engineLoadPromise;
+  engineLoadPromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = engineChunkUrl();
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => {
+      engineLoadPromise = null;
+      reject(new Error("Failed to load call engine"));
+    };
+    document.head.appendChild(script);
+  });
+  return engineLoadPromise;
+}
+
+// Idle-time warm-up only — never called from the click path itself, so a
+// slow/failed prefetch can never delay opening the modal. See
+// prefetchEngine() below and consultant-card.js's own idle-time call to it.
+function prefetchEngine() {
+  ensureEngineLoaded().catch(() => {
+    // Silent: this is a best-effort cache warm, not a real load attempt.
+    // ensureEngineLoaded() will simply retry for real when the customer
+    // actually clicks Call/Video.
+  });
 }
 
 /**
@@ -60,6 +104,8 @@ function open(config) {
   if (activeSession) return;
 
   const isVideo = callType === "video";
+  // Modal renders immediately, with its normal "Connecting…" skeleton state
+  // — engine loading/initialization happens after, never blocking this.
   const modal = openCallModal({
     consultantName: config.consultantName,
     consultantAvatar: config.consultantAvatar,
@@ -82,27 +128,38 @@ function open(config) {
 
   console.log("[CALL MODAL] initialization started");
 
-  activeSession = startCustomerCall({
-    shop,
-    consultantId,
-    callType: isVideo ? "video" : "voice",
-    onState: (state) => {
-      if (state.status === "checking") console.log("[CALL MODAL] token request");
-      if (state.status === "ringing") console.log("[CALL MODAL] Agora initialization");
-      if (state.status === "connected") console.log("[CALL MODAL] connected");
-      modal.setStatus(state.status, state.message);
-      if (TERMINAL_STATES.has(state.status)) {
-        console.log("[CALL MODAL] call ended");
-        window.setTimeout(() => {
-          if (activeModal === modal) closeActive();
-        }, AUTO_CLOSE_DELAY_MS);
-      }
-    },
-  });
+  ensureEngineLoaded()
+    .then(() => {
+      // The modal may have been closed (or a newer call started) while the
+      // engine chunk was still downloading — don't start a stale session.
+      if (activeModal !== modal) return;
+      activeSession = window.ConsultlyCallEngine.startCustomerCall({
+        shop,
+        consultantId,
+        callType: isVideo ? "video" : "voice",
+        onState: (state) => {
+          if (activeModal !== modal) return;
+          if (state.status === "checking") console.log("[CALL MODAL] token request");
+          if (state.status === "ringing") console.log("[CALL MODAL] Agora initialization");
+          if (state.status === "connected") console.log("[CALL MODAL] connected");
+          modal.setStatus(state.status, state.message);
+          if (TERMINAL_STATES.has(state.status)) {
+            console.log("[CALL MODAL] call ended");
+            window.setTimeout(() => {
+              if (activeModal === modal) closeActive();
+            }, AUTO_CLOSE_DELAY_MS);
+          }
+        },
+      });
+    })
+    .catch((err) => {
+      console.error("[CALL MODAL] failed to load call engine:", err);
+      if (activeModal === modal) modal.setStatus("failed", "Call failed. Please try again.");
+    });
 }
 
 function close() {
   activeSession?.hangUp("user_cut_call");
 }
 
-window.ConsultlyCallWidget = { open, close };
+window.ConsultlyCallWidget = { open, close, prefetchEngine };

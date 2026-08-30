@@ -1,14 +1,23 @@
-// Builds dist/consultly-call-widget.js — a single, dependency-free <script>
-// the Theme Extension loads. Bundles this package's own files PLUS the
-// React app's callSlice.js / SokectConfig.js / ringingTune.js by importing
-// them directly from ../consultly_Frontend (see engine.js) — the same
-// Agora/Socket.IO engine the dashboard uses, not a reimplementation.
+// Builds TWO separate <script> files instead of one 1.4MB bundle:
+//
+//   consultly-call-widget.js  — bootstrap (index.js + ui.js). Loaded on
+//                               every consultant-card page view. Contains
+//                               no Agora/Socket.IO/Redux — just enough to
+//                               open the modal shell and its skeleton state.
+//   consultly-call-engine.js  — the actual call engine (engine.js, which
+//                               imports callSlice.js/SokectConfig.js from
+//                               consultly_Frontend + Agora + Socket.IO +
+//                               Redux). Loaded on demand, only once the
+//                               customer clicks Call/Video (see
+//                               ensureEngineLoaded in src/index.js).
+//
+// Both are still bundled into consultly_Frontend/public/ (same origin the
+// bootstrap's own sibling-file lookup for the engine chunk relies on, and
+// the same origin /sounds/ringing_tone.mp3 is served from).
 //
 // process.env.REACT_APP_* values are read from consultly_Frontend/.env at
-// BUILD time and inlined as string literals (esbuild `define`, the same
-// mechanism CRA's webpack config uses) — this bundle has no bundler-level
-// env support of its own, and reading the same .env file the React app
-// already uses keeps the two from drifting out of sync.
+// BUILD time and inlined as string literals (esbuild `define`) — see the
+// original single-bundle build's own comment for why.
 const path = require("path");
 const esbuild = require("esbuild");
 const dotenv = require("dotenv");
@@ -29,28 +38,55 @@ const define = {
   ),
 };
 
-esbuild
-  .build({
-    entryPoints: [path.join(__dirname, "src", "index.js")],
-    bundle: true,
-    minify: true,
-    sourcemap: false,
-    format: "iife",
-    target: ["es2018"],
-    // Output straight into consultly_Frontend/public — same origin the React
-    // app (and its /sounds/ringing_tone.mp3 asset engine.js reuses) is
-    // already served from, and it ships automatically with every frontend
-    // deploy with no separate hosting step for this bundle.
-    outfile: path.join(
+const outDir = path.join(__dirname, "..", "consultly_Frontend", "public");
+
+// store.js imports @reduxjs/toolkit directly (its own devDependency here);
+// callSlice.js — imported from consultly_Frontend — imports its OWN copy
+// from consultly_Frontend/node_modules. Without this alias esbuild treats
+// those as two unrelated files and bundles BOTH full copies (toolkit +
+// its immer dependency, ~115KB combined, twice) into the engine chunk.
+// Pointing this package's own import at the SAME copy callSlice.js already
+// resolves keeps exactly one in the bundle. This is an existing coupling,
+// not a new one — engine.js already only works because consultly_Frontend's
+// node_modules has agora-rtc-sdk-ng/socket.io-client installed; this just
+// extends the same assumption to @reduxjs/toolkit.
+const sharedOptions = {
+  bundle: true,
+  minify: true,
+  treeShaking: true,
+  legalComments: "none",
+  sourcemap: false,
+  format: "iife",
+  target: ["es2018"],
+  define,
+  alias: {
+    "@reduxjs/toolkit": path.join(
       __dirname,
       "..",
       "consultly_Frontend",
-      "public",
-      "consultly-call-widget.js",
+      "node_modules",
+      "@reduxjs",
+      "toolkit",
     ),
-    define,
-    loader: { ".css": "text" },
-    logLevel: "info",
+  },
+  loader: { ".css": "text" },
+  logLevel: "info",
+};
+
+Promise.all([
+  esbuild.build({
+    ...sharedOptions,
+    entryPoints: [path.join(__dirname, "src", "index.js")],
+    outfile: path.join(outDir, "consultly-call-widget.js"),
+  }),
+  esbuild.build({
+    ...sharedOptions,
+    entryPoints: [path.join(__dirname, "src", "engine-entry.js")],
+    outfile: path.join(outDir, "consultly-call-engine.js"),
+  }),
+])
+  .then(() => {
+    console.log("consultly_CallWidget: built bootstrap + engine chunk.");
   })
   .catch((err) => {
     console.error(err);
