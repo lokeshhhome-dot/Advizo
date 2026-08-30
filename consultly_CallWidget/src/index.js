@@ -45,26 +45,28 @@ function closeActive() {
   activeSession = null;
 }
 
-// Sibling file next to this bootstrap script (same origin, same directory —
-// consultly_Frontend/public/) — no extra backend route needed to locate it,
-// unlike the bootstrap's own App-Proxy redirect (that one exists because
-// the THEME needs to reach this file without hardcoding its real origin;
-// once we're already executing on that origin, a relative sibling path is
-// simplest and never goes stale independently of this file).
-function engineChunkUrl() {
-  try {
-    return new URL("consultly-call-engine.js", document.currentScript?.src || location.href).href;
-  } catch (_) {
-    return "consultly-call-engine.js";
-  }
+// Goes through the SAME App-Proxy redirect pattern consultant-card.js
+// already uses to load this bootstrap itself (GET /apps/consultly/
+// call-widget.js -> 302 -> the real React app origin) rather than trying to
+// derive that origin from this script's own document.currentScript.src.
+// That property reflects the ORIGINAL <script src> attribute (this same
+// kind of App-Proxy URL) — redirects happen at the network layer and never
+// rewrite it — so by the time engine loading actually runs (a click or an
+// idle callback, always well after this bootstrap's own synchronous
+// top-level execution, when document.currentScript has already reverted to
+// null anyway) there is no reliable script-tag-based way to find the real
+// origin. Asking the shop's own App Proxy again, the same way, sidesteps
+// the whole problem.
+function engineChunkUrl(shop) {
+  return `https://${shop}/apps/consultly/call-engine.js`;
 }
 
-function ensureEngineLoaded() {
+function ensureEngineLoaded(shop) {
   if (window.ConsultlyCallEngine) return Promise.resolve();
   if (engineLoadPromise) return engineLoadPromise;
   engineLoadPromise = new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = engineChunkUrl();
+    script.src = engineChunkUrl(shop);
     script.async = true;
     script.onload = () => resolve();
     script.onerror = () => {
@@ -79,8 +81,9 @@ function ensureEngineLoaded() {
 // Idle-time warm-up only — never called from the click path itself, so a
 // slow/failed prefetch can never delay opening the modal. See
 // prefetchEngine() below and consultant-card.js's own idle-time call to it.
-function prefetchEngine() {
-  ensureEngineLoaded().catch(() => {
+function prefetchEngine(shop) {
+  if (!shop) return;
+  ensureEngineLoaded(shop).catch(() => {
     // Silent: this is a best-effort cache warm, not a real load attempt.
     // ensureEngineLoaded() will simply retry for real when the customer
     // actually clicks Call/Video.
@@ -98,6 +101,7 @@ function open(config) {
   }
   console.log("[CALL MODAL] opened");
   console.log("[CALL MODAL] call type =", callType);
+  console.log("[CALL DEBUG] customer modal opened");
 
   // Re-entrancy guard: a stray double-click shouldn't start a second engine
   // session against an already-open modal.
@@ -128,7 +132,7 @@ function open(config) {
 
   console.log("[CALL MODAL] initialization started");
 
-  ensureEngineLoaded()
+  ensureEngineLoaded(shop)
     .then(() => {
       // The modal may have been closed (or a newer call started) while the
       // engine chunk was still downloading — don't start a stale session.

@@ -28,18 +28,6 @@ import {
 
 const BACKEND_HOST = (process.env.REACT_APP_BACKEND_HOST || "").replace(/\/+$/, "");
 
-// The ringtone mp3 lives on the React app's own origin (public/sounds/...),
-// not the shop's — initRingtone() defaults to a path-relative URL that only
-// resolves correctly when the page itself is that origin. This widget's
-// page IS the shop, so it must pass the absolute URL explicitly.
-const WIDGET_SCRIPT_ORIGIN = (() => {
-  try {
-    return new URL(document.currentScript?.src || "").origin;
-  } catch (_) {
-    return "";
-  }
-})();
-
 function authHeaders(authToken) {
   return { Authorization: `Bearer ${authToken || ""}` };
 }
@@ -105,13 +93,17 @@ async function generateToken({ channelName, uid, receiverId, callType, authToken
 
 // Best-effort end-of-call notification: socket ack with a REST fallback,
 // exactly matching VideoCallingPage.js's emitCallEndedToServer.
-function emitCallEndedToServer(payload) {
+// authToken: /call/end-session requires it — authorizeCallParticipant on
+// the backend 401s an unauthenticated request (confirmed by reading
+// Auth/auth.js), so the REST fallback below needs the same Bearer header
+// every other authenticated call in this file already sends.
+function emitCallEndedToServer(payload, authToken) {
   const socket = getSocket();
   const endViaRest = async () => {
     try {
       const { data } = await fetchJson(`${BACKEND_HOST}/call/end-session`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders(authToken) },
         body: JSON.stringify(payload),
       });
       return data || { success: false, reason: "rest_failed" };
@@ -156,6 +148,7 @@ export function startCustomerCall({ shop, consultantId, callType, onState }) {
   let ended = false;
   let channelName = "";
   let callerId = "";
+  let authToken = "";
   let shopId = "";
   let transactionId = "";
   let startedAt = 0;
@@ -164,11 +157,19 @@ export function startCustomerCall({ shop, consultantId, callType, onState }) {
   let ringRetryId = null;
   const socket = getSocket();
 
+  // call-connected is a CustomEvent callSlice.js itself dispatches once
+  // Agora's connectionState is CONNECTED and a remote user has joined — not
+  // a new event, just listened to here for diagnostics.
+  function onAgoraConnected() {
+    console.log("[CALL DEBUG] remote user joined = true");
+  }
+
   const cleanupListeners = () => {
     socket.off("call-accepted-started", onAcceptedStarted);
     socket.off("call-missed", onMissed);
     socket.off("call-ended-rejected", onRejected);
     socket.off("callEnded", onServerEnded);
+    window.removeEventListener("call-connected", onAgoraConnected);
     if (ringRetryId) clearInterval(ringRetryId);
   };
 
@@ -179,31 +180,38 @@ export function startCustomerCall({ shop, consultantId, callType, onState }) {
     stopRingtone();
     store.dispatch(endCallThunk());
     if (channelName) {
-      emitCallEndedToServer({
-        callerId,
-        receiverId: consultantId,
-        channelName,
-        callType,
-        transactionId: transactionId || undefined,
-        shopId: shopId || undefined,
-        clientDurationSeconds: startedAt
-          ? Math.max(0, Math.round((Date.now() - startedAt) / 1000))
-          : 0,
-        endby: reason,
-      });
+      emitCallEndedToServer(
+        {
+          callerId,
+          receiverId: consultantId,
+          channelName,
+          callType,
+          transactionId: transactionId || undefined,
+          shopId: shopId || undefined,
+          clientDurationSeconds: startedAt
+            ? Math.max(0, Math.round((Date.now() - startedAt) / 1000))
+            : 0,
+          endby: reason,
+        },
+        authToken,
+      );
     }
     onState({ status: "ended" });
   };
 
   function onAcceptedStarted(data) {
+    console.log("[CALL DEBUG] consultant accepted = true");
+    console.log("[CALL DEBUG] call-accepted-started received = true");
     transactionId = data?.transactionId || "";
     shopId = data?.shopId || "";
     startedAt = Date.now();
     stopRingtone();
+    console.log("[CALL DEBUG] call connected");
     onState({ status: "connected" });
   }
 
   function onMissed() {
+    console.log("[CALL DEBUG] consultant accepted = false (missed)");
     if (ended) return;
     ended = true;
     cleanupListeners();
@@ -213,6 +221,7 @@ export function startCustomerCall({ shop, consultantId, callType, onState }) {
   }
 
   function onRejected() {
+    console.log("[CALL DEBUG] consultant accepted = false (rejected)");
     if (ended) return;
     ended = true;
     cleanupListeners();
@@ -231,24 +240,39 @@ export function startCustomerCall({ shop, consultantId, callType, onState }) {
   }
 
   (async () => {
+    console.log("[CALL DEBUG] startCustomerCall started, callType =", callType);
     onState({ status: "checking" });
 
     const identity = await fetchIdentity(shop);
+    console.log("[CALL DEBUG] identity resolved, authenticated =", Boolean(identity?.authenticated));
     if (!identity?.authenticated) {
       onState({ status: "unauthenticated" });
       return;
     }
     const userId = identity.customerId;
-    const authToken = identity.authToken;
+    authToken = identity.authToken;
     callerId = userId;
 
+    // SokectConfig.js's getSocketAuthPayload() (used by both getSocket()'s
+    // initial auth and connectAndRegisterSocket's refresh right before
+    // connect()) reads this exact key — the same thing VideoCallingPage.js
+    // does with its own URL-provided authToken. Without this, the socket
+    // connects with no auth at all on this page (a fresh origin with its
+    // own empty localStorage), which can silently break registration/ring/
+    // accept, not just the end-session REST fallback below.
+    try {
+      localStorage.setItem("token", authToken || "");
+    } catch (_) {}
+
     const balance = await checkBalance({ userId, consultantId, callType, authToken });
+    console.log("[CALL DEBUG] balance check result =", Boolean(balance));
     if (!balance) {
       onState({ status: "no-balance" });
       return;
     }
 
     const status = await checkStatus({ consultantId, shop });
+    console.log("[CALL DEBUG] user availability result =", Boolean(status?.success));
     if (!status?.success) {
       onState({
         status: "unavailable",
@@ -261,6 +285,7 @@ export function startCustomerCall({ shop, consultantId, callType, onState }) {
     try {
       channelName = `channel-${userId.slice(-6)}-${consultantId.slice(-6)}`;
       const uid = Math.floor(Math.random() * 1000000);
+      console.log("[CALL DEBUG] token request started");
       tokenData = await generateToken({
         channelName,
         uid,
@@ -268,23 +293,28 @@ export function startCustomerCall({ shop, consultantId, callType, onState }) {
         callType,
         authToken,
       });
+      console.log("[CALL DEBUG] token request success =", Boolean(tokenData?.token));
 
       connectAndRegisterSocket(
         { callerId, receiverId: consultantId, channelName },
         callerId,
       );
+      console.log("[CALL DEBUG] socket connected =", socket.connected);
 
       socket.on("call-accepted-started", onAcceptedStarted);
       socket.on("call-missed", onMissed);
       socket.on("call-ended-rejected", onRejected);
       socket.on("callEnded", onServerEnded);
+      window.addEventListener("call-connected", onAgoraConnected);
 
       const ringPayload = { callerId, receiverId: consultantId, channelName, callType, shop };
       const sendRing = () => {
         if (ringAcked || ended || ringAttempts >= 6) return;
         ringAttempts += 1;
+        console.log("[CALL DEBUG] call-user emitted, attempt =", ringAttempts);
         socket.emit("call-user", ringPayload, () => {
           ringAcked = true;
+          console.log("[CALL DEBUG] call-user acknowledged by server");
         });
       };
       if (socket.connected) sendRing();
@@ -297,6 +327,7 @@ export function startCustomerCall({ shop, consultantId, callType, onState }) {
         if (socket.connected) sendRing();
       }, 3000);
 
+      console.log("[CALL DEBUG] Agora join started");
       await store
         .dispatch(
           startCallThunk({
@@ -308,11 +339,17 @@ export function startCustomerCall({ shop, consultantId, callType, onState }) {
           }),
         )
         .unwrap();
+      console.log("[CALL DEBUG] Agora join success = true");
 
-      initRingtone(`${WIDGET_SCRIPT_ORIGIN}/sounds/ringing_tone.mp3`);
+      // frontendOrigin comes from the identity response fetched above — the
+      // React app's real origin, authoritative server-side, and needed here
+      // since the ringtone mp3 only exists there, not on the shop's domain
+      // this widget's page is actually running on.
+      initRingtone(`${identity.frontendOrigin || ""}/sounds/ringing_tone.mp3`);
       playRingtone();
       onState({ status: "ringing" });
     } catch (err) {
+      console.log("[CALL DEBUG] Agora join success = false, error =", err?.message);
       cleanupListeners();
       onState({ status: "failed", message: err?.message || "Call failed. Please try again." });
     }

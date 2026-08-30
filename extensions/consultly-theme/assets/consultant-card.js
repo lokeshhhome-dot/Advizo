@@ -348,7 +348,7 @@
       ensureCallWidgetScript(shop)
         .then(function () {
           if (window.ConsultlyCallWidget && typeof window.ConsultlyCallWidget.prefetchEngine === "function") {
-            window.ConsultlyCallWidget.prefetchEngine();
+            window.ConsultlyCallWidget.prefetchEngine(shop);
           }
         })
         .catch(function () {});

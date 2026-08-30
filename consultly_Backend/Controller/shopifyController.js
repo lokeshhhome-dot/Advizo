@@ -1168,6 +1168,15 @@ const proxyShopifyCallIdentity = async (req, res) => {
     customerId: customerSession?.userId || null,
     authToken: customerSession?.userId ? customerSession.token || "" : "",
     shopId: shopId || null,
+    // The engine chunk (engine.js) needs this to build an absolute URL for
+    // /sounds/ringing_tone.mp3, which only exists on the React app's own
+    // origin, not the shop's. document.currentScript.src can't supply this
+    // reliably (it reflects the ORIGINAL App-Proxy <script src> the engine
+    // chunk was requested with, never the post-redirect origin the browser
+    // actually fetched it from) — this identity call already happens first
+    // in startCustomerCall, so handing back the real origin here needs no
+    // extra request.
+    frontendOrigin: getTrustedConsultantAppUrl() || resolveFrontendUrl(req),
   });
 };
 
@@ -1182,6 +1191,24 @@ const proxyShopifyCallIdentity = async (req, res) => {
  */
 const proxyShopifyCallWidgetScript = (req, res) => {
   const target = `${getTrustedConsultantAppUrl() || resolveFrontendUrl(req)}/consultly-call-widget.js`;
+  return res.redirect(302, target);
+};
+
+/**
+ * Loads the (heavy, Agora-containing) call engine chunk — same reasoning
+ * and pattern as proxyShopifyCallWidgetScript above. This exists because
+ * the bootstrap script cannot reliably derive its own real origin from
+ * document.currentScript.src to locate a sibling file: that property
+ * reflects the ORIGINAL <script src> attribute the bootstrap was given
+ * (this same App-Proxy URL, since redirects happen at the network layer
+ * and never rewrite the DOM attribute), not the React app domain the
+ * browser actually ended up fetching it from after following the 302
+ * below. Going through an identical named proxy route for the engine chunk
+ * sidesteps that entirely — the bootstrap just asks for it by the shop's
+ * own domain, exactly like it does for itself.
+ */
+const proxyShopifyCallEngineScript = (req, res) => {
+  const target = `${getTrustedConsultantAppUrl() || resolveFrontendUrl(req)}/consultly-call-engine.js`;
   return res.redirect(302, target);
 };
 
@@ -1526,5 +1553,6 @@ module.exports = {
   proxyShopifyStorefrontChat,
   proxyShopifyCallIdentity,
   proxyShopifyCallWidgetScript,
+  proxyShopifyCallEngineScript,
   exchangeChatSession,
 };
