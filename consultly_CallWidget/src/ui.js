@@ -75,6 +75,8 @@ const ICONS = {
     '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/><line x1="1" y1="1" x2="23" y2="23"/></svg>',
   switchCamera:
     '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4a8 8 0 0 1 7.6 5.5"/><polyline points="20 3.5 20 9.5 14 9.5"/><path d="M12 20a8 8 0 0 1-7.6-5.5"/><polyline points="4 20.5 4 14.5 10 14.5"/><circle cx="12" cy="12" r="2.6"/></svg>',
+  speaker:
+    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>',
   end:
     '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 15.5c0 .3-.1.5-.3.7l-2.9 2.9c-.2.2-.5.3-.8.3-2.1-.1-4.3-.7-6.4-1.9C8.5 16.3 6.5 14.3 5.2 12.2 4 10.1 3.4 7.9 3.3 5.8c0-.3.1-.6.3-.8l2.9-2.9c.4-.4 1-.5 1.5-.2.2.1.3.3.4.5l1.5 3.5c.2.4.1.9-.2 1.2L8.4 8.4c.9 2.2 2.5 3.8 4.7 4.7l1.3-1.3c.3-.3.8-.4 1.2-.2l3.5 1.5c.2.1.4.2.5.4.3.5.2 1.1-.2 1.5l-.4.5z" fill="currentColor"/></svg>',
   close:
@@ -186,6 +188,17 @@ function ensureModal() {
   switchCameraBtn.innerHTML = ICONS.switchCamera;
   switchCameraBtn.hidden = true;
 
+  // Shown for BOTH call types (voice and video), unlike camera/switch-camera
+  // which only ever apply to video. Disabled rather than hidden when the
+  // browser/device has no real output-device selection to offer (most
+  // mobile browsers) — see engine.js's canSwitchSpeaker for why this can't
+  // be faked as a true speakerphone/earpiece toggle.
+  const speakerBtn = document.createElement("button");
+  speakerBtn.type = "button";
+  speakerBtn.className = "consultly-call-widget-control";
+  speakerBtn.setAttribute("aria-label", "Switch audio output");
+  speakerBtn.innerHTML = ICONS.speaker;
+
   const endBtn = document.createElement("button");
   endBtn.type = "button";
   endBtn.className = "consultly-call-widget-control consultly-call-widget-control--end";
@@ -195,6 +208,7 @@ function ensureModal() {
   controls.appendChild(muteBtn);
   controls.appendChild(cameraBtn);
   controls.appendChild(switchCameraBtn);
+  controls.appendChild(speakerBtn);
   controls.appendChild(endBtn);
 
   panel.appendChild(closeBtn);
@@ -223,6 +237,7 @@ function ensureModal() {
     muteBtn,
     cameraBtn,
     switchCameraBtn,
+    speakerBtn,
     endBtn,
   };
   return els;
@@ -250,11 +265,17 @@ function stopTimerInterval() {
   }
 }
 
-export function openCallModal({ consultantName, consultantAvatar, isVideo, onEnd, onToggleMute, onToggleCamera, onSwitchCamera }) {
+export function openCallModal({ consultantName, consultantAvatar, isVideo, onEnd, onToggleMute, onToggleCamera, onSwitchCamera, onToggleSpeaker }) {
   const e = ensureModal();
   stopTimerInterval();
   callActive = true;
 
+  // callType (isVideo) comes from the same config the customer's Call/Video
+  // click already carried through openNativeCallModal -> engine.js's own
+  // callType — never re-derived or guessed from UI state, and never changes
+  // for the life of this call: cameraBtn/switchCameraBtn are only ever
+  // touched here at open() and via setCanSwitchCamera, so a voice call can
+  // never grow a camera control mid-session.
   e.panel.classList.toggle("consultly-call-widget-panel--video", Boolean(isVideo));
   e.name.textContent = consultantName || "Consultant";
   e.callTypeLabel.textContent = isVideo ? "Video Call" : "Voice Call";
@@ -269,6 +290,9 @@ export function openCallModal({ consultantName, consultantAvatar, isVideo, onEnd
   e.muteBtn.setAttribute("aria-label", "Mute microphone");
   e.cameraBtn.dataset.state = isVideo ? "off" : "on";
   e.cameraBtn.innerHTML = isVideo ? ICONS.cameraOff : ICONS.cameraOn;
+  e.speakerBtn.innerHTML = ICONS.speaker;
+  e.speakerBtn.disabled = true;
+  e.speakerBtn.setAttribute("aria-disabled", "true");
 
   if (consultantAvatar) {
     e.avatarImg.src = consultantAvatar;
@@ -288,6 +312,7 @@ export function openCallModal({ consultantName, consultantAvatar, isVideo, onEnd
   e.muteBtn.onclick = () => onToggleMute?.();
   e.cameraBtn.onclick = () => onToggleCamera?.();
   e.switchCameraBtn.onclick = () => onSwitchCamera?.();
+  e.speakerBtn.onclick = () => onToggleSpeaker?.();
   e.endBtn.onclick = () => onEnd?.("user_cut_call");
   e.closeBtn.onclick = () => onEnd?.("user_cut_call");
   e.backdrop.onclick = (evt) => {
@@ -348,6 +373,17 @@ export function openCallModal({ consultantName, consultantAvatar, isVideo, onEnd
     setSwitchingCamera(busy) {
       e.switchCameraBtn.disabled = Boolean(busy);
       e.switchCameraBtn.setAttribute("aria-busy", busy ? "true" : "false");
+    },
+    // Speaker stays VISIBLE (unlike camera/switch-camera) even when
+    // unsupported — disabled instead, per the explicit "degrade gracefully"
+    // requirement, since it belongs in both the voice and video control set.
+    setSpeakerAvailable(can) {
+      e.speakerBtn.disabled = !can;
+      e.speakerBtn.setAttribute("aria-disabled", can ? "false" : "true");
+      e.speakerBtn.title = can ? "" : "Not supported on this device";
+    },
+    setSwitchingSpeaker(busy) {
+      e.speakerBtn.setAttribute("aria-busy", busy ? "true" : "false");
     },
     close() {
       stopTimerInterval();

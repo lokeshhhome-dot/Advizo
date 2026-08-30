@@ -137,6 +137,13 @@ function open(config) {
       modal.setSwitchingCamera(false);
       if (!result?.ok) console.error("[CALL MODAL] camera switch failed:", result?.message);
     },
+    onToggleSpeaker: async () => {
+      if (!activeSession) return;
+      modal.setSwitchingSpeaker(true);
+      const result = await activeSession.switchSpeaker();
+      modal.setSwitchingSpeaker(false);
+      if (!result?.ok) console.error("[CALL MODAL] speaker switch failed:", result?.message);
+    },
   });
   activeModal = modal;
   bindMediaListeners(modal);
@@ -163,6 +170,13 @@ function open(config) {
           // timer is read-only and never drives billing/session state.
           if (state.status === "connected" && state.startedAt) {
             modal.startTimer(state.startedAt);
+            // Only meaningful once the remote audio track actually exists
+            // (it doesn't before the call connects) — see engine.js's
+            // canSwitchSpeaker for why this can report false on most mobile
+            // browsers regardless of call type.
+            activeSession?.canSwitchSpeaker().then((can) => {
+              if (activeModal === modal) modal.setSpeakerAvailable(can);
+            });
           }
           if (TERMINAL_STATES.has(state.status)) {
             console.log("[CALL MODAL] call ended");

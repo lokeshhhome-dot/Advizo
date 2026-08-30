@@ -33,6 +33,10 @@ let remoteVideoTrack = null;
 // Export functions to get tracks for video rendering
 export const getLocalVideoTrack = () => localVideoTrack;
 export const getRemoteVideoTrack = () => remoteVideoTrack;
+// Read-only handle for output-device (speaker) selection — Agora's
+// IRemoteAudioTrack exposes setPlaybackDevice(deviceId) on browsers that
+// support it; nothing here changes how the track itself is created/played.
+export const getRemoteAudioTrack = () => remoteAudioTrack;
 
 // Read-only handle on the Agora client for observers (network-quality monitor).
 // Callers must only ever subscribe to events / read stats through this — the

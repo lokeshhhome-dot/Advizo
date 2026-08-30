@@ -179,16 +179,25 @@
   color: #f4f6f8;
 }
 
+/* Sized to visually match the Consultant Dashboard's own local-preview
+   tile (VideoCallingPage.module.css's .localVideo — a ~3:4 portrait tile,
+   not 16:9: its real desktop size is 150x200, scaling to 176x234 on wide
+   screens and down to 92x120/108x148 on small ones — clamp() here tracks
+   that same range responsively instead of hardcoding one of those steps).
+   Positioned within .stage (not the panel), so its bottom offset already
+   clears the controls bar below without any extra math. */
 .consultly-call-widget-local-video {
   position: absolute;
   bottom: 16px;
   right: 16px;
-  width: 100px;
-  height: 136px;
-  border-radius: 12px;
+  width: clamp(96px, 30vw, 168px);
+  aspect-ratio: 3 / 4;
+  height: auto;
+  border-radius: 14px;
   overflow: hidden;
   background: #000;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
 }
 
 /* ---- controls ---- */

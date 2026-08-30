@@ -17,6 +17,7 @@ import {
   getRemoteVideoTrack,
   switchCamera as switchCameraTrack,
   getLocalCameraDeviceId,
+  getRemoteAudioTrack,
 } from "../../consultly_Frontend/src/components/Redux/slices/callSlice";
 import {
   getSocket,
@@ -390,6 +391,51 @@ export function startCustomerCall({ shop, consultantId, callType, onState }) {
     }
   };
 
+  // Speaker/output-device control. callSlice.js did not previously expose
+  // the remote audio track at all — getRemoteAudioTrack (one line, added
+  // alongside the existing getLocalVideoTrack/getRemoteVideoTrack getters)
+  // is the only callSlice.js change this required. setPlaybackDevice is
+  // Agora's own IRemoteAudioTrack API (real output-device selection on
+  // browsers that support it, e.g. desktop Chrome/Edge) — not a second
+  // audio system. There is no cross-browser way to force loudspeaker vs
+  // earpiece on mobile web, and no fake toggle is implemented for that:
+  // canSwitchSpeaker() reports false and the UI disables the button rather
+  // than pretending to do something.
+  let currentSpeakerIndex = 0;
+  const listAudioOutputs = async () => {
+    try {
+      if (!navigator?.mediaDevices?.enumerateDevices) return [];
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      return devices.filter((d) => d.kind === "audiooutput");
+    } catch (_) {
+      return [];
+    }
+  };
+
+  const canSwitchSpeaker = async () => {
+    const remoteTrack = getRemoteAudioTrack();
+    if (!remoteTrack || typeof remoteTrack.setPlaybackDevice !== "function") return false;
+    const outputs = await listAudioOutputs();
+    return outputs.length > 1;
+  };
+
+  const switchSpeaker = async () => {
+    const remoteTrack = getRemoteAudioTrack();
+    if (!remoteTrack || typeof remoteTrack.setPlaybackDevice !== "function") {
+      return { ok: false, message: "Not supported on this device" };
+    }
+    const outputs = await listAudioOutputs();
+    if (outputs.length < 2) return { ok: false, message: "Only one audio output available" };
+    currentSpeakerIndex = (currentSpeakerIndex + 1) % outputs.length;
+    const next = outputs[currentSpeakerIndex];
+    try {
+      await remoteTrack.setPlaybackDevice(next.deviceId);
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, message: err?.message };
+    }
+  };
+
   return {
     isVideo,
     toggleMute: () => {
@@ -409,6 +455,8 @@ export function startCustomerCall({ shop, consultantId, callType, onState }) {
     // like the dashboard's own behavior.
     canSwitchCamera,
     switchCamera,
+    canSwitchSpeaker,
+    switchSpeaker,
     hangUp,
     getLocalVideoTrack,
     getRemoteVideoTrack,
