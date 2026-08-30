@@ -15,6 +15,8 @@ import {
   toggleVideo as toggleVideoAction,
   getLocalVideoTrack,
   getRemoteVideoTrack,
+  switchCamera as switchCameraTrack,
+  getLocalCameraDeviceId,
 } from "../../consultly_Frontend/src/components/Redux/slices/callSlice";
 import {
   getSocket,
@@ -207,7 +209,10 @@ export function startCustomerCall({ shop, consultantId, callType, onState }) {
     startedAt = Date.now();
     stopRingtone();
     console.log("[CALL DEBUG] call connected");
-    onState({ status: "connected" });
+    // startedAt is the SAME timestamp clientDurationSeconds is computed from
+    // on hangUp — the display-only UI timer uses this exact value too, so it
+    // can never drift from the authoritative session-start moment.
+    onState({ status: "connected", startedAt });
   }
 
   function onMissed() {
@@ -355,6 +360,36 @@ export function startCustomerCall({ shop, consultantId, callType, onState }) {
     }
   })();
 
+  const listCameraDevices = async () => {
+    try {
+      if (!navigator?.mediaDevices?.enumerateDevices) return [];
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      return devices.filter((d) => d.kind === "videoinput");
+    } catch (_) {
+      return [];
+    }
+  };
+
+  const canSwitchCamera = async () => {
+    if (!isVideo) return false;
+    const cameras = await listCameraDevices();
+    return cameras.length > 1;
+  };
+
+  const switchCamera = async () => {
+    const cameras = await listCameraDevices();
+    if (cameras.length < 2) return { ok: false };
+    const currentId = getLocalCameraDeviceId();
+    const currentIndex = cameras.findIndex((d) => d.deviceId === currentId);
+    const next = cameras[(currentIndex + 1) % cameras.length];
+    try {
+      await switchCameraTrack({ deviceId: next.deviceId });
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, message: err?.message };
+    }
+  };
+
   return {
     isVideo,
     toggleMute: () => {
@@ -365,6 +400,15 @@ export function startCustomerCall({ shop, consultantId, callType, onState }) {
       store.dispatch(toggleVideoAction());
       return store.getState().call.videoEnabled;
     },
+    // Reuses callSlice.js's own switchCamera/getLocalCameraDeviceId (the
+    // exact functions the Consultant Dashboard's useCameraSwitch hook wraps)
+    // — this only replicates that hook's device-selection logic (which
+    // camera is "next"), not the actual switch mechanism. Best-effort: no
+    // cameras or a failed switch just means the button stays hidden/the
+    // current camera keeps publishing, never interrupting the call, exactly
+    // like the dashboard's own behavior.
+    canSwitchCamera,
+    switchCamera,
     hangUp,
     getLocalVideoTrack,
     getRemoteVideoTrack,

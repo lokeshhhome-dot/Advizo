@@ -20,10 +20,13 @@ function injectStyles() {
   document.head.appendChild(style);
 }
 
+// "Calling…" (not "Ringing…") — from the customer's own point of view they
+// are the one calling out, not the one being rung.
 const STATUS_TEXT = {
   checking: "Connecting…",
-  ringing: "Ringing…",
+  ringing: "Calling…",
   connected: "Connected",
+  reconnecting: "Reconnecting…",
   ended: "Call ended",
   missed: "No answer",
   rejected: "Declined",
@@ -34,11 +37,49 @@ const STATUS_TEXT = {
   "no-balance": "Insufficient balance",
 };
 
+const STATUS_DOT_CLASS = {
+  connected: "consultly-call-widget-dot--live",
+  checking: "consultly-call-widget-dot--pending",
+  ringing: "consultly-call-widget-dot--pending",
+  reconnecting: "consultly-call-widget-dot--warn",
+};
+
 function escapeHtml(value) {
   return String(value == null ? "" : value).replace(/[&<>"']/g, (ch) => (
     { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]
   ));
 }
+
+// mm:ss, or hh:mm:ss once a call passes an hour.
+function formatDuration(totalSeconds) {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  const hrs = Math.floor(s / 3600);
+  const mins = Math.floor((s % 3600) / 60);
+  const secs = s % 60;
+  const pad = (n) => String(n).padStart(2, "0");
+  return hrs > 0 ? `${pad(hrs)}:${pad(mins)}:${pad(secs)}` : `${pad(mins)}:${pad(secs)}`;
+}
+
+// Same path data as VideoCallingPage.js's own mic/camera/switch-camera
+// icons (Consultant Dashboard) — hand-copied since there's no shared
+// component boundary between the React app and this vanilla widget, kept
+// visually identical on purpose so both sides of a call look consistent.
+const ICONS = {
+  micOn:
+    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>',
+  micOff:
+    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="1" y1="1" x2="23" y2="23"/></svg>',
+  cameraOn:
+    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>',
+  cameraOff:
+    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/><line x1="1" y1="1" x2="23" y2="23"/></svg>',
+  switchCamera:
+    '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4a8 8 0 0 1 7.6 5.5"/><polyline points="20 3.5 20 9.5 14 9.5"/><path d="M12 20a8 8 0 0 1-7.6-5.5"/><polyline points="4 20.5 4 14.5 10 14.5"/><circle cx="12" cy="12" r="2.6"/></svg>',
+  end:
+    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 15.5c0 .3-.1.5-.3.7l-2.9 2.9c-.2.2-.5.3-.8.3-2.1-.1-4.3-.7-6.4-1.9C8.5 16.3 6.5 14.3 5.2 12.2 4 10.1 3.4 7.9 3.3 5.8c0-.3.1-.6.3-.8l2.9-2.9c.4-.4 1-.5 1.5-.2.2.1.3.3.4.5l1.5 3.5c.2.4.1.9-.2 1.2L8.4 8.4c.9 2.2 2.5 3.8 4.7 4.7l1.3-1.3c.3-.3.8-.4 1.2-.2l3.5 1.5c.2.1.4.2.5.4.3.5.2 1.1-.2 1.5l-.4.5z" fill="currentColor"/></svg>',
+  close:
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+};
 
 let els = null;
 
@@ -60,10 +101,41 @@ function ensureModal() {
   closeBtn.type = "button";
   closeBtn.className = "consultly-call-widget-close";
   closeBtn.setAttribute("aria-label", "Close");
-  closeBtn.innerHTML =
-    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
-    '<path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  closeBtn.innerHTML = ICONS.close;
 
+  // ---- header: name + call type, status dot + text + live timer ----
+  const header = document.createElement("div");
+  header.className = "consultly-call-widget-header";
+
+  const headerTop = document.createElement("div");
+  headerTop.className = "consultly-call-widget-header-row";
+  const name = document.createElement("p");
+  name.className = "consultly-call-widget-name";
+  const callTypeLabel = document.createElement("span");
+  callTypeLabel.className = "consultly-call-widget-calltype";
+  headerTop.appendChild(name);
+  headerTop.appendChild(callTypeLabel);
+
+  const headerBottom = document.createElement("div");
+  headerBottom.className = "consultly-call-widget-header-row";
+  const statusLine = document.createElement("div");
+  statusLine.className = "consultly-call-widget-statusline";
+  const statusDot = document.createElement("span");
+  statusDot.className = "consultly-call-widget-dot";
+  const statusText = document.createElement("span");
+  statusText.className = "consultly-call-widget-status-text";
+  statusLine.appendChild(statusDot);
+  statusLine.appendChild(statusText);
+  const timerEl = document.createElement("span");
+  timerEl.className = "consultly-call-widget-timer";
+  timerEl.hidden = true;
+  headerBottom.appendChild(statusLine);
+  headerBottom.appendChild(timerEl);
+
+  header.appendChild(headerTop);
+  header.appendChild(headerBottom);
+
+  // ---- stage: remote video / avatar fallback + local PIP ----
   const stage = document.createElement("div");
   stage.className = "consultly-call-widget-stage";
 
@@ -84,55 +156,49 @@ function ensureModal() {
   avatarWrap.appendChild(avatarImg);
   avatarWrap.appendChild(avatarFallback);
 
-  const name = document.createElement("p");
-  name.className = "consultly-call-widget-name";
-
-  const status = document.createElement("p");
-  status.className = "consultly-call-widget-status";
-
-  const callTypeLabel = document.createElement("p");
-  callTypeLabel.className = "consultly-call-widget-calltype";
-
   const localVideo = document.createElement("div");
   localVideo.setAttribute("data-local-video", "");
   localVideo.className = "consultly-call-widget-local-video";
 
   stage.appendChild(remoteVideo);
   stage.appendChild(avatarWrap);
-  stage.appendChild(name);
-  stage.appendChild(status);
-  stage.appendChild(callTypeLabel);
   stage.appendChild(localVideo);
 
+  // ---- controls ----
   const controls = document.createElement("div");
   controls.className = "consultly-call-widget-controls";
 
   const muteBtn = document.createElement("button");
   muteBtn.type = "button";
   muteBtn.className = "consultly-call-widget-control";
-  muteBtn.setAttribute("aria-label", "Mute");
-  muteBtn.textContent = "🎤";
+  muteBtn.setAttribute("aria-label", "Mute microphone");
 
   const cameraBtn = document.createElement("button");
   cameraBtn.type = "button";
   cameraBtn.className = "consultly-call-widget-control";
-  cameraBtn.setAttribute("aria-label", "Camera");
-  cameraBtn.textContent = "📷";
+  cameraBtn.setAttribute("aria-label", "Turn camera off");
   cameraBtn.hidden = true;
+
+  const switchCameraBtn = document.createElement("button");
+  switchCameraBtn.type = "button";
+  switchCameraBtn.className = "consultly-call-widget-control consultly-call-widget-control--secondary";
+  switchCameraBtn.setAttribute("aria-label", "Switch camera");
+  switchCameraBtn.innerHTML = ICONS.switchCamera;
+  switchCameraBtn.hidden = true;
 
   const endBtn = document.createElement("button");
   endBtn.type = "button";
   endBtn.className = "consultly-call-widget-control consultly-call-widget-control--end";
   endBtn.setAttribute("aria-label", "End call");
-  endBtn.innerHTML =
-    '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
-    '<path d="M21 15.5c0 .3-.1.5-.3.7l-2.9 2.9c-.2.2-.5.3-.8.3-2.1-.1-4.3-.7-6.4-1.9C8.5 16.3 6.5 14.3 5.2 12.2 4 10.1 3.4 7.9 3.3 5.8c0-.3.1-.6.3-.8l2.9-2.9c.4-.4 1-.5 1.5-.2.2.1.3.3.4.5l1.5 3.5c.2.4.1.9-.2 1.2L8.4 8.4c.9 2.2 2.5 3.8 4.7 4.7l1.3-1.3c.3-.3.8-.4 1.2-.2l3.5 1.5c.2.1.4.2.5.4.3.5.2 1.1-.2 1.5l-.4.5z" fill="currentColor"/></svg>';
+  endBtn.innerHTML = ICONS.end;
 
   controls.appendChild(muteBtn);
   controls.appendChild(cameraBtn);
+  controls.appendChild(switchCameraBtn);
   controls.appendChild(endBtn);
 
   panel.appendChild(closeBtn);
+  panel.appendChild(header);
   panel.appendChild(stage);
   panel.appendChild(controls);
   backdrop.appendChild(panel);
@@ -142,18 +208,21 @@ function ensureModal() {
     backdrop,
     panel,
     closeBtn,
+    name,
+    callTypeLabel,
+    statusDot,
+    statusText,
+    timerEl,
     stage,
     remoteVideo,
     avatarWrap,
     avatarImg,
     avatarFallback,
-    name,
-    status,
-    callTypeLabel,
     localVideo,
     controls,
     muteBtn,
     cameraBtn,
+    switchCameraBtn,
     endBtn,
   };
   return els;
@@ -161,22 +230,45 @@ function ensureModal() {
 
 let previouslyFocused = null;
 let keydownBound = false;
+// True for the whole "checking" -> "connected" span — guards against an
+// accidental backdrop click / Escape silently dropping a live or in-progress
+// call. Cleared once a terminal status is reached, so the (already-ending)
+// modal can still be dismissed normally in its closing window.
+let callActive = false;
+let timerIntervalId = null;
+
 function handleKeydown(evt) {
-  if (evt.key === "Escape" || evt.key === "Esc") {
-    els?.endBtn?.click();
+  if (evt.key !== "Escape" && evt.key !== "Esc") return;
+  if (callActive) return;
+  els?.endBtn?.click();
+}
+
+function stopTimerInterval() {
+  if (timerIntervalId) {
+    window.clearInterval(timerIntervalId);
+    timerIntervalId = null;
   }
 }
 
-export function openCallModal({ consultantName, consultantAvatar, isVideo, onEnd, onToggleMute, onToggleCamera }) {
+export function openCallModal({ consultantName, consultantAvatar, isVideo, onEnd, onToggleMute, onToggleCamera, onSwitchCamera }) {
   const e = ensureModal();
+  stopTimerInterval();
+  callActive = true;
+
   e.panel.classList.toggle("consultly-call-widget-panel--video", Boolean(isVideo));
   e.name.textContent = consultantName || "Consultant";
   e.callTypeLabel.textContent = isVideo ? "Video Call" : "Voice Call";
-  e.status.textContent = STATUS_TEXT.checking;
-  e.status.className = "consultly-call-widget-status";
+  e.statusText.textContent = STATUS_TEXT.checking;
+  e.statusDot.className = `consultly-call-widget-dot ${STATUS_DOT_CLASS.checking}`;
+  e.timerEl.hidden = true;
+  e.timerEl.textContent = "00:00";
   e.cameraBtn.hidden = !isVideo;
+  e.switchCameraBtn.hidden = true;
   e.muteBtn.dataset.state = "unmuted";
+  e.muteBtn.innerHTML = ICONS.micOn;
+  e.muteBtn.setAttribute("aria-label", "Mute microphone");
   e.cameraBtn.dataset.state = isVideo ? "off" : "on";
+  e.cameraBtn.innerHTML = isVideo ? ICONS.cameraOff : ICONS.cameraOn;
 
   if (consultantAvatar) {
     e.avatarImg.src = consultantAvatar;
@@ -190,14 +282,18 @@ export function openCallModal({ consultantName, consultantAvatar, isVideo, onEnd
   e.avatarImg.alt = escapeHtml(consultantName || "Consultant");
 
   e.remoteVideo.style.display = "none";
+  e.avatarWrap.style.display = "flex";
   e.localVideo.style.display = "none";
 
   e.muteBtn.onclick = () => onToggleMute?.();
   e.cameraBtn.onclick = () => onToggleCamera?.();
+  e.switchCameraBtn.onclick = () => onSwitchCamera?.();
   e.endBtn.onclick = () => onEnd?.("user_cut_call");
   e.closeBtn.onclick = () => onEnd?.("user_cut_call");
   e.backdrop.onclick = (evt) => {
-    if (evt.target === e.backdrop) onEnd?.("user_cut_call");
+    if (evt.target !== e.backdrop) return;
+    if (callActive) return; // accidental-close guard while a call is live/in progress
+    onEnd?.("user_cut_call");
   };
 
   previouslyFocused = document.activeElement;
@@ -211,13 +307,23 @@ export function openCallModal({ consultantName, consultantAvatar, isVideo, onEnd
 
   return {
     setStatus(statusKey, message) {
-      e.status.textContent = message || STATUS_TEXT[statusKey] || statusKey;
-      e.status.className =
-        "consultly-call-widget-status" +
-        (statusKey === "connected" ? " consultly-call-widget-status--live" : "");
-      // Video only actually shows once a remote track publishes — see
-      // showRemoteVideo/showLocalVideo, called from index.js's Agora event
-      // bridge. Connected (voice) just needs the status text updated above.
+      e.statusText.textContent = message || STATUS_TEXT[statusKey] || statusKey;
+      e.statusDot.className = `consultly-call-widget-dot ${STATUS_DOT_CLASS[statusKey] || ""}`;
+    },
+    startTimer(startedAt) {
+      stopTimerInterval();
+      e.timerEl.hidden = false;
+      const tick = () => {
+        e.timerEl.textContent = formatDuration((Date.now() - startedAt) / 1000);
+      };
+      tick();
+      timerIntervalId = window.setInterval(tick, 1000);
+    },
+    stopTimer() {
+      stopTimerInterval();
+    },
+    setCallActive(active) {
+      callActive = Boolean(active);
     },
     showRemoteVideo(show) {
       e.remoteVideo.style.display = show ? "block" : "none";
@@ -228,13 +334,24 @@ export function openCallModal({ consultantName, consultantAvatar, isVideo, onEnd
     },
     setMuted(muted) {
       e.muteBtn.dataset.state = muted ? "muted" : "unmuted";
-      e.muteBtn.textContent = muted ? "🔇" : "🎤";
+      e.muteBtn.innerHTML = muted ? ICONS.micOff : ICONS.micOn;
+      e.muteBtn.setAttribute("aria-label", muted ? "Unmute microphone" : "Mute microphone");
     },
     setCameraOn(on) {
       e.cameraBtn.dataset.state = on ? "on" : "off";
-      e.cameraBtn.textContent = on ? "📷" : "🚫";
+      e.cameraBtn.innerHTML = on ? ICONS.cameraOn : ICONS.cameraOff;
+      e.cameraBtn.setAttribute("aria-label", on ? "Turn camera off" : "Turn camera on");
+    },
+    setCanSwitchCamera(can) {
+      e.switchCameraBtn.hidden = !can;
+    },
+    setSwitchingCamera(busy) {
+      e.switchCameraBtn.disabled = Boolean(busy);
+      e.switchCameraBtn.setAttribute("aria-busy", busy ? "true" : "false");
     },
     close() {
+      stopTimerInterval();
+      callActive = false;
       if (!e.backdrop || e.backdrop.hasAttribute("hidden")) return;
       e.backdrop.setAttribute("hidden", "hidden");
       document.body.style.overflow = "";

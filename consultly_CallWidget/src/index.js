@@ -126,6 +126,17 @@ function open(config) {
       const videoEnabled = activeSession?.toggleCamera();
       modal.setCameraOn(Boolean(videoEnabled));
     },
+    onSwitchCamera: async () => {
+      if (!activeSession) return;
+      modal.setSwitchingCamera(true);
+      const result = await activeSession.switchCamera();
+      // A failed switch leaves the previous camera published and the call
+      // uninterrupted — same behavior as the Consultant Dashboard's own
+      // camera-switch button — so there's nothing else to reconcile here
+      // beyond clearing the busy state.
+      modal.setSwitchingCamera(false);
+      if (!result?.ok) console.error("[CALL MODAL] camera switch failed:", result?.message);
+    },
   });
   activeModal = modal;
   bindMediaListeners(modal);
@@ -147,18 +158,37 @@ function open(config) {
           if (state.status === "ringing") console.log("[CALL MODAL] Agora initialization");
           if (state.status === "connected") console.log("[CALL MODAL] connected");
           modal.setStatus(state.status, state.message);
+          // startedAt is the same authoritative timestamp the engine bills
+          // duration from (see engine.js's onAcceptedStarted) — this display
+          // timer is read-only and never drives billing/session state.
+          if (state.status === "connected" && state.startedAt) {
+            modal.startTimer(state.startedAt);
+          }
           if (TERMINAL_STATES.has(state.status)) {
             console.log("[CALL MODAL] call ended");
+            modal.stopTimer();
+            modal.setCallActive(false);
             window.setTimeout(() => {
               if (activeModal === modal) closeActive();
             }, AUTO_CLOSE_DELAY_MS);
           }
         },
       });
+      if (isVideo) {
+        activeSession.canSwitchCamera().then((can) => {
+          if (activeModal === modal) modal.setCanSwitchCamera(can);
+        });
+      }
     })
     .catch((err) => {
       console.error("[CALL MODAL] failed to load call engine:", err);
-      if (activeModal === modal) modal.setStatus("failed", "Call failed. Please try again.");
+      if (activeModal === modal) {
+        modal.setStatus("failed", "Call failed. Please try again.");
+        modal.setCallActive(false);
+        window.setTimeout(() => {
+          if (activeModal === modal) closeActive();
+        }, AUTO_CLOSE_DELAY_MS);
+      }
     });
 }
 
