@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import styles from './LoginForm.module.css';
 import axios from 'axios';
@@ -6,6 +6,7 @@ import { connectAndRegisterSocket, notifySocketUserReady } from '../Sokect-io/So
 import { verifyToken } from '../Redux/slices/authConsultantSlice';
 import { redirectToConsultantDashboard } from '../../utils/consultantAuth';
 import { prepareSessionLogin, SESSION_TYPES } from '../../utils/browserSession';
+import advizoMark from '../../assets/image.png';
 
 const EyeIcon = ({ off }) =>
     off ? (
@@ -50,6 +51,25 @@ const LoginForm = () => {
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showNewPassword, setShowNewPassword] = useState(false);
+
+    // This page is loaded inside an iframe the backend composes around the
+    // shop's own header/footer (proxyShopifyConsultantPage), which shows its
+    // own loading spinner over that iframe until this fires — real
+    // readiness, not a timer. requestAnimationFrame confirms this first
+    // paint has actually happened before telling the parent. "*" targetOrigin
+    // matches this app's existing iframe postMessage calls (AGORA_IFRAME_HEIGHT,
+    // SHOW_TOAST in App.js) — the parent is the one responsible for checking
+    // event.origin before acting on it, since it alone knows which origin to
+    // trust (this app's own compiled URL is only defined server-side there).
+    useEffect(() => {
+        requestAnimationFrame(() => {
+            try {
+                window.parent?.postMessage({ type: 'ADVIZO_CONSULTANT_LOGIN_READY' }, '*');
+            } catch (err) {
+                // Not inside an iframe (e.g. local dev at /login directly) — fine to ignore.
+            }
+        });
+    }, []);
 
     const switchView = (nextView) => {
         setView(nextView);
@@ -201,11 +221,21 @@ const LoginForm = () => {
 
     return (
         <div className={styles.loginPageContainer}>
-            <div className={styles.loginContainer}>
+            <div className={styles.loginPanel}>
+                <div className={styles.brandSide}>
+                    <img src={advizoMark} alt="Advizo" className={styles.brandMark} />
+                    <p className={styles.brandTagline}>Consultant Portal</p>
+                    <p className={styles.brandCopy}>
+                        Manage your conversations, sessions, and earnings from one place.
+                    </p>
+                </div>
+
+                <div className={styles.formSide}>
 
                 {view === 'login' && (
                     <>
-                        <h1 className={styles.loginTitle}>Login</h1>
+                        <h1 className={styles.loginTitle}>Welcome back</h1>
+                        <p className={styles.loginSubtitle}>Sign in to your consultant account</p>
                         <form className={styles.loginForm} onSubmit={handleSubmit}>
                             {formSuccess && <div className={styles.successBanner}>{formSuccess}</div>}
                             {formError && <div className={styles.errorBanner}>{formError}</div>}
@@ -269,6 +299,9 @@ const LoginForm = () => {
                                 {isLoading ? (<><Spinner /> Signing in...</>) : 'Log in'}
                             </button>
                         </form>
+                        <p className={styles.helpNote}>
+                            Don't have an account? Contact your shop admin for access.
+                        </p>
                     </>
                 )}
 
@@ -392,6 +425,7 @@ const LoginForm = () => {
                         </form>
                     </>
                 )}
+                </div>
             </div>
         </div>
     );

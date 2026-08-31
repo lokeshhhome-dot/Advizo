@@ -993,26 +993,79 @@ const proxyShopifyConsultantPage = async (req, res) => {
     );
     // getTrustedConsultantAppUrl() || resolveFrontendUrl(req)
 
+    const consultantLoginSrc =
+      `${"https://untaxed-cattishly-renewal.ngrok-free.dev"}/login?shop=${shop}`;
+    // Derived from the exact same URL the iframe actually loads (not
+    // recomputed from getTrustedConsultantAppUrl/resolveFrontendUrl
+    // separately) so the postMessage origin check below can never drift out
+    // of sync with where the iframe really points.
+    const consultantLoginOrigin = new URL(consultantLoginSrc).origin;
+
     const pageHtml = `
         <!DOCTYPE html>
         <html>
           ${finalHead}
+          <style>
+            /* Advizo login loader — covers the iframe only until the React
+               app inside it reports readiness (see the postMessage listener
+               below). Not a skeleton: one spinner, one message, nothing else. */
+            #advizo-login-loader {
+              position: absolute;
+              inset: 0;
+              z-index: 5;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              gap: 14px;
+              background: #fbfaf5;
+              transition: opacity 220ms ease;
+            }
+            #advizo-login-loader.is-hidden {
+              opacity: 0;
+              pointer-events: none;
+            }
+            .advizo-login-spinner {
+              width: 32px;
+              height: 32px;
+              border-radius: 50%;
+              border: 3px solid rgba(20, 86, 60, 0.15);
+              border-top-color: #14563c;
+              animation: advizoLoginSpin 0.8s linear infinite;
+            }
+            @media (prefers-reduced-motion: reduce) {
+              .advizo-login-spinner { animation-duration: 1.6s; }
+            }
+            @keyframes advizoLoginSpin {
+              to { transform: rotate(360deg); }
+            }
+            .advizo-login-loader-text {
+              margin: 0;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+              font-size: 13px;
+              color: #5c6b64;
+            }
+          </style>
           <body style="margin:0;padding:0;display:flex;flex-direction:column;">
             <header id="proxy-header"
               style="flex-shrink:0;position:relative;z-index:999;">
             ${headerHtml}
             </header>
-             
+
             <main style="position:relative;">
+              <div id="advizo-login-loader" role="status" aria-live="polite" aria-label="Loading consultant portal">
+                <span class="advizo-login-spinner" aria-hidden="true"></span>
+                <p class="advizo-login-loader-text">Loading consultant portal…</p>
+              </div>
               <iframe
                 id="agora-iframe"
-                src="${"https://untaxed-cattishly-renewal.ngrok-free.dev"}/login?shop=${shop}"
+                src="${consultantLoginSrc}"
                 style="border:none;width:100%;min-height:200px;display:block;"
               ></iframe>
             </main>
-  
+
             <footer style="flex-shrink:0;">${footerHtml}</footer>
-  
+
             <!-- Parent script (MUST HAVE) -->
             <script src="https://cdnjs.cloudflare.com/ajax/libs/iframe-resizer/4.3.6/iframeResizer.min.js"></script>
             <script>
@@ -1022,6 +1075,34 @@ const proxyShopifyConsultantPage = async (req, res) => {
                 heightCalculationMethod: "bodyScroll",
                 minHeight: 200,
               }, "#agora-iframe");
+
+              (function () {
+                var TRUSTED_ORIGIN = ${JSON.stringify(consultantLoginOrigin)};
+                var loader = document.getElementById("advizo-login-loader");
+                var hidden = false;
+
+                function hideLoader() {
+                  if (hidden || !loader) return;
+                  hidden = true;
+                  loader.classList.add("is-hidden");
+                  setTimeout(function () {
+                    if (loader.parentNode) loader.parentNode.removeChild(loader);
+                  }, 240);
+                }
+
+                window.addEventListener("message", function (event) {
+                  if (event.origin !== TRUSTED_ORIGIN) return;
+                  if (event.data && event.data.type === "ADVIZO_CONSULTANT_LOGIN_READY") {
+                    hideLoader();
+                  }
+                });
+
+                // Safety net only — real readiness always comes from the
+                // React login app's own postMessage above. This just
+                // prevents a genuinely stuck iframe load from leaving the
+                // spinner up forever.
+                setTimeout(hideLoader, 8000);
+              })();
             </script>
           </body>
         </html>
