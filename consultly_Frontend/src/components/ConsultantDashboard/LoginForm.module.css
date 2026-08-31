@@ -29,12 +29,16 @@
 
 /* ---------------------------------- BRAND SIDE ---------------------------------- */
 
+/* Light, warm background — the Advizo lockup's own ink/amber colors
+   (#14213d / #c8871f) are dark-on-light by design, so this panel stays
+   light instead of the dark-green treatment used before that asset existed. */
 .brandSide {
     flex: 0 0 38%;
     box-sizing: border-box;
     padding: 44px 36px;
-    background: linear-gradient(160deg, #14563c 0%, #0d3f2c 100%);
-    color: #ffffff;
+    background: radial-gradient(130% 110% at 100% 0%, #f8f5ec 0%, #eee7d8 100%);
+    border-right: 1px solid rgba(20, 33, 61, 0.08);
+    color: #14213d;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -54,7 +58,7 @@
     font-weight: 650;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.75);
+    color: #c8871f;
 }
 
 .brandCopy {
@@ -63,7 +67,7 @@
     font-weight: 600;
     line-height: 1.45;
     letter-spacing: -0.01em;
-    color: #ffffff;
+    color: #14213d;
     max-width: 260px;
 }
 

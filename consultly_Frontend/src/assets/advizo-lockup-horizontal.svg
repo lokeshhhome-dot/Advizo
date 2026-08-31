@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="196" height="44" viewBox="0 0 196 44" fill="none" role="img" aria-label="Advizo">
+  <g transform="translate(2 8) scale(1.02)">
+    <path d="M3 25 L14.4 3" fill="none" stroke="#14213D" stroke-width="2.1" stroke-linecap="round"></path>
+    <path d="M29 25 L17.6 3" fill="none" stroke="#14213D" stroke-width="2.1" stroke-linecap="round"></path>
+    <path d="M9.4 16.5 L22.6 16.5" fill="none" stroke="#C8871F" stroke-width="2.1" stroke-linecap="round"></path>
+    <circle cx="16" cy="1.6" r="2.3" fill="#C8871F"></circle>
+  </g>
+  <text x="48" y="30" font-family="'Bricolage Grotesque','Instrument Sans',system-ui,sans-serif" font-size="26" font-weight="600" letter-spacing="0.5" fill="#14213D">Advizo</text>
+</svg>

@@ -23,7 +23,7 @@ import { ConsultantDashboardSkeleton } from "../loading/PageSkeletons";
 import { getProfileImageUrl, handleProfileImageError } from "../../utils/getProfileImageUrl";
 import { useConsultantIdentity } from "../../utils/useConsultantIdentity";
 import { useConsultantNotifications } from "./useConsultantNotifications";
-import appLogo from "../../assets/image.png";
+import appLogo from "../../assets/advizo-lockup-horizontal.svg";
 
 // This replaces the old "logo + search + bell + avatar" top bar entirely —
 // there is no shell-level header on desktop any more (each page owns its own
@@ -226,7 +226,7 @@ function TabNavigation() {
         {/* ---------------------------- NAV RAIL (desktop) --------------------------- */}
         <aside className={styles.rail}>
           <div className={styles.railBrand}>
-            <img src={appLogo} alt="Consultly" className={styles.railBrandLogo} />
+            <img src={appLogo} alt="Advizo" className={styles.railBrandLogo} />
           </div>
 
           <nav className={styles.railNav} aria-label="Consultant dashboard">

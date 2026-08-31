@@ -6,7 +6,7 @@ import { connectAndRegisterSocket, notifySocketUserReady } from '../Sokect-io/So
 import { verifyToken } from '../Redux/slices/authConsultantSlice';
 import { redirectToConsultantDashboard } from '../../utils/consultantAuth';
 import { prepareSessionLogin, SESSION_TYPES } from '../../utils/browserSession';
-import advizoMark from '../../assets/image.png';
+import advizoMark from '../../assets/advizo-lockup-horizontal.svg';
 
 const EyeIcon = ({ off }) =>
     off ? (

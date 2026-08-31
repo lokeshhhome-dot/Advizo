@@ -29,19 +29,23 @@
     z-index: 200;
 }
 
+/* Sized for the horizontal wordmark lockup (196x44, ~4.5:1) — a fixed square
+   icon box like the old single-mark logo used no longer fits; height-driven
+   sizing with width:auto keeps it legible and centered at this rail's
+   width. Widens/left-aligns at the desktop breakpoint below. */
 .railBrand {
-    width: 40px;
-    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
+    height: 32px;
     margin-bottom: 8px;
     flex-shrink: 0;
 }
 
 .railBrandLogo {
-    max-width: 32px;
-    max-height: 32px;
+    height: 18px;
+    width: auto;
+    max-width: 100%;
     object-fit: contain;
     display: block;
 }
@@ -455,7 +459,13 @@
     }
 
     .railBrand {
+        justify-content: flex-start;
+        height: auto;
         margin-left: 6px;
+    }
+
+    .railBrandLogo {
+        height: 24px;
     }
 
     .railNav {
