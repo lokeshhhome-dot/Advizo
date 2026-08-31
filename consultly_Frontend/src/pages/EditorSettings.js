@@ -11,7 +11,7 @@ import styles from "./EditorSettings.module.css";
 const EDITOR_ITEMS = [
   {
     key: "consultant-card-theme",
-    path: "/consultant-card-theme",
+    path: "/editor/consultant-card-theme",
     icon: PaintBrushFlatIcon,
     title: "Card Appearance",
     description:

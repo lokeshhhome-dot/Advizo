@@ -251,7 +251,7 @@ export default function App() {
               />
               <Route path="/voucher-management" element={<VoucherTable />} />
               <Route path="/admin-percentage" element={<AdminPercentage />} />
-              <Route path="/consultant-card-theme" element={<ConsultantCardTheme />} />
+              <Route path="/editor/consultant-card-theme" element={<ConsultantCardTheme />} />
               <Route path="/editor" element={<EditorSettings />} />
               <Route
                 path="/revenue-management"

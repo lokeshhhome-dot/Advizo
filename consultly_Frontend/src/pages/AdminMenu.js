@@ -49,7 +49,6 @@ export function AdminMenu() {
     <NavMenu>
       <a href="/" rel="home" onClick={(e) => handleNav(e, "/")}>Dashboard</a>
       <a href="/consultant-list" onClick={(e) => handleNav(e, "/consultant-list")}>Consultants</a>
-      <a href="/editor" onClick={(e) => handleNav(e, "/editor")}>Editor</a>
       <a href="/admin-percentage" onClick={(e) => handleNav(e, "/admin-percentage")}>Commission</a>
       <a href="/voucher-management" onClick={(e) => handleNav(e, "/voucher-management")}>Vouchers</a>
       <a href="/history" onClick={(e) => handleNav(e, "/history")}>Activity History</a>
@@ -58,6 +57,7 @@ export function AdminMenu() {
       <a href="/consultant-support" onClick={(e) => handleNav(e, "/consultant-support")}>Support Inbox</a>
       <a href="/revenue-management" onClick={(e) => handleNav(e, "/revenue-management")}>Revenue Management</a>
       <a href="/account-information" onClick={(e) => handleNav(e, "/account-information")}>Billing</a>
+      <a href="/editor" onClick={(e) => handleNav(e, "/editor")}>Editor</a>
       <a href="/faq" onClick={(e) => handleNav(e, "/faq")}>FAQ</a>
     </NavMenu>
   );
