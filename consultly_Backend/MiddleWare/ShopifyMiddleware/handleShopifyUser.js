@@ -17,35 +17,17 @@ const SESSION_CACHE_TTL_MS = 5 * 60 * 1000;
 const USER_TOKEN_CACHE_TTL_MS = 6 * 24 * 60 * 60 * 1000;
 const JWT_EXPIRY = "7d";
 
-// TEMPORARY TESTING FLAG — do not treat this as the production auth path.
-// Confirmed live: App Proxy verified, shop found, logged_in_customer_id
-// present, AND the installed token DOES have read_customers granted — yet
-// Admin GraphQL customer(id){ id } still returns ACCESS_DENIED. Since id is
-// never protected data and the scope is confirmed present, this points at
-// something Shopify gates independently of OAuth scopes (most likely
-// Protected Customer Data app-review approval), which no amount of query
-// retrying can work around. This flag lets Theme Extension / New Customer
-// Accounts testing continue in the meantime by trusting App-Proxy-verified
-// logged_in_customer_id directly, skipping the Shopify Admin GraphQL
-// existence check. The real verifyShopifyCustomer/fetchShopifyCustomerProfile
-// implementations are left completely intact below and are exactly what
-// runs again the moment this flag is unset — this is a bypass of ONE step,
-// not a second auth system.
-// UNCONDITIONAL for now — an env-var-gated version of this flag was tried
-// first (SHOPIFY_CUSTOMER_GRAPHQL_VERIFICATION_BYPASS /
-// TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL), but production logs showed it
-// evaluating to false ("[SHOPIFY TEST AUTH] GraphQL customer verification
-// bypassed = false"), meaning the env var was never actually set/propagated
-// on the live deployment — so this is hardcoded true instead, with no env
-// var dependency, to guarantee the bypass is actually active regardless of
-// deployment configuration.
-//
-// TODO — RE-ENABLE REAL VERIFICATION: set this back to `false` (or restore
-// an env-var check) once the Protected Customer Data / ACCESS_DENIED issue
-// is resolved. verifyShopifyCustomer / fetchShopifyCustomerProfile /
-// verifyAppInstallationScopes below are completely untouched and start
-// running again the instant this is `false` — nothing else needs to change.
-const TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL = true;
+// ROLLBACK SWITCH — real Shopify Admin GraphQL customer verification is now
+// ACTIVE (Protected Customer Data approval has been granted, so
+// customer(id){ id } no longer returns ACCESS_DENIED for an installation
+// with read_customers). This flag is kept, defaulted to `false`, purely as a
+// documented one-line emergency rollback: flipping it back to `true` returns
+// to trusting App-Proxy-verified logged_in_customer_id directly, skipping
+// the GraphQL existence check, exactly as this app ran previously while
+// approval was pending. verifyShopifyCustomer / fetchShopifyCustomerProfile /
+// verifyAppInstallationScopes below are unchanged either way — this only
+// selects which path new-customer resolution takes.
+const TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL = false;
 
 const buildSessionResult = (user, token, message = "Customer already exists") => ({
   success: true,
@@ -576,19 +558,17 @@ const manageShopifyUser = async (shop, customerId, options = {}) => {
     // NEW USER
     // ======================================================
 
-    // TEMPORARY TEST AUTH BYPASS — see TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL's
-    // own comment at the top of this file. Trusts App-Proxy-verified
+    // ROLLBACK PATH ONLY — inactive by default (see
+    // TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL's comment at the top of this
+    // file). If ever flipped back on, this trusts App-Proxy-verified
     // logged_in_customer_id directly as shopifyCustomerId, skipping
     // verifyShopifyCustomer entirely — the customer(id) GraphQL call and its
-    // "Customer not found in Shopify" / ACCESS_DENIED rejection path below
-    // are never reached while this branch returns first — then falls into
-    // the EXACT SAME Mongo create logic used by the real path below (same
-    // schema, same placeholder-email rule, same E11000 race-reconciliation)
-    // — this is not a second user-creation implementation, only a different
-    // source for `verifiedCustomerId`/`profile`.
-    // TODO: remove this `if` block (or confirm the flag is unset) once real
-    // Shopify customer verification is restored — verifyShopifyCustomer
-    // itself, further down, is untouched and ready to resume immediately.
+    // "Customer not found in Shopify" rejection path below are never reached
+    // while this branch returns first — then falls into the EXACT SAME
+    // Mongo create logic used by the real path below (same schema, same
+    // placeholder-email rule, same E11000 race-reconciliation) — this is not
+    // a second user-creation implementation, only a different source for
+    // `verifiedCustomerId`/`profile`.
     if (TEMP_BYPASS_SHOPIFY_CUSTOMER_GRAPHQL) {
       console.log("[SHOPIFY TEST AUTH] Mongo user found =", false);
       return createShopifyCustomerUser({
