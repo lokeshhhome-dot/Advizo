@@ -1,11 +1,16 @@
 import { EmptyState } from '@shopify/polaris';
 import { useAppStatus } from '../ProtectRoute/AppStatusProvider';
-import { StorefrontSkeleton } from '../loading/PageSkeletons';
+import { StorefrontSkeleton, ChatOpeningSpinner } from '../loading/PageSkeletons';
 
-const ProtectStoreFront = ({ children }) => {
+// loadingVariant defaults to the existing full-page skeleton everywhere —
+// only the /chats route opts into "spinner" (see App.js), so no other
+// ProtectStoreFront-wrapped page changes behavior.
+const ProtectStoreFront = ({ children, loadingVariant = 'skeleton' }) => {
     const { loading, appEnabled } = useAppStatus();
 
-    if (loading) return <StorefrontSkeleton />;
+    if (loading) {
+        return loadingVariant === 'spinner' ? <ChatOpeningSpinner /> : <StorefrontSkeleton />;
+    }
 
     if (!appEnabled) {
         return (

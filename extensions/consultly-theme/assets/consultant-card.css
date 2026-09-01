@@ -593,6 +593,34 @@
   display: none;
 }
 
+/* Entrance: backdrop fades, panel settles in with a small scale/translate —
+   subtle on purpose (section 15), never on close (closing just re-adds
+   [hidden], no exit transition to keep the affordance instant). */
+.consultly-profile-modal-backdrop {
+  animation: consultlyProfileFadeIn 0.18s ease-out;
+}
+
+.consultly-profile-modal {
+  animation: consultlyProfileScaleIn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes consultlyProfileFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes consultlyProfileScaleIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .consultly-profile-modal-backdrop,
+  .consultly-profile-modal {
+    animation: none;
+  }
+}
+
 /* Natural (auto) height, capped by max-height — NOT a fixed height. A
    consultant with little content (short/no bio, few chips) gets a modal
    that hugs that content; only once total content exceeds max-height does
@@ -739,6 +767,35 @@
   color: #5c6b64;
 }
 
+.consultly-profile-modal__header-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.consultly-profile-modal__rating-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #5c6b64;
+  white-space: nowrap;
+}
+
+.consultly-profile-modal__stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  color: #d8b34a;
+  flex-shrink: 0;
+}
+
+.consultly-profile-modal__stars svg {
+  display: block;
+}
+
 /* ---- body (the ONLY scrolling region) ---- */
 
 .consultly-profile-modal__body {
@@ -784,23 +841,124 @@
   background: #000;
 }
 
-.consultly-profile-modal__meta {
+/* ---- Consultation stats — plain grouped value/label pairs, deliberately
+   NOT individual bordered/shadowed cards (section 11: avoid repeated "KPI
+   card" layouts). Whitespace does the separating work instead of boxes. */
+.consultly-profile-modal__stat-row {
   display: flex;
   flex-wrap: wrap;
+  gap: 28px;
+}
+
+.consultly-profile-modal__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.consultly-profile-modal__stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #10231c;
+  letter-spacing: -0.01em;
+}
+
+.consultly-profile-modal__stat-label {
+  font-size: 12px;
+  color: #5c6b64;
+}
+
+/* ---- Rating & Reviews — compact summary + thin distribution bars, not a
+   full review dashboard. Demo data until a real field exists (see
+   getProfileExtras in consultant-card.js). ---- */
+.consultly-profile-modal__rating-summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.consultly-profile-modal__rating-number {
+  font-size: 30px;
+  font-weight: 700;
+  color: #10231c;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.consultly-profile-modal__rating-count {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: #5c6b64;
+}
+
+.consultly-profile-modal__rating-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-width: 260px;
+}
+
+.consultly-profile-modal__rating-bar-row {
+  display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.consultly-profile-modal__badge {
-  display: inline-flex;
-  align-items: center;
-  background: #f4f5f4;
-  color: #5c6b64;
-  padding: 4px 10px;
+.consultly-profile-modal__rating-bar-label {
+  width: 10px;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: #7b8a83;
+  text-align: right;
+}
+
+.consultly-profile-modal__rating-bar-track {
+  flex: 1;
+  height: 5px;
   border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
+  background: #f0efe9;
+  overflow: hidden;
+}
+
+.consultly-profile-modal__rating-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #d8b34a;
+}
+
+/* ---- Connect — social icons, only rendered when a URL exists (see
+   socialLinksMarkup). Circular treatment matches .consultly-profile-modal__close
+   above for visual consistency within this same component. ---- */
+.consultly-profile-modal__social-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.consultly-profile-modal__social-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #f4f5f4;
+  color: #10231c;
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.consultly-profile-modal__social-icon:hover {
+  background: #f4f8f6;
+  color: #14563c;
+  transform: translateY(-1px);
+}
+
+.consultly-profile-modal__social-icon:focus-visible {
+  outline: 2px solid #14563c;
+  outline-offset: 2px;
 }
 
 .consultly-profile-modal__chip-row {
@@ -976,5 +1134,121 @@
 
   .consultly-profile-modal__action {
     flex: 1 1 100%;
+  }
+
+  .consultly-profile-modal__stat-row {
+    gap: 20px;
+  }
+
+  .consultly-profile-modal__rating-number {
+    font-size: 26px;
+  }
+}
+
+/* ==========================================================================
+   Chat overlay — the "Chat" button on the consultant card opens the
+   existing React chat (UserChat.js, reached via /apps/consultly/chats) in
+   this backdrop/panel shell instead of a bare fixed iframe. Same
+   backdrop/scroll-lock/ESC/focus conventions as .consultly-profile-modal*
+   above, kept as its own separate DOM tree (see openChatOverlay's comment)
+   since chat needs no header/footer chrome of its own — UserChat.js renders
+   that inside the iframe.
+   ========================================================================== */
+
+.consultly-chat-overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 35, 28, 0.55);
+  z-index: 2147482500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: max(24px, env(safe-area-inset-top))
+    max(24px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom))
+    max(24px, env(safe-area-inset-left));
+  animation: consultlyProfileFadeIn 0.18s ease-out;
+}
+
+.consultly-chat-overlay-backdrop[hidden] {
+  display: none;
+}
+
+.consultly-chat-overlay-panel {
+  position: relative;
+  width: min(92vw, 480px);
+  height: min(90vh, 760px);
+  box-sizing: border-box;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 24px 60px rgba(16, 35, 28, 0.3);
+  overflow: hidden;
+  animation: consultlyProfileScaleIn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .consultly-chat-overlay-backdrop,
+  .consultly-chat-overlay-panel {
+    animation: none;
+  }
+}
+
+.consultly-chat-overlay-iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #ffffff;
+}
+
+.consultly-chat-overlay-spinner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  z-index: 1;
+}
+
+.consultly-chat-overlay-spinner[hidden] {
+  display: none;
+}
+
+.consultly-chat-overlay-spinner-ring {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid rgba(20, 86, 60, 0.15);
+  border-top-color: #14563c;
+  animation: consultlyChatSpin 0.8s linear infinite;
+}
+
+@keyframes consultlyChatSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .consultly-chat-overlay-spinner-ring {
+    animation-duration: 1.6s;
+  }
+}
+
+/* Mobile: a true full-screen messaging page, not a floating card — no outer
+   margin, no rounding, edge-to-edge. UserChat.js's own header/composer
+   handle safe-area insets internally. */
+@media (max-width: 767.98px) {
+  .consultly-chat-overlay-backdrop {
+    padding: 0;
+  }
+
+  .consultly-chat-overlay-panel {
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
   }
 }

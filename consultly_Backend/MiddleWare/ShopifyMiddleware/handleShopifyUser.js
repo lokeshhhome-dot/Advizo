@@ -40,9 +40,9 @@ const buildSessionResult = (user, token, message = "Customer already exists") =>
 const cacheSession = (shop, customerId, result) => {
   if (result?.success) {
     storefrontSessionCache.set(
-      `session:${shop}:${customerId}`,
+      `session:${shop}:${customerId}`, 
       result,
-      SESSION_CACHE_TTL_MS,
+      SESSION_CACHE_TTL_MS, 
     );
   }
   return result;
@@ -219,6 +219,7 @@ const verifyShopifyCustomer = async (shop, accessToken, customerId) => {
       }
     }`,
   );
+  console.log("result customer data", result)
 
   if (result.customer) {
     console.log("[SHOPIFY IDENTITY] GraphQL customer exists =", true);
@@ -260,6 +261,8 @@ const verifyShopifyCustomer = async (shop, accessToken, customerId) => {
  * null so the caller falls back to its existing "Shopify Customer"
  * placeholder — it must never be able to fail identity verification.
  */
+
+
 const fetchShopifyCustomerProfile = async (shop, accessToken, customerId) => {
   const result = await runShopifyCustomerQuery(
     shop,

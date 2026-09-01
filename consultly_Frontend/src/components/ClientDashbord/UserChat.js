@@ -24,6 +24,71 @@ import {
 } from "../../utils/getProfileImageUrl";
 import { prepareSessionLogin, SESSION_TYPES } from "../../utils/browserSession";
 
+function formatSessionDuration(totalSeconds) {
+  const s = Math.max(0, Math.floor(totalSeconds || 0));
+  const m = Math.floor(s / 60);
+  const rem = s % 60;
+  if (m === 0) return `${rem}s`;
+  return `${m}m ${String(rem).padStart(2, "0")}s`;
+}
+
+function isSameCalendarDay(a, b) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function formatDayLabel(date) {
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  if (isSameCalendarDay(date, today)) return "Today";
+  if (isSameCalendarDay(date, yesterday)) return "Yesterday";
+  return date.toLocaleDateString([], {
+    month: "short",
+    day: "numeric",
+    year: date.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
+  });
+}
+
+// Groups the flat message list into per-day buckets so a day separator only
+// renders when the history actually spans more than one calendar day.
+function groupMessagesByDay(list) {
+  const groups = [];
+  (list || []).forEach((message) => {
+    const ts = message?.timestamp ? new Date(message.timestamp) : new Date();
+    const lastGroup = groups[groups.length - 1];
+    if (lastGroup && isSameCalendarDay(lastGroup.date, ts)) {
+      lastGroup.messages.push(message);
+    } else {
+      groups.push({ date: ts, messages: [message] });
+    }
+  });
+  return groups;
+}
+
+const ICON_WAITING = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7v5l3 2" />
+  </svg>
+);
+
+const ICON_HANDSHAKE = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 12l2 2 4-4" />
+    <circle cx="12" cy="12" r="9" />
+  </svg>
+);
+
+const ICON_MESSAGE_START = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+  </svg>
+);
+
 /**
  * Props are ALL optional and only override the URL-param reads below when
  * given — the existing routed `/chats` page (App Proxy iframe, no props
@@ -69,6 +134,7 @@ const UserChat = ({
   // establish identity directly; this is strictly a fallback for the
   // App-Proxy-launched overlay, which deliberately gets neither in its URL).
   const exchangeCode = parms.get("exchange");
+  const chatUiReadyFiredRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -166,6 +232,18 @@ const UserChat = ({
           hasUrlToken: Boolean(urlToken),
           shopId: resolvedShopId,
         });
+      }
+
+      // Tells the theme overlay's spinner (openChatOverlay in
+      // consultant-card.js) to hide — fired once bootstrap has resolved
+      // identity either way, success or degraded, since both outcomes reach
+      // a real, renderable chat state (an active chat or the Start Chat
+      // request state) rather than a loading placeholder. No-ops harmlessly
+      // when this instance isn't inside that overlay (ConsultantChatModal,
+      // the routed /chats page).
+      if (!cancelled && !chatUiReadyFiredRef.current) {
+        chatUiReadyFiredRef.current = true;
+        window.parent.postMessage({ type: "CONSULTLY_CHAT_UI_READY" }, "*");
       }
     }
 
@@ -635,6 +713,10 @@ const UserChat = ({
   const { chatTimer } = useSelector((state) => state.socket);
   const { autoChatEnded } = useSelector((state) => state.socket);
   const [seconds, setSeconds] = useState(0);
+  // Snapshot of `seconds` taken the instant a chat ends, before it's reset to
+  // 0 — lets the end-of-chat toast show the real session length even though
+  // closeOrGoBack() below navigates/closes this component right after.
+  const [lastSessionSeconds, setLastSessionSeconds] = useState(0);
 
   useEffect(() => {
     if (!chatTimer.isRunning || !chatTimer.startTime) return;
@@ -652,6 +734,7 @@ const UserChat = ({
   const remainingSeconds = seconds % 60;
 
   const stopChatTimer = () => {
+    setLastSessionSeconds(seconds);
     socket.emit("endChat", {
       transactionId: chatTimer.transactionId,
       startTime: chatTimer.startTime,
@@ -671,6 +754,7 @@ const UserChat = ({
 
   useEffect(() => {
     if (autoChatEnded) {
+      setLastSessionSeconds(seconds);
       socket.emit("endChat", {
         transactionId: chatTimer.transactionId,
         startTime: chatTimer.startTime,
@@ -686,17 +770,18 @@ const UserChat = ({
       setShowChatLock((prev) => !prev);
       closeOrGoBack();
     }
-  }, [autoChatEnded]);
+  }, [autoChatEnded, seconds]);
 
   useEffect(() => {
     if (prevIsRunningRef.current === true && chatTimer.isRunning === false) {
+      setLastSessionSeconds(seconds);
       setShowChatEndToast(true);
       seIsLock(false);
       setWaitingForAccept(false);
       closeOrGoBack();
     }
     prevIsRunningRef.current = chatTimer.isRunning;
-  }, [chatTimer.isRunning]);
+  }, [chatTimer.isRunning, seconds]);
 
   useEffect(() => {
     if (chatTimer.isRunning) {
@@ -718,6 +803,19 @@ const UserChat = ({
     setRefreshed((prev) => !prev);
   };
 
+  const messageGroups = groupMessagesByDay(chatMessagesData);
+  const showDaySeparators = messageGroups.length > 1;
+  const isActive = Boolean(consultantOverview?.consultant?.isActive);
+  const consultantName = consultantOverview?.consultant?.fullname || "Consultant";
+  // Same flag that decides whether the request/accept overlay covers the
+  // stream — messaging has no business being available while that overlay
+  // is up, so the composer follows it exactly rather than a second flag.
+  const canMessage = !showChatLock;
+  const endedToastMessage =
+    lastSessionSeconds > 0
+      ? `Chat ended · ${formatSessionDuration(lastSessionSeconds)} session`
+      : "Chat ended";
+
   return (
     <Fragment>
       <InsufficientBalanceModal
@@ -726,256 +824,237 @@ const UserChat = ({
         insufficientBalance={insufficientBalance}
       />
 
-      <div className={styles.chatPageContainer}>
-        <div className={styles.container}>
-          {/* Chat Window */}
-          <div className={styles.chatWindow}>
-            <div className={styles.chatWindowContent}>
-              {/* Chat Header */}
-              <div className={styles.chatHeader}>
-                <div className={styles.chatHeaderInfo}>
-                  <button
-                    onClick={() => backToViewProfile()}
-                    className={styles.backButton}
-                    title="Go Back"
-                  >
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M19 12H5M12 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  <div className={styles.avatarWrapper}>
-                    <div className={styles.chatHeaderAvatar}>
-                      <img
-                        src={imageUrl}
-                        alt={consultantOverview?.consultant?.fullname || "Consultant"}
-                        className={styles.chatHeaderAvatar}
-                        onError={handleProfileImageError}
-                      />
-                    </div>
-                    {consultantOverview?.consultant?.isActive && (
-                      <div className={styles.onlineIndicator}></div>
+      <div className={styles.chatShell}>
+        <div className={styles.chatCard}>
+          {/* Header */}
+          <div className={styles.header}>
+            <div className={styles.headerIdentity}>
+              <button
+                onClick={() => backToViewProfile()}
+                className={styles.backBtn}
+                aria-label="Go back"
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M19 12H5M12 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <div className={styles.avatarWrap}>
+                <div className={styles.avatarCircle}>
+                  <img
+                    src={imageUrl}
+                    alt={consultantName}
+                    className={styles.avatarImg}
+                    onError={handleProfileImageError}
+                  />
+                </div>
+                {isActive && (
+                  <span className={styles.onlineDot} aria-hidden="true" />
+                )}
+              </div>
+              <div className={styles.identityText}>
+                <div className={styles.name}>{consultantName}</div>
+                <div className={styles.status} data-active={isActive}>
+                  <span className={styles.statusDot} aria-hidden="true" />
+                  {isActive ? "Active now" : "Offline"}
+                </div>
+              </div>
+            </div>
+            {chatTimer.isRunning && (
+              <div className={styles.sessionPill}>
+                <span className={styles.timerBadge}>
+                  <span className={styles.timerDot} aria-hidden="true" />
+                  <span className={styles.timerValue}>
+                    {minutes}:{String(remainingSeconds).padStart(2, "0")}
+                  </span>
+                </span>
+                <button
+                  onClick={stopChatTimer}
+                  className={styles.endBtn}
+                  aria-label="End chat session"
+                >
+                  End chat
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Conversation stream */}
+          <div className={styles.stream} ref={messagesAreaRef}>
+            {showChatLock && (
+              <div className={styles.requestOverlay}>
+                <div className={styles.requestCard}>
+                  <div className={styles.requestIconWrap} data-variant={isLock ? "ready" : "waiting"}>
+                    {isLock ? ICON_HANDSHAKE : ICON_WAITING}
+                    {waitingForAccept && (
+                      <span className={styles.requestPulseRing} aria-hidden="true" />
                     )}
                   </div>
-                  <div>
-                    <div className={styles.chatHeaderName}>
-                      {consultantOverview?.consultant?.fullname}
-                    </div>
-                    <div
-                      className={styles.chatHeaderStatus}
-                      style={{
-                        color: consultantOverview?.consultant?.isActive
-                          ? "#10b981"
-                          : "#6c757d",
+                  <div className={styles.requestBody}>
+                    {isLock ? (
+                      <>
+                        <h4 className={styles.requestTitle}>
+                          {consultantName} is ready
+                        </h4>
+                        <p className={styles.requestSubtitle}>
+                          Accept to start your consultation.
+                        </p>
+                      </>
+                    ) : waitingForAccept ? (
+                      <>
+                        <h4 className={styles.requestTitle}>
+                          Waiting for {consultantName}
+                        </h4>
+                        <p className={styles.requestSubtitle}>
+                          They&apos;ve been notified of your request.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <h4 className={styles.requestTitle}>
+                          Start a conversation
+                        </h4>
+                        <p className={styles.requestSubtitle}>
+                          Send a request to {consultantName} to begin.
+                        </p>
+                      </>
+                    )}
+                  </div>
+                  {isLock ? (
+                    <button
+                      className={`${styles.requestAction} ${styles.requestActionAccept}`}
+                      onClick={() => startCHatHandler()}
+                    >
+                      Accept chat
+                    </button>
+                  ) : (
+                    <button
+                      className={`${styles.requestAction} ${waitingForAccept ? styles.requestActionWaiting : styles.requestActionStart}`}
+                      disabled={waitingForAccept}
+                      onClick={() => {
+                        sendChat("👋 Hi! I'd like to start a consultation.");
+                        setWaitingForAccept(true);
                       }}
                     >
-                      {consultantOverview?.consultant?.isActive
-                        ? "Active now"
-                        : "Offline"}
-                    </div>
-                  </div>
-                </div>
-                <div className={styles.chatHeaderActions}>
-                  {chatTimer.isRunning && (
-                    <div className={styles.timerWrap}>
-                      <span className={styles.timerPill}>
-                        <span className={styles.timerDot} />
-                        {minutes}:{String(remainingSeconds).padStart(2, "0")}
-                      </span>
-                      <button
-                        onClick={stopChatTimer}
-                        className={styles.stopChatBtn}
-                      >
-                        Stop Chat
-                      </button>
-                    </div>
+                      {waitingForAccept ? `Waiting ${waitCountdown}s` : "Start chat"}
+                    </button>
                   )}
                 </div>
               </div>
+            )}
 
-              {/* Messages Area */}
-              <div className={styles.messagesArea} ref={messagesAreaRef}>
-                {showChatLock && (
-                  <div className={styles.chatEndOverlay}>
-                    <div className={styles.chatEndBox}>
-                      <div
-                        style={{
-                          position: "relative",
-                          width: "44px",
-                          height: "44px",
-                        }}
-                      >
-                        <div className={styles.lockIcon}>🔒</div>
-                        {waitingForAccept && (
-                          <div className={styles.reverseRing}></div>
-                        )}
-                      </div>
-                      <div className={styles.chatEndContent}>
-                        <h4>chat unlock </h4>
-                        <p>Your chat session has unlocked.</p>
-                      </div>
-                      {isLock ? (
-                        <button
-                          style={{
-                            marginLeft: "auto",
-                            background: "green",
-                            color: "#fff",
-                            border: "none",
-                            padding: "8px 16px",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            fontSize: "12px",
-                            width: "100px",
-                            fontFamily: "sans-serif",
-                          }}
-                          onClick={() => {
-                            startCHatHandler();
-                          }}
-                        >
-                          Accept chat
-                        </button>
-                      ) : (
-                        <button
-                          style={{
-                            marginLeft: "auto",
-                            background: waitingForAccept ? "gray" : "yellow",
-                            color: waitingForAccept ? "#fff" : "#000",
-                            border: "none",
-                            padding: "8px 16px",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            fontSize: "12px",
-                            width: "100px",
-                            fontFamily: "sans-serif",
-                          }}
-                          disabled={waitingForAccept ? true : false}
-                          onClick={() => {
-                            sendChat("👋 Hi! I'd like to start a consultation.");
-                            setWaitingForAccept(true);
-                          }}
-                        >
-                          {waitingForAccept
-                            ? `Wait ${waitCountdown}s`
-                            : "start chat"}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {chatMessagesData.length === 0 ? (
-                  <div className={styles.emptyMessages}>
-                    <p>No messages yet. Start the conversation!</p>
-                  </div>
-                ) : (
-                  <>
-                    {chatMessagesData.map((message) => {
-                      const isOwn = message.senderId === clientId;
-                      const timestamp = new Date(
-                        message.timestamp,
-                      ).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: true,
-                      });
-
-                      return (
-                        <div
-                          key={message._id}
-                          className={`${styles.messageContainer} ${isOwn ? styles.messageContainerRight : styles.messageContainerLeft}`}
-                        >
-                          <div
-                            className={`${styles.messageBubble} ${isOwn ? styles.messageBubbleOwn : styles.messageBubbleOther}`}
-                          >
-                            {!isOwn && (
-                              <div className={styles.messageSender}>
-                                {consultantOverview?.consultant?.fullname ||
-                                  "Consultant"}
-                              </div>
-                            )}
-                            <div className={styles.messageText}>
-                              {message.text}
-                            </div>
-                            <div className={styles.messageTimestamp}>
-                              {timestamp}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </>
-                )}
-              </div>
-
-              <TypingIndicator
-                label={partnerLabel}
-                visible={isPartnerTyping}
-              />
-
-              {/* Message Input */}
-              <div className={styles.messageInputArea}>
-                <div className={styles.inputGroup}>
-                  <button className={styles.attachButton} title="Attach File">
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                    >
-                      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-                    </svg>
-                  </button>
-                  <input
-                    onChange={(e) => {
-                      setText(e.target.value);
-                      handleInputChange(e.target.value);
-                    }}
-                    value={text || ""}
-                    type="text"
-                    className={styles.messageInput}
-                    placeholder="Type a message..."
-                    onFocus={() => scrollToBottom(true)}
-                    onKeyPress={(e) => {
-                      if (e.key === "Enter" && text?.trim()) {
-                        sendChat();
-                      }
-                    }}
-                  />
-                  <button
-                    onClick={sendChat}
-                    className={styles.sendButton}
-                    title="Send"
-                  >
-                    <svg
-                      className={styles.sendIcon}
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                    >
-                      <line x1="22" y1="2" x2="11" y2="13" />
-                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                    </svg>
-                  </button>
+            {chatMessagesData.length === 0 ? (
+              <div className={styles.streamEmpty}>
+                <div className={styles.streamEmptyIcon} aria-hidden="true">
+                  {ICON_MESSAGE_START}
                 </div>
+                <p className={styles.streamEmptyText}>
+                  No messages yet. Say hello to start the conversation.
+                </p>
               </div>
+            ) : (
+              messageGroups.map((group, groupIndex) => (
+                <Fragment key={group.date.toISOString() + groupIndex}>
+                  {showDaySeparators && (
+                    <div className={styles.daySeparator}>
+                      <span className={styles.daySeparatorLabel}>
+                        {formatDayLabel(group.date)}
+                      </span>
+                    </div>
+                  )}
+                  {group.messages.map((message) => {
+                    const isOwn = message.senderId === clientId;
+                    const timestamp = new Date(
+                      message.timestamp,
+                    ).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: true,
+                    });
+
+                    return (
+                      <div
+                        key={message._id}
+                        className={`${styles.bubbleRow} ${isOwn ? styles.bubbleRowOwn : styles.bubbleRowOther}`}
+                      >
+                        <div
+                          className={`${styles.bubble} ${isOwn ? styles.bubbleOwn : styles.bubbleOther}`}
+                        >
+                          {!isOwn && (
+                            <div className={styles.bubbleSender}>
+                              {consultantName}
+                            </div>
+                          )}
+                          <div className={styles.bubbleText}>{message.text}</div>
+                          <div className={styles.bubbleTime}>{timestamp}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </Fragment>
+              ))
+            )}
+          </div>
+
+          <div className={styles.typingSlot}>
+            <TypingIndicator label={partnerLabel} visible={isPartnerTyping} />
+          </div>
+
+          {/* Composer — disabled entirely until canMessage (mirrors the
+              request/accept overlay's own condition), so a message can't be
+              typed or sent before the chat has actually started. */}
+          <div className={styles.composer}>
+            <div className={styles.composerInner}>
+              <input
+                onChange={(e) => {
+                  setText(e.target.value);
+                  handleInputChange(e.target.value);
+                }}
+                value={text || ""}
+                type="text"
+                className={styles.composerInput}
+                placeholder={canMessage ? "Type a message..." : "Start the chat to send a message"}
+                aria-label="Message"
+                disabled={!canMessage}
+                onFocus={() => scrollToBottom(true)}
+                onKeyPress={(e) => {
+                  if (e.key === "Enter" && text?.trim()) {
+                    sendChat();
+                  }
+                }}
+              />
+              <button
+                onClick={sendChat}
+                className={styles.sendBtn}
+                disabled={!canMessage || !text?.trim()}
+                aria-label="Send message"
+              >
+                <svg
+                  className={styles.sendIcon}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                >
+                  <line x1="22" y1="2" x2="11" y2="13" />
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
+              </button>
             </div>
           </div>
         </div>
       </div>
       <ReactToast
         show={showChatEndToast}
-        message="Chat ended"
+        message={endedToastMessage}
         onClose={() => setShowChatEndToast(false)}
       />
     </Fragment>

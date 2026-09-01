@@ -37,6 +37,43 @@
       '<path d="M14 5H3C1.9 5 1 5.9 1 7V17C1 18.1 1.9 19 3 19H14C15.1 19 16 18.1 16 17V7C16 5.9 15.1 5.1 14 5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   };
 
+  // Star used for the (currently demo — see PROFILE_DEMO_DEFAULTS) rating
+  // summary. Plain inline SVG, matching the rest of ICONS above — no emoji,
+  // no icon-font/library dependency.
+  var STAR_ICON_FILLED =
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">' +
+    '<path d="M12 2.5l2.9 6.6 7.1.7-5.4 4.7 1.6 7-6.2-3.8-6.2 3.8 1.6-7-5.4-4.7 7.1-.7z"/></svg>';
+  var STAR_ICON_EMPTY =
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" xmlns="http://www.w3.org/2000/svg">' +
+    '<path d="M12 2.5l2.9 6.6 7.1.7-5.4 4.7 1.6 7-6.2-3.8-6.2 3.8 1.6-7-5.4-4.7 7.1-.7z" stroke-linejoin="round"/></svg>';
+
+  // Social profile icons for the modal's "Connect" row (section 6). Only
+  // rendered when the matching URL is present — see socialLinksMarkup.
+  var SOCIAL_ICONS = {
+    linkedin:
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">' +
+      '<path d="M6.94 5a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM3.25 8.75h3.4V21h-3.4V8.75zM9.75 8.75h3.26v1.68h.05c.45-.86 1.56-1.77 3.22-1.77 3.44 0 4.07 2.27 4.07 5.22V21h-3.4v-6.4c0-1.53-.03-3.5-2.13-3.5-2.14 0-2.47 1.67-2.47 3.39V21h-3.4V8.75z"/></svg>',
+    twitter:
+      '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">' +
+      '<path d="M18.9 2H22l-7.6 8.7L23.3 22h-7.1l-5.6-6.9L4.2 22H1l8.1-9.3L1 2h7.3l5.1 6.4L18.9 2zm-1.2 18h1.9L7.4 4h-2l12.3 16z"/></svg>',
+    instagram:
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">' +
+      '<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1" fill="currentColor" stroke="none"/></svg>',
+    youtube:
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">' +
+      '<rect x="2" y="5" width="20" height="14" rx="4"/><path d="M10 9.5l5 2.5-5 2.5v-5z" fill="currentColor" stroke="none"/></svg>',
+    website:
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">' +
+      '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.4 2.6 3.6 5.7 3.6 9s-1.2 6.4-3.6 9c-2.4-2.6-3.6-5.7-3.6-9s1.2-6.4 3.6-9z"/></svg>',
+  };
+  var SOCIAL_LABELS = {
+    linkedin: "LinkedIn",
+    twitter: "X (Twitter)",
+    instagram: "Instagram",
+    youtube: "YouTube",
+    website: "Website",
+  };
+
   var COMM_DISABLED_MESSAGE =
     "Communication unavailable. The store has exhausted its communication minutes.";
   var COMM_DISABLED_TOAST = "Communication is currently unavailable.";
@@ -203,7 +240,8 @@
       "https://" +
       shop +
       "/apps/consultly/chats?consultantId=" +
-      encodeURIComponent(consultantId)
+      encodeURIComponent(consultantId) +
+      "&embedded=1"
     );
   }
 
@@ -574,52 +612,145 @@
   // chat UI. ?embedded=1 tells UserChat.js to postMessage
   // CONSULTLY_CHAT_CLOSE instead of navigating when its own close/back
   // button is used — see UserChat.js closeOrGoBack/backToViewProfile.
-  var chatOverlayIframe = null;
-  var chatOverlayCloseListenerBound = false;
+  // Own dedicated backdrop/panel shell — deliberately NOT the same DOM
+  // instance as ensureProfileModal() above (chat has no header/footer
+  // regions to share; UserChat.js renders its own header/composer inside the
+  // iframe). Mirrors that modal's proven backdrop/scroll-lock/ESC/focus
+  // pattern so this gets the same fixes for free, without risking the
+  // working profile/call modal by retrofitting it.
+  var chatOverlayEls = null; // { backdrop, panel, iframe, spinner }
+  var chatOverlayMessageListenerBound = false;
+  var chatOverlayKeydownBound = false;
+  var chatOverlayPreviouslyFocused = null;
+  var chatOverlayBodyOverflow = "";
+  var chatOverlayReadyTimer = null;
 
-  function closeChatOverlay() {
-    if (chatOverlayIframe && chatOverlayIframe.parentNode) {
-      chatOverlayIframe.parentNode.removeChild(chatOverlayIframe);
-    }
-    chatOverlayIframe = null;
+  function ensureChatOverlay() {
+    if (chatOverlayEls) return chatOverlayEls;
+
+    var backdrop = document.createElement("div");
+    backdrop.className = "consultly-chat-overlay-backdrop";
+    backdrop.setAttribute("hidden", "hidden");
+
+    var panel = document.createElement("div");
+    panel.className = "consultly-chat-overlay-panel";
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-modal", "true");
+    panel.setAttribute("aria-label", "Chat");
+    panel.setAttribute("tabindex", "-1");
+
+    var spinner = document.createElement("div");
+    spinner.className = "consultly-chat-overlay-spinner";
+    spinner.setAttribute("role", "status");
+    spinner.setAttribute("aria-label", "Loading chat");
+    spinner.innerHTML = '<span class="consultly-chat-overlay-spinner-ring"></span>';
+
+    var iframe = document.createElement("iframe");
+    iframe.className = "consultly-chat-overlay-iframe";
+    iframe.setAttribute("title", "Chat");
+
+    panel.appendChild(spinner);
+    panel.appendChild(iframe);
+    backdrop.appendChild(panel);
+
+    // Click on the backdrop itself (not bubbled from inside the panel)
+    // closes the overlay — same convention as the profile modal.
+    backdrop.addEventListener("click", function (evt) {
+      if (evt.target === backdrop) closeChatOverlay();
+    });
+
+    document.body.appendChild(backdrop);
+    chatOverlayEls = { backdrop: backdrop, panel: panel, iframe: iframe, spinner: spinner };
+    return chatOverlayEls;
   }
 
-  function ensureChatOverlayCloseListener() {
-    if (chatOverlayCloseListenerBound) return;
-    chatOverlayCloseListenerBound = true;
+  function isChatOverlayOpen() {
+    return Boolean(chatOverlayEls) && !chatOverlayEls.backdrop.hasAttribute("hidden");
+  }
+
+  function handleChatOverlayKeydown(evt) {
+    if (evt.key === "Escape" || evt.key === "Esc") closeChatOverlay();
+  }
+
+  function ensureChatOverlayMessageListener() {
+    if (chatOverlayMessageListenerBound) return;
+    chatOverlayMessageListenerBound = true;
     window.addEventListener("message", function (event) {
-      if (!event.data || event.data.type !== "CONSULTLY_CHAT_CLOSE") return;
-      console.log("[THEME CHAT TEST] CONSULTLY_CHAT_CLOSE received — closing overlay");
-      closeChatOverlay();
+      if (!event.data || !event.data.type) return;
+      if (event.data.type === "CONSULTLY_CHAT_CLOSE") {
+        closeChatOverlay();
+      } else if (event.data.type === "CONSULTLY_CHAT_UI_READY") {
+        hideChatOverlaySpinner();
+      }
     });
+  }
+
+  function hideChatOverlaySpinner() {
+    if (chatOverlayReadyTimer) {
+      clearTimeout(chatOverlayReadyTimer);
+      chatOverlayReadyTimer = null;
+    }
+    if (chatOverlayEls) {
+      chatOverlayEls.spinner.setAttribute("hidden", "hidden");
+    }
   }
 
   function openChatOverlay(consultantId, shop) {
     if (!shop) {
-      console.error("[THEME CHAT TEST] shop missing — cannot open chat overlay");
+      console.error("[consultly] shop missing — cannot open chat overlay");
       return;
     }
-    ensureChatOverlayCloseListener();
-    closeChatOverlay();
+    ensureChatOverlayMessageListener();
+    var els = ensureChatOverlay();
 
-    // App-Proxy-relative — see buildChatOverlayUrl. The backend resolves the
-    // Shopify customer -> DB user itself (resolveStorefrontCustomer) and
-    // 302s into the React app with that identity already attached; this
-    // bundle never needs to know or pass the DB user id itself.
-    var src = buildChatOverlayUrl(shop, consultantId);
+    // Reset to the loading state every time — the iframe is destroyed on
+    // close (see closeChatOverlay), so each open is a fresh boot and should
+    // show the spinner again, not a stale chat frame from a previous open.
+    els.spinner.removeAttribute("hidden");
+    els.iframe.src = buildChatOverlayUrl(shop, consultantId);
 
-    console.log("[THEME CHAT TEST] opening chat overlay iframe:", src);
+    // Safety net: if the React app never posts CONSULTLY_CHAT_UI_READY (a
+    // slow network, an error before mount), don't leave the spinner
+    // spinning forever — the boot-loader elsewhere in this app uses the same
+    // "post a ready signal, fall back to a timer" pattern.
+    if (chatOverlayReadyTimer) clearTimeout(chatOverlayReadyTimer);
+    chatOverlayReadyTimer = setTimeout(hideChatOverlaySpinner, 8000);
 
-    var iframe = document.createElement("iframe");
-    iframe.src = src;
-    iframe.setAttribute(
-      "style",
-      "position:fixed;top:0;left:0;width:100vw;height:100vh;" +
-        "border:0;z-index:2147483000;background:#fff;",
-    );
-    iframe.setAttribute("allow", "microphone; camera");
-    document.body.appendChild(iframe);
-    chatOverlayIframe = iframe;
+    if (!isChatOverlayOpen()) {
+      chatOverlayPreviouslyFocused = document.activeElement;
+      chatOverlayBodyOverflow = document.body.style.overflow;
+    }
+    els.backdrop.removeAttribute("hidden");
+    document.body.style.overflow = "hidden";
+    if (!chatOverlayKeydownBound) {
+      document.addEventListener("keydown", handleChatOverlayKeydown);
+      chatOverlayKeydownBound = true;
+    }
+    els.panel.focus();
+  }
+
+  function closeChatOverlay() {
+    if (!isChatOverlayOpen()) return;
+    if (chatOverlayReadyTimer) {
+      clearTimeout(chatOverlayReadyTimer);
+      chatOverlayReadyTimer = null;
+    }
+    chatOverlayEls.backdrop.setAttribute("hidden", "hidden");
+    document.body.style.overflow = chatOverlayBodyOverflow;
+    if (chatOverlayKeydownBound) {
+      document.removeEventListener("keydown", handleChatOverlayKeydown);
+      chatOverlayKeydownBound = false;
+    }
+    // Tear the iframe down (not just hide it) — otherwise the chat's
+    // Socket.IO connection would keep running invisibly in the background.
+    chatOverlayEls.iframe.src = "about:blank";
+    if (
+      chatOverlayPreviouslyFocused &&
+      typeof chatOverlayPreviouslyFocused.focus === "function"
+    ) {
+      chatOverlayPreviouslyFocused.focus();
+    }
+    chatOverlayPreviouslyFocused = null;
   }
 
   // ---------- Consultant Profile modal ----------
@@ -820,6 +951,127 @@
       .join("");
   }
 
+  // ---- Profile modal "extras" (rating/reviews/consultation count/social
+  // links) — DEMO DATA, isolated in this one object per the explicit
+  // instruction to make future backend integration a drop-in change.
+  //
+  // None of these fields exist anywhere in the /apps/consultly/consultant
+  // API response today (confirmed: no rating/review/session-count/social
+  // link field on the consultant schema). getProfileExtras() below checks
+  // for each real field FIRST and only falls back to a demo value when the
+  // real one is absent — so the moment the backend/Consultant Dashboard adds
+  // c.rating / c.reviewCount / c.totalConsultations / c.socialLinks, this
+  // component picks them up automatically with zero further changes here.
+  //
+  // SHOW_DEMO_SOCIAL_LINKS is a separate, explicit switch: unlike a rounded
+  // rating number, a social icon is a literal clickable link a real shopper
+  // could open — set this to `false` (or delete PROFILE_DEMO_DEFAULTS.socialLinks)
+  // before this reaches real customers on a shop with no real Consultant
+  // Dashboard social-link data yet, so no icon points at a placeholder URL.
+  var SHOW_DEMO_SOCIAL_LINKS = true;
+  var PROFILE_DEMO_DEFAULTS = {
+    rating: 4.9,
+    reviewCount: 128,
+    // Demo distribution, most-stars first (5★ … 1★) — purely illustrative.
+    ratingBreakdown: [72, 20, 5, 2, 1],
+    consultationsCompleted: 1248,
+    socialLinks: {
+      linkedin: "https://www.linkedin.com/",
+      twitter: "https://x.com/",
+      instagram: "https://www.instagram.com/",
+      website: "",
+    },
+  };
+
+  function getProfileExtras(c) {
+    var hasRealSocialLinks =
+      c.socialLinks &&
+      typeof c.socialLinks === "object" &&
+      Object.keys(c.socialLinks).some(function (k) {
+        return Boolean(c.socialLinks[k]);
+      });
+
+    return {
+      rating: c.rating != null ? Number(c.rating) : PROFILE_DEMO_DEFAULTS.rating,
+      reviewCount:
+        c.reviewCount != null ? Number(c.reviewCount) : PROFILE_DEMO_DEFAULTS.reviewCount,
+      ratingBreakdown: Array.isArray(c.ratingBreakdown)
+        ? c.ratingBreakdown
+        : PROFILE_DEMO_DEFAULTS.ratingBreakdown,
+      consultationsCompleted:
+        c.totalConsultations != null
+          ? Number(c.totalConsultations)
+          : PROFILE_DEMO_DEFAULTS.consultationsCompleted,
+      socialLinks: hasRealSocialLinks
+        ? c.socialLinks
+        : SHOW_DEMO_SOCIAL_LINKS
+          ? PROFILE_DEMO_DEFAULTS.socialLinks
+          : {},
+      isDemoRating: c.rating == null,
+      isDemoSocialLinks: !hasRealSocialLinks,
+    };
+  }
+
+  // Whole-star rounding only — a compact summary, not a review dashboard.
+  function starRowMarkup(rating) {
+    var filled = Math.max(0, Math.min(5, Math.round(rating)));
+    var html = "";
+    for (var i = 0; i < 5; i++) {
+      html += i < filled ? STAR_ICON_FILLED : STAR_ICON_EMPTY;
+    }
+    return html;
+  }
+
+  // Five thin bars, longest-first — intentionally compact (max-width capped
+  // in CSS), not a full analytics chart.
+  function ratingBreakdownMarkup(breakdown) {
+    var max = Math.max(1, breakdown.reduce(function (a, b) { return Math.max(a, b); }, 0));
+    var labels = [5, 4, 3, 2, 1];
+    return breakdown
+      .map(function (value, i) {
+        var pct = Math.round((value / max) * 100);
+        return (
+          '<div class="consultly-profile-modal__rating-bar-row">' +
+          '<span class="consultly-profile-modal__rating-bar-label">' + labels[i] + "</span>" +
+          '<span class="consultly-profile-modal__rating-bar-track">' +
+          '<span class="consultly-profile-modal__rating-bar-fill" style="width:' + pct + '%"></span>' +
+          "</span>" +
+          "</div>"
+        );
+      })
+      .join("");
+  }
+
+  function statPairMarkup(value, label) {
+    return (
+      '<div class="consultly-profile-modal__stat">' +
+      '<span class="consultly-profile-modal__stat-value">' + escapeHtml(value) + "</span>" +
+      '<span class="consultly-profile-modal__stat-label">' + escapeHtml(label) + "</span>" +
+      "</div>"
+    );
+  }
+
+  function socialLinksMarkup(socialLinks) {
+    var keys = ["linkedin", "twitter", "instagram", "youtube", "website"];
+    var html = "";
+    keys.forEach(function (key) {
+      var url = socialLinks[key];
+      if (!url) return;
+      var label = SOCIAL_LABELS[key];
+      html +=
+        '<a class="consultly-profile-modal__social-icon" href="' +
+        escapeHtml(url) +
+        '" target="_blank" rel="noopener noreferrer" aria-label="' +
+        escapeHtml(label) +
+        '" title="' +
+        escapeHtml(label) +
+        '">' +
+        SOCIAL_ICONS[key] +
+        "</a>";
+    });
+    return html;
+  }
+
   function renderProfileModalContent(els, data, shop) {
     var c = data.consultant || {};
     var name = c.displayName || c.fullname || "Consultant";
@@ -835,6 +1087,8 @@
         ? '<span class="consultly-profile-modal__status consultly-profile-modal__status--online">Available now</span>'
         : '<span class="consultly-profile-modal__status consultly-profile-modal__status--offline">Offline</span>';
 
+    var extras = getProfileExtras(c);
+
     // ---- header (fixed, does not scroll) ----
     els.header.innerHTML =
       '<img class="consultly-profile-modal__avatar" src="' +
@@ -849,7 +1103,13 @@
       '<p class="consultly-profile-modal__profession">' +
       escapeHtml(profession) +
       "</p>" +
+      '<div class="consultly-profile-modal__header-row">' +
       statusHtml +
+      '<span class="consultly-profile-modal__rating-inline">' +
+      '<span class="consultly-profile-modal__stars">' + starRowMarkup(extras.rating) + "</span>" +
+      '<span>' + extras.rating.toFixed(1) + " · " + extras.reviewCount + " reviews</span>" +
+      "</span>" +
+      "</div>" +
       "</div>";
 
     var avatarEl = els.header.querySelector(".consultly-profile-modal__avatar");
@@ -865,26 +1125,8 @@
 
     // ---- body (the ONLY scrolling region) ----
 
-    // Intro: title/experience/languages as a compact meta line, same fields
-    // the card already shows, no fabricated "qualification" field (none
-    // exists) — profession already covers that role in the header above.
-    var introHtml =
-      '<section class="consultly-profile-modal__section consultly-profile-modal__section--intro">' +
-      '<div class="consultly-profile-modal__meta">' +
-      (experience > 0
-        ? '<span class="consultly-profile-modal__badge">' + experience + "+ yrs experience</span>"
-        : "") +
-      "</div>" +
-      (languages.length
-        ? '<div class="consultly-profile-modal__chip-row">' +
-          '<span class="consultly-profile-modal__chip-row-label">Speaks</span>' +
-          profileChipsMarkup("consultly-profile-modal__lang-chip", languages) +
-          "</div>"
-        : "") +
-      "</section>";
-
     var aboutHtml = c.bio
-      ? '<section class="consultly-profile-modal__section">' +
+      ? '<section class="consultly-profile-modal__section consultly-profile-modal__section--intro">' +
         '<h2 class="consultly-profile-modal__section-title">About</h2>' +
         '<p class="consultly-profile-modal__about">' +
         escapeHtml(c.bio) +
@@ -904,7 +1146,7 @@
           .filter(Boolean)
       : [];
     var expertiseHtml = specialties.length
-      ? '<section class="consultly-profile-modal__section">' +
+      ? '<section class="consultly-profile-modal__section' + (aboutHtml ? "" : " consultly-profile-modal__section--intro") + '">' +
         '<h2 class="consultly-profile-modal__section-title">Expertise</h2>' +
         '<div class="consultly-profile-modal__chip-row">' +
         profileChipsMarkup("consultly-profile-modal__expertise-tag", specialties) +
@@ -912,12 +1154,53 @@
         "</section>"
       : "";
 
-    // No rating/review/session-count field exists anywhere in the API
-    // response — that whole section is omitted rather than shown empty or
-    // filled with an invented number (years of experience is already shown
-    // in the intro above, so it isn't repeated here as its own section).
+    // Consultation info — real experience/languages fields (same ones the
+    // old "intro" meta line showed) plus the demo consultations-completed
+    // count, grouped as one section instead of a separate meta strip.
+    var statsHtml = "";
+    if (experience > 0) statsHtml += statPairMarkup(experience + "+ yrs", "Experience");
+    statsHtml += statPairMarkup(extras.consultationsCompleted.toLocaleString(), "Consultations");
+    var consultationHtml =
+      '<section class="consultly-profile-modal__section' +
+      (aboutHtml || expertiseHtml ? "" : " consultly-profile-modal__section--intro") +
+      '">' +
+      '<h2 class="consultly-profile-modal__section-title">Consultation</h2>' +
+      '<div class="consultly-profile-modal__stat-row">' + statsHtml + "</div>" +
+      (languages.length
+        ? '<div class="consultly-profile-modal__chip-row">' +
+          '<span class="consultly-profile-modal__chip-row-label">Speaks</span>' +
+          profileChipsMarkup("consultly-profile-modal__lang-chip", languages) +
+          "</div>"
+        : "") +
+      "</section>";
 
-    els.body.innerHTML = introHtml + aboutHtml + expertiseHtml;
+    // Rating & Reviews — see getProfileExtras()'s own comment: demo data
+    // until the backend has a real rating/review field, clearly isolated
+    // there rather than invented inline here.
+    var ratingHtml =
+      '<section class="consultly-profile-modal__section">' +
+      '<h2 class="consultly-profile-modal__section-title">Rating &amp; Reviews</h2>' +
+      '<div class="consultly-profile-modal__rating-summary">' +
+      '<span class="consultly-profile-modal__rating-number">' + extras.rating.toFixed(1) + "</span>" +
+      '<div>' +
+      '<span class="consultly-profile-modal__stars">' + starRowMarkup(extras.rating) + "</span>" +
+      '<p class="consultly-profile-modal__rating-count">' + extras.reviewCount + " reviews</p>" +
+      "</div>" +
+      "</div>" +
+      '<div class="consultly-profile-modal__rating-bars">' + ratingBreakdownMarkup(extras.ratingBreakdown) + "</div>" +
+      "</section>";
+
+    var socialHtml = "";
+    var socialIcons = socialLinksMarkup(extras.socialLinks);
+    if (socialIcons) {
+      socialHtml =
+        '<section class="consultly-profile-modal__section">' +
+        '<h2 class="consultly-profile-modal__section-title">Connect</h2>' +
+        '<div class="consultly-profile-modal__social-row">' + socialIcons + "</div>" +
+        "</section>";
+    }
+
+    els.body.innerHTML = aboutHtml + expertiseHtml + consultationHtml + ratingHtml + socialHtml;
 
     // ---- footer (fixed, does not scroll) ----
     var buttons = "";

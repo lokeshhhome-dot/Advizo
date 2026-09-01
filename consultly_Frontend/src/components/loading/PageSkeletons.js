@@ -8,6 +8,7 @@ import {
   SkeletonDisplayText,
   SkeletonPage,
   SkeletonTabs,
+  Spinner,
 } from "@shopify/polaris";
 
 export function AdminPageSkeleton({ title = true }) {
@@ -102,6 +103,28 @@ export function StorefrontSkeleton() {
           ))}
         </div>
       </BlockStack>
+    </div>
+  );
+}
+
+// A skeleton implies "here's roughly what content will look like" — wrong
+// for the chat opening moment, where the next screen (a request/accept
+// state, or an active conversation) has no fixed shape to preview. A single
+// centered spinner reads as "connecting", not "loading this specific
+// layout", which is the more honest signal here. Used only by the /chats
+// route via ProtectStoreFront's loadingVariant="spinner" — every other
+// ProtectStoreFront-wrapped page keeps the default StorefrontSkeleton.
+export function ChatOpeningSpinner() {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "100dvh",
+      }}
+    >
+      <Spinner accessibilityLabel="Loading chat" size="large" />
     </div>
   );
 }

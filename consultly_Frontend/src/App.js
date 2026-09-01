@@ -326,7 +326,7 @@ export default function App() {
             <Route
               path="/chats"
               element={
-                <ProtectStoreFront>
+                <ProtectStoreFront loadingVariant="spinner">
                   <UserChat />
                 </ProtectStoreFront>
               }

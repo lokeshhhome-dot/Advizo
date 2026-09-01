@@ -20,6 +20,71 @@ import {
 } from "../../utils/getProfileImageUrl";
 import { useConsultantIdentity } from "../../utils/useConsultantIdentity";
 
+/* ---------------------------------------------------------------------------
+   Pure, stateless presentation helpers — kept outside the component so they
+   never re-create on render. None of these touch state/socket/API logic;
+   they only reshape data ChatsPage already holds (chatMessagesData timestamps,
+   the seconds counter) for display.
+--------------------------------------------------------------------------- */
+
+// mm:ss / h:mm:ss — same simple pattern VideoCallingPage.js already uses for
+// its own call timer, kept local rather than a new shared util for one value.
+const formatSessionDuration = (totalSeconds) => {
+  const s = Math.max(0, Math.floor(totalSeconds || 0));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const pad = (n) => String(n).padStart(2, "0");
+  return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
+};
+
+const isSameCalendarDay = (a, b) =>
+  a.getFullYear() === b.getFullYear() &&
+  a.getMonth() === b.getMonth() &&
+  a.getDate() === b.getDate();
+
+const formatDayLabel = (date) => {
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  if (isSameCalendarDay(date, today)) return "Today";
+  if (isSameCalendarDay(date, yesterday)) return "Yesterday";
+  return date.toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" });
+};
+
+// Groups an already-chronological message list into { dayLabel, messages[] }
+// buckets so the message list can render one date separator per day instead
+// of repeating the date per-message — purely a render-time reshape of
+// chatMessagesData, no new data source.
+const groupMessagesByDay = (list) => {
+  const groups = [];
+  list.forEach((message) => {
+    const date = new Date(message.timestamp);
+    const label = formatDayLabel(date);
+    const lastGroup = groups[groups.length - 1];
+    if (lastGroup && lastGroup.label === label) {
+      lastGroup.messages.push(message);
+    } else {
+      groups.push({ label, messages: [message] });
+    }
+  });
+  return groups;
+};
+
+// Inline SVGs replacing the old emoji (💬 / 🔒) used for the chat-request and
+// chat-ended states — same visual weight/stroke convention as the other
+// icons already in this file (send/attach/back buttons below).
+const CHAT_REQUEST_ICON = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  </svg>
+);
+const CHAT_ENDED_ICON = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 6L9 17l-5-5" />
+  </svg>
+);
+
 const ChatsPage = () => {
   const [selectedChat, setSelectedChat] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
@@ -51,6 +116,10 @@ const ChatsPage = () => {
   const { userInRequest } = useSelector((state) => state.consultants);
   const { chatTimer } = useSelector((state) => state.socket);
   const [seconds, setSeconds] = useState(0);
+  // Snapshot of `seconds` at the moment a session ends, purely for the
+  // "Consultation ended" state's duration display — see stopChatTimer and
+  // the chatTimer.isRunning effect below.
+  const [lastSessionSeconds, setLastSessionSeconds] = useState(0);
   // Seconds left after clicking "Accept Chat" while the user still has to
   // press their confirm button; null = not waiting. Reverts to the plain
   // "Accept Chat" button at zero so the consultant can accept again.
@@ -477,6 +546,11 @@ const ChatsPage = () => {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
   const stopChatTimer = () => {
+    // Captured before the reset below so the redesigned "Consultation
+    // ended" state can show the real elapsed time (section 7 of the brief)
+    // instead of always reading 0 — purely a display snapshot, the
+    // endChat socket payload/contract right below is unchanged.
+    setLastSessionSeconds(seconds);
     socket.emit("endChat", {
       transactionId: chatTimer.transactionId,
       startTime: chatTimer.startTime,
@@ -533,13 +607,17 @@ const ChatsPage = () => {
   };
   useEffect(() => {
     if (prevIsRunningRef.current === true && chatTimer.isRunning === false) {
+      // Same duration snapshot as stopChatTimer, for the case where the
+      // session ends without this consultant clicking "Stop Chat"
+      // themselves (other party ended it / server timeout).
+      setLastSessionSeconds(seconds);
       setShowChatEndToast(true);
       getChatList();
       setShowChatEndPop(true);
       localStorage.removeItem("activeChatUserId");
     }
     prevIsRunningRef.current = chatTimer.isRunning;
-  }, [chatTimer.isRunning]);
+  }, [chatTimer.isRunning, seconds]);
 
   useEffect(() => {
     if (chatTimer.isRunning) {
@@ -553,519 +631,342 @@ const ChatsPage = () => {
     (conv) => conv?.sender?.id === currentUserId,
   );
 
+  const messageGroups = groupMessagesByDay(chatMessagesData);
+
   return (
     <Fragment>
-      <div className={styles.pageContainer}>
-        <div className={styles.chatLayout}>
-          {/* Conversations Sidebar */}
-          <div
-            className={`${styles.conversationsSidebar} ${showChatView ? styles.hideOnMobile : ""}`}
-          >
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                height: "100%",
-              }}
-            >
-              {/* Search Bar */}
-              <div className={styles.searchBar}>
-                <div className={styles.searchInputWrapper}>
-                  <svg
-                    className={styles.searchIcon}
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                  >
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="m21 21-4.35-4.35" />
-                  </svg>
-                  <input
-                    type="text"
-                    className={styles.searchInput}
-                    placeholder="Search conversations..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-              </div>
+      <div className={styles.workspace}>
+        {/* ------------------------------ CONVERSATION RAIL ----------------------------- */}
+        <aside className={`${styles.rail} ${showChatView ? styles.hideOnMobile : ""}`}>
+          <div className={styles.railTop}>
+            <h1 className={styles.railTitle}>Conversations</h1>
+            <div className={styles.railSearch}>
+              <svg className={styles.railSearchIcon} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.35-4.35" />
+              </svg>
+              <input
+                type="text"
+                className={styles.railSearchInput}
+                placeholder="Search conversations"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Search conversations"
+              />
+            </div>
 
-              <div className={styles.filterBar}>
-                <div className={styles.filterTabs}>
+            <div className={styles.railTabRow}>
+              <div className={styles.railTabs} role="tablist">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={!showRequestModal}
+                  className={`${styles.railTab} ${!showRequestModal ? styles.railTabActive : ""}`}
+                  onClick={() => setShowRequestModal(false)}
+                >
+                  Active
+                </button>
+                {isRequestModalOpen.length > 0 && (
                   <button
                     type="button"
-                    className={`${styles.filterTab} ${!showRequestModal ? styles.filterTabActive : ""}`}
-                    onClick={() => setShowRequestModal(false)}
+                    role="tab"
+                    aria-selected={showRequestModal}
+                    className={`${styles.railTab} ${showRequestModal ? styles.railTabActive : ""}`}
+                    onClick={() => setShowRequestModal(true)}
                   >
-                    Active
+                    Requests <span className={styles.railTabCount}>{isRequestModalOpen.length}</span>
                   </button>
-                  {isRequestModalOpen.length > 0 && (
-                    <button
-                      type="button"
-                      className={`${styles.filterTab} ${showRequestModal ? styles.filterTabActive : ""}`}
-                      onClick={() => setShowRequestModal(true)}
-                    >
-                      Requests <span className={styles.filterTabCount}>{isRequestModalOpen.length}</span>
-                    </button>
-                  )}
-                </div>
-                {!showRequestModal ? (
-                  <button
-                    type="button"
-                    className={`${styles.unreadToggle} ${unreadOnly ? styles.unreadToggleActive : ""}`}
-                    onClick={() => setUnreadOnly((v) => !v)}
-                    aria-pressed={unreadOnly}
-                  >
-                    Unread only
-                  </button>
-                ) : null}
+                )}
               </div>
-              {showRequestModal ? (
-                isRequestModalOpen?.map((conversation) => {
-                  const updatedAt = new Date(
-                    conversation?.updatedAt,
-                  ).toLocaleTimeString([], {
+              {!showRequestModal ? (
+                <button
+                  type="button"
+                  className={`${styles.railUnreadToggle} ${unreadOnly ? styles.railUnreadToggleActive : ""}`}
+                  onClick={() => setUnreadOnly((v) => !v)}
+                  aria-pressed={unreadOnly}
+                >
+                  Unread
+                </button>
+              ) : null}
+            </div>
+          </div>
+
+          <div className={styles.railList}>
+            {showRequestModal ? (
+              isRequestModalOpen.length === 0 ? (
+                <div className={styles.railEmpty}>
+                  <p className={styles.railEmptyText}>New consultation requests will appear here.</p>
+                </div>
+              ) : (
+                isRequestModalOpen.map((conversation) => {
+                  const updatedAt = new Date(conversation?.updatedAt).toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
                     hour12: true,
                   });
                   return (
-                    <Fragment>
-                      <div
-                        key={conversation.id}
-                        className={`${styles.conversationItem} ${selectedChat === conversation.id ? styles.conversationItemActive : ""}`}
-                      >
-                        <div className={styles.conversationContent}>
-                          <div className={styles.avatarWrapper}>
-                            <img
-                              src={getProfileImageUrl(
-                                conversation?.sender?.profileImage,
-                              )}
-                              onError={handleProfileImageError}
-                              alt="profile"
-                              className={styles.conversationAvatar}
-                            />
-                            {conversation.isActive && (
-                              <div className={styles.onlineIndicator}></div>
-                            )}
-                          </div>
-                          <div className={styles.conversationDetails}>
-                            <div
-                              className={`${styles.conversationHeader} ${styles.flexBetween} ${styles.flexStart}`}
-                            >
-                              <div className={styles.conversationName}>
-                                {conversation.sender?.fullname}
-                              </div>
-                              <div className={styles.conversationTimestamp}>
-                                {updatedAt}
-                              </div>
+                    <div key={conversation.id} className={styles.requestRow}>
+                      <div className={styles.threadAvatarWrap}>
+                        <img
+                          src={getProfileImageUrl(conversation?.sender?.profileImage)}
+                          onError={handleProfileImageError}
+                          alt=""
+                          className={styles.threadAvatar}
+                        />
+                        {conversation.isActive && <span className={styles.threadOnlineDot} />}
+                      </div>
+                      <div className={styles.threadBody}>
+                        <div className={styles.threadTopRow}>
+                          <span className={styles.threadName}>{conversation.sender?.fullname}</span>
+                          <span className={styles.threadTime}>{updatedAt}</span>
+                        </div>
+                        <p className={styles.threadPreview}>{conversation?.lastMessage}</p>
+                      </div>
+                      <div className={styles.requestRowActions}>
+                        <button
+                          type="button"
+                          className={styles.requestAcceptBtn}
+                          onClick={() => {
+                            updateUser(conversation);
+                            setShowRequestModal(!showRequestModal);
+                          }}
+                        >
+                          Accept
+                        </button>
+                        <div className={styles.threadMenuWrapper}>
+                          <button
+                            type="button"
+                            className={styles.threadMenuBtn}
+                            aria-label="More options"
+                            onClick={() => handlerUserControlMenu(conversation)}
+                          >
+                            <BsThreeDotsVertical />
+                          </button>
+                          {userControlMenu === conversation?.chatListId && (
+                            <div className={styles.threadMenu} onClick={(e) => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                className={styles.threadMenuItem}
+                                onClick={() => {
+                                  updateUser(conversation);
+                                  setShowRequestModal(false);
+                                }}
+                              >
+                                Accept
+                              </button>
+                              <button
+                                type="button"
+                                className={styles.threadMenuItem}
+                                onClick={() => HandleRemoveUser(conversation)}
+                              >
+                                Remove
+                              </button>
                             </div>
-                            <div
-                              className={`${styles.conversationMessage} ${styles.flexBetween} ${styles.flexCenter}`}
-                            >
-                              <div className={styles.messageText}>
-                                {conversation?.lastMessage}
-                              </div>
-
-                              <div className={styles.moreMenuWrapper}>
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    gap: "10px",
-                                  }}
-                                >
-                                  <button
-                                    type="button"
-                                    className={styles.acceptRequestBtn}
-                                    onClick={() => {
-                                      updateUser(conversation);
-                                      setShowRequestModal(!showRequestModal);
-                                    }}
-                                  >
-                                    Add
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className={styles.unreadBadgeIcon}
-                                    onClick={(e) => {
-                                      handlerUserControlMenu(conversation);
-                                    }}
-                                  >
-                                    <BsThreeDotsVertical />
-                                  </button>
-                                </div>
-                                {userControlMenu ===
-                                  conversation?.chatListId && (
-                                    <div
-                                      className={styles.moreMenu}
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      <button
-                                        type="button"
-                                        className={styles.moreMenuItem}
-                                        onClick={() => {
-                                          updateUser(conversation);
-                                          setShowRequestModal(false);
-                                        }}
-                                      >
-                                        Add
-                                      </button>
-                                      <button
-                                        type="button"
-                                        className={styles.moreMenuItem}
-                                        onClick={() => {
-                                          HandleRemoveUser(conversation);
-                                        }}
-                                      >
-                                        Remove
-                                      </button>
-                                    </div>
-                                  )}
-                              </div>
-                            </div>
-                          </div>
+                          )}
                         </div>
                       </div>
-                    </Fragment>
+                    </div>
                   );
                 })
-              ) : (
-                <div className={styles.conversationsList}>
-                  {isRequestModalCloseAll.length === 0 ? (
-                    <div className={styles.emptyState}>
-                      <div>
-                        <svg
-                          className={styles.emptyIcon}
-                          width="48"
-                          height="48"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                        >
-                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                        </svg>
-                        <p className={styles.emptyText}>
-                          Loading conversations...
-                        </p>
-                      </div>
-                    </div>
-                  ) : isRequestModalClose.length === 0 ? (
-                    <div className={styles.emptyState}>
-                      <div>
-                        <svg
-                          className={styles.emptyIcon}
-                          width="48"
-                          height="48"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                        >
-                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                        </svg>
-                        <p className={styles.emptyText}>
-                          No conversations found
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    isRequestModalClose?.map((conversation) => {
-                      const updatedAt = new Date(
-                        conversation?.updatedAt,
-                      ).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: true,
-                      });
-                      const isChatAccepted = conversation?.isChatAccepted;
-                      const isMatchedUser =
-                        conversation?.sender?.id === currentUserId;
+              )
+            ) : isRequestModalCloseAll.length === 0 ? (
+              <div className={styles.railEmpty}>
+                <svg className={styles.railEmptyIcon} width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                <p className={styles.railEmptyText}>Your conversations will appear here</p>
+              </div>
+            ) : isRequestModalClose.length === 0 ? (
+              <div className={styles.railEmpty}>
+                <svg className={styles.railEmptyIcon} width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.35-4.35" />
+                </svg>
+                <p className={styles.railEmptyText}>No conversations match your filters</p>
+              </div>
+            ) : (
+              isRequestModalClose.map((conversation) => {
+                const updatedAt = new Date(conversation?.updatedAt).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                });
+                const isMatchedUser = conversation?.sender?.id === currentUserId;
+                const shouldDisable = hasMatchedUser && !isMatchedUser;
 
-                      const shouldDisable = hasMatchedUser && !isMatchedUser;
-                      return (
-                        <Fragment>
-                          <div
-                            key={conversation.id}
-                            onClick={() => {
-                              if (shouldDisable) return;
-                              handleChatSelect({
-                                shopId: conversation.shop.id,
-                                userId: conversation.sender.id,
-                                isChatAccepted: conversation.isChatAccepted,
-                              });
-                            }}
-                            className={`${styles.conversationItem} 
-                            ${shouldDisable ? styles.disabledItem : ""}
-                            ${isMatchedUser ? styles.conversationItemActive : ""}
-                          `}
-                          >
-                            <div className={styles.conversationContent}>
-                              <div className={styles.avatarWrapper}>
-                                <img
-                                  src={getProfileImageUrl(
-                                    conversation?.sender?.profileImage,
-                                  )}
-                                  onError={handleProfileImageError}
-                                  alt={conversation?.sender?.fullname || "User"}
-                                  className={styles.conversationAvatar}
-                                />
-                                {conversation.sender.isActive && (
-                                  <div className={styles.onlineIndicator}></div>
-                                )}
-                              </div>
-                              <div className={styles.conversationDetails}>
-                                <div
-                                  className={`${styles.conversationHeader} ${styles.flexBetween} ${styles.flexStart}`}
-                                >
-                                  <div className={styles.conversationName}>
-                                    {conversation.sender?.fullname}
-                                    {conversation.unreadCount > 0 && (
-                                      <span className={styles.unreadCountBadge}>
-                                        {conversation.unreadCount > 9
-                                          ? "9+"
-                                          : conversation.unreadCount}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className={styles.conversationTimestamp}>
-                                    {updatedAt}
-                                  </div>
-                                </div>
-                                <div
-                                  className={`${styles.conversationMessage} ${styles.flexBetween} ${styles.flexCenter}`}
-                                >
-                                  <div
-                                    className={`${styles.messageText} ${conversation.unreadCount > 0 ? styles.messageTextUnread : ""}`}
-                                  >
-                                    {conversation?.lastMessage}
-                                  </div>
-
-                                  <div className={styles.moreMenuWrapper}>
-                                    <button
-                                      type="button"
-                                      className={styles.unreadBadgeIcon}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setUserControlMenu((prev) =>
-                                          prev === conversation?.chatListId
-                                            ? null
-                                            : conversation?.chatListId,
-                                        );
-                                      }}
-                                    >
-                                      <BsThreeDotsVertical />
-                                    </button>
-
-                                    {userControlMenu ===
-                                      conversation?.chatListId && (
-                                        <div
-                                          className={styles.moreMenu}
-                                          onClick={(e) => e.stopPropagation()}
-                                        >
-                                          <button
-                                            type="button"
-                                            className={styles.moreMenuItem}
-                                            onClick={() => {
-                                              HandleRemoveUser(conversation);
-                                            }}
-                                          >
-                                            Remove
-                                          </button>
-                                        </div>
-                                      )}
-                                  </div>
-                                  {/* )} */}
-                                </div>
-                                <div
-                                  className={`${styles.conversationStatus} ${conversation.isOnline ? styles.statusOnline : styles.statusOffline}`}
-                                >
-                                  {conversation.lastActive}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </Fragment>
-                      );
-                    })
-                  )}
-                </div>
-              )}
-              {/* Conversations List */}
-            </div>
-          </div>
-
-          {/* Chat Window */}
-          <div
-            className={`${styles.chatWindow} ${!showChatView ? styles.hideOnMobile : ""}`}
-          >
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                height: "100%",
-              }}
-            >
-              {selectedConversation ? (
-                <>
-                  {/* Chat Header */}
+                return (
                   <div
-                    className={`${styles.chatHeader} ${styles.flexBetween} ${styles.flexCenter}`}
+                    key={conversation.id}
+                    onClick={() => {
+                      if (shouldDisable) return;
+                      handleChatSelect({
+                        shopId: conversation.shop.id,
+                        userId: conversation.sender.id,
+                        isChatAccepted: conversation.isChatAccepted,
+                      });
+                    }}
+                    className={`${styles.threadRow} ${shouldDisable ? styles.threadRowDisabled : ""} ${isMatchedUser ? styles.threadRowActive : ""}`}
                   >
-                    {/* Mobile Back Button */}
-                    <button
-                      className={styles.mobileBackButton}
-                      onClick={handleBackToList}
-                      aria-label="Back to conversations"
-                    >
-                      <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                      >
-                        <path d="M19 12H5M12 19l-7-7 7-7" />
-                      </svg>
-                    </button>
-                    <div
-                      className={`${styles.chatHeaderInfo} ${styles.flex} ${styles.flexCenter}`}
-                    >
-                      <div className={styles.avatarWrapper}>
-                        {/* {
-                                                        selectedConversation?.sender?.profileImage ? ( */}
-                        <img
-                          src={getProfileImageUrl(
-                            selectedConversation?.sender?.profileImage,
-                          )}
-                          onError={handleProfileImageError}
-                          alt={selectedConversation?.sender?.fullname || "User"}
-                          className={styles.chatHeaderAvatar}
-                          style={{
-                            borderRadius: "50%",
-                            width: "40px",
-                            height: "40px",
-                            objectFit: "cover",
-                          }}
-                        />
-
-                        {selectedConversation?.sender.isActive && (
-                          <div className={styles.onlineIndicator}></div>
-                        )}
-                      </div>
-                      <div>
-                        <div className={styles.chatHeaderName}>
-                          {selectedConversation?.sender?.fullname || "User"}
-                        </div>
-                        {/* <div className={styles.chatHeaderStatus} style={{ color: selectedConversation?.sender.isActive ? '#10b981' : '#6c757d' }}>
-                                                        {selectedConversation?.isOnline ? 'Active now' : selectedConversation?.lastActive || 'Offline'}
-                                                    </div> */}
-                      </div>
+                    <div className={styles.threadAvatarWrap}>
+                      <img
+                        src={getProfileImageUrl(conversation?.sender?.profileImage)}
+                        onError={handleProfileImageError}
+                        alt=""
+                        className={styles.threadAvatar}
+                      />
+                      {conversation.sender.isActive && <span className={styles.threadOnlineDot} />}
                     </div>
-                    {chatTimer.isRunning &&
-                      isActiveChatUser === selectChatUser && (
-                        <div className={styles.timerWrap}>
-                          <span className={styles.timerPill}>
-                            <span className={styles.timerDot} />
-                            {minutes}:
-                            {String(remainingSeconds).padStart(2, "0")}
-                          </span>
+                    <div className={styles.threadBody}>
+                      <div className={styles.threadTopRow}>
+                        <span className={styles.threadName}>
+                          {conversation.sender?.fullname}
+                          {conversation.unreadCount > 0 && (
+                            <span className={styles.threadUnreadBadge}>
+                              {conversation.unreadCount > 9 ? "9+" : conversation.unreadCount}
+                            </span>
+                          )}
+                        </span>
+                        <span className={styles.threadTime}>{updatedAt}</span>
+                      </div>
+                      <div className={styles.threadBottomRow}>
+                        <p className={`${styles.threadPreview} ${conversation.unreadCount > 0 ? styles.threadPreviewUnread : ""}`}>
+                          {conversation?.lastMessage}
+                        </p>
+                        <div className={styles.threadMenuWrapper}>
                           <button
-                            onClick={stopChatTimer}
-                            className={styles.stopChatBtn}
+                            type="button"
+                            className={styles.threadMenuBtn}
+                            aria-label="More options"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setUserControlMenu((prev) =>
+                                prev === conversation?.chatListId ? null : conversation?.chatListId,
+                              );
+                            }}
                           >
-                            Stop Chat
+                            <BsThreeDotsVertical />
                           </button>
+                          {userControlMenu === conversation?.chatListId && (
+                            <div className={styles.threadMenu} onClick={(e) => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                className={styles.threadMenuItem}
+                                onClick={() => HandleRemoveUser(conversation)}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
+                      <span className={`${styles.threadStatus} ${conversation.isOnline ? styles.threadStatusOnline : styles.threadStatusOffline}`}>
+                        {conversation.lastActive}
+                      </span>
+                    </div>
                   </div>
+                );
+              })
+            )}
+          </div>
+        </aside>
 
-                  {/* Messages Area */}
-                  <div className={styles.messagesArea} ref={messagesAreaRef}>
-                    {showChatEndPop ? (
-                      <div className={styles.mainChatReqBox}>
-                        <div className={styles.chatRequestBox}>
-                          <div className={styles.chatIcon}>🔒</div>
+        {/* ---------------------------- CONVERSATION WORKSPACE --------------------------- */}
+        <section className={`${styles.conversation} ${!showChatView ? styles.hideOnMobile : ""}`}>
+          {selectedConversation ? (
+            <>
+              <header className={styles.conversationBar}>
+                <button
+                  type="button"
+                  className={styles.conversationBack}
+                  onClick={handleBackToList}
+                  aria-label="Back to conversations"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
+                    <path d="M19 12H5M12 19l-7-7 7-7" />
+                  </svg>
+                </button>
 
-                          <div className={styles.chatRequestContent}>
-                            <h4>Chat Ended</h4>
-                            <p>The chat session has been ended successfully</p>
-                          </div>
+                <div className={styles.conversationIdentity}>
+                  <div className={styles.threadAvatarWrap}>
+                    <img
+                      src={getProfileImageUrl(selectedConversation?.sender?.profileImage)}
+                      onError={handleProfileImageError}
+                      alt=""
+                      className={styles.conversationAvatarImg}
+                    />
+                    {selectedConversation?.sender.isActive && <span className={styles.threadOnlineDot} />}
+                  </div>
+                  <span className={styles.conversationName}>
+                    {selectedConversation?.sender?.fullname || "User"}
+                  </span>
+                </div>
 
-                          <button
-                            onClick={() => setShowChatEndPop(false)}
-                            className={styles.acceptBtn}
-                          >
-                            OK
-                          </button>
+                {chatTimer.isRunning && isActiveChatUser === selectChatUser && (
+                  <div className={styles.sessionPill}>
+                    <span className={styles.sessionDot} />
+                    <span className={styles.sessionTime}>
+                      {minutes}:{String(remainingSeconds).padStart(2, "0")}
+                    </span>
+                    <button type="button" onClick={stopChatTimer} className={styles.sessionEndBtn}>
+                      End
+                    </button>
+                  </div>
+                )}
+              </header>
+
+              <div className={styles.messageStream} ref={messagesAreaRef}>
+                {showChatEndPop ? (
+                  <div className={styles.stateCard}>
+                    <span className={styles.stateCardIcon}>{CHAT_ENDED_ICON}</span>
+                    <h3 className={styles.stateCardTitle}>Consultation ended</h3>
+                    <p className={styles.stateCardText}>
+                      Session with {selectedConversation?.sender?.fullname || "this client"} lasted{" "}
+                      {formatSessionDuration(lastSessionSeconds)}.
+                    </p>
+                    <button type="button" onClick={() => setShowChatEndPop(false)} className={styles.stateCardAction}>
+                      Done
+                    </button>
+                  </div>
+                ) : !chatTimer.isRunning &&
+                  (selectedConversation?.isChatAccepted === "request" ||
+                    chatAccepted?.isChatAccepted === "request") ? (
+                  <div className={styles.stateCard}>
+                    <span className={`${styles.stateCardIcon} ${styles.stateCardIconAccent}`}>{CHAT_REQUEST_ICON}</span>
+                    <h3 className={styles.stateCardTitle}>New consultation request</h3>
+                    <p className={styles.stateCardText}>
+                      {acceptCountdown !== null
+                        ? "Accepted — waiting for the client to confirm"
+                        : "A client wants to start a conversation with you"}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        acceptUserChat({
+                          userId: chaterIds?.userId || selectedConversation?.sender?.id,
+                          shopId: chaterIds?.shopId || selectedConversation?.shop?.id || shopId,
+                        })
+                      }
+                      className={`${styles.stateCardAction} ${styles.stateCardActionPrimary} ${acceptCountdown !== null ? styles.stateCardActionWaiting : ""}`}
+                      disabled={acceptCountdown !== null}
+                    >
+                      {acceptCountdown !== null ? `Waiting… ${acceptCountdown}s` : "Accept request"}
+                    </button>
+                  </div>
+                ) : chatMessagesData.length === 0 ? (
+                  <div className={styles.streamEmpty}>
+                    <p className={styles.streamEmptyTitle}>Start the conversation</p>
+                    <p className={styles.streamEmptyText}>Send the first message to begin.</p>
+                  </div>
+                ) : (
+                  <>
+                    {messageGroups.map((group, groupIndex) => (
+                      <Fragment key={`${group.label}-${groupIndex}`}>
+                        <div className={styles.daySeparator}>
+                          <span className={styles.daySeparatorLabel}>{group.label}</span>
                         </div>
-                      </div>
-                    ) : !chatTimer.isRunning &&
-                      (selectedConversation?.isChatAccepted === "request" ||
-                        chatAccepted?.isChatAccepted === "request") ? (
-                      <div className={styles.mainChatReqBox}>
-                        <div className={styles.chatRequestBox}>
-                          <div className={styles.chatIcon}>💬</div>
-
-                          <div className={styles.chatRequestContent}>
-                            <h4>New Chat Request</h4>
-                            <p>
-                              {acceptCountdown !== null
-                                ? "Accepted — waiting for the user to confirm"
-                                : "A user wants to start a chat with you"}
-                            </p>
-                          </div>
-
-                          <button
-                            onClick={() =>
-                              acceptUserChat({
-                                userId:
-                                  chaterIds?.userId ||
-                                  selectedConversation?.sender?.id,
-                                shopId:
-                                  chaterIds?.shopId ||
-                                  selectedConversation?.shop?.id ||
-                                  shopId,
-                              })
-                            }
-                            className={styles.acceptBtn}
-                            disabled={acceptCountdown !== null}
-                            style={
-                              acceptCountdown !== null
-                                ? { background: "#22c55e", cursor: "wait" }
-                                : undefined
-                            }
-                          >
-                            {acceptCountdown !== null
-                              ? `Waiting… ${acceptCountdown}s`
-                              : "Accept Chat"}
-                          </button>
-                        </div>
-                      </div>
-                    ) : chatMessagesData.length === 0 ? (
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "center",
-                          alignItems: "center",
-                          height: "100%",
-                        }}
-                      >
-                        <p>No messages yet. Start the conversation!</p>
-                      </div>
-                    ) : (
-                      <>
-                        {chatMessagesData.map((message) => {
+                        {group.messages.map((message) => {
                           const isOwn = message.senderId === consultantId;
-                          const timestamp = new Date(
-                            message.timestamp,
-                          ).toLocaleTimeString([], {
+                          const timestamp = new Date(message.timestamp).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
                             hour12: true,
@@ -1074,111 +975,73 @@ const ChatsPage = () => {
                           return (
                             <div
                               key={message._id}
-                              className={`${styles.messageContainer} ${isOwn ? styles.messageContainerRight : styles.messageContainerLeft}`}
+                              className={`${styles.bubbleRow} ${isOwn ? styles.bubbleRowOwn : styles.bubbleRowOther}`}
                             >
-                              <div
-                                className={`${styles.messageBubble} ${isOwn ? styles.messageBubbleOwn : styles.messageBubbleOther}`}
-                              >
-                                {/* {!isOwn && (
-                                                                <div className={styles.messageSender}>
-                                                                    User
-                                                                </div>
-                                                            )} */}
-                                <div className={styles.messageText}>
-                                  {message.text}
-                                </div>
-                                <div className={styles.messageTimestamp}>
-                                  {timestamp}
-                                </div>
+                              <div className={`${styles.bubble} ${isOwn ? styles.bubbleOwn : styles.bubbleOther}`}>
+                                <p className={styles.bubbleText}>{message.text}</p>
+                                <span className={styles.bubbleTime}>{timestamp}</span>
                               </div>
                             </div>
                           );
                         })}
-                        <div ref={messagesEndRef} />
-                      </>
-                    )}
-                  </div>
+                      </Fragment>
+                    ))}
+                    <div ref={messagesEndRef} />
+                  </>
+                )}
+              </div>
 
-                  <TypingIndicator
-                    label={partnerLabel}
-                    visible={isPartnerTyping}
-                  />
+              <TypingIndicator label={partnerLabel} visible={isPartnerTyping} />
 
-                  {/* Message Input */}
-                  <div className={styles.messageInputArea}>
-                    <div className={styles.inputGroup}>
-                      <button
-                        className={styles.attachButton}
-                        title="Attach File"
-                      >
-                        <svg
-                          width="20"
-                          height="20"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                        >
-                          <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-                        </svg>
-                      </button>
-                      <input
-                        onChange={(e) => {
-                          setText(e.target.value);
-                          handleInputChange(e.target.value);
-                        }}
-                        value={text}
-                        type="text"
-                        className={styles.messageInput}
-                        placeholder="Type a message..."
-                        onKeyPress={(e) => {
-                          if (e.key === "Enter" && text.trim()) {
-                            sendChat();
-                          }
-                        }}
-                      />
-                      <button
-                        onClick={sendChat}
-                        className={styles.sendButton}
-                        title="Send"
-                      >
-                        <svg
-                          className={styles.sendIcon}
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                        >
-                          <line x1="22" y1="2" x2="11" y2="13" />
-                          <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className={styles.emptyChatState}>
-                  <div className={styles.emptyChatContent}>
-                    <svg
-                      className={styles.emptyChatIcon}
-                      width="64"
-                      height="64"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                    >
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              <div className={styles.composer}>
+                <div className={styles.composerGroup}>
+                  <button type="button" className={styles.composerAttach} title="Attach file" aria-label="Attach file">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
+                      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
                     </svg>
-                    <p className={styles.emptyChatText}>
-                      Select a conversation to start chatting
-                    </p>
-                  </div>
+                  </button>
+                  <input
+                    onChange={(e) => {
+                      setText(e.target.value);
+                      handleInputChange(e.target.value);
+                    }}
+                    value={text}
+                    type="text"
+                    className={styles.composerInput}
+                    placeholder="Type a message…"
+                    aria-label="Message"
+                    onKeyPress={(e) => {
+                      if (e.key === "Enter" && text.trim()) {
+                        sendChat();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={sendChat}
+                    className={styles.composerSend}
+                    title="Send"
+                    aria-label="Send message"
+                    disabled={!text.trim()}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
+                      <line x1="22" y1="2" x2="11" y2="13" />
+                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg>
+                  </button>
                 </div>
-              )}
+              </div>
+            </>
+          ) : (
+            <div className={styles.streamEmpty}>
+              <svg className={styles.streamEmptyIcon} width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              <p className={styles.streamEmptyTitle}>Select a conversation</p>
+              <p className={styles.streamEmptyText}>Choose a conversation from the list to continue.</p>
             </div>
-          </div>
-        </div>
+          )}
+        </section>
       </div>
       <ReactToast
         show={showChatEndToast}
