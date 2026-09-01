@@ -5,13 +5,18 @@
  * consultant-profile.js. Small formatting helpers are intentionally
  * duplicated rather than shared — there's nothing to import from.
  *
- * Data source: the App Proxy JSON endpoint (/apps/consultly/customer/me).
- * Unlike consultant-profile.js, there is no id read from this page's URL —
- * customer identity comes entirely from Shopify's App Proxy signal
- * (logged_in_customer_id), resolved server-side. This file never reads a
- * customer id from the URL, query string, or localStorage, and never sends
- * one to the backend — the fetch below carries no identifying parameter at
- * all beyond what Shopify's proxy already signs.
+ * Data sources, all App Proxy JSON endpoints resolved server-side from
+ * Shopify's own signed customer identity (never a client-supplied id):
+ *   GET  /apps/consultly/customer/me            — identity, balance,
+ *                                                  wallet + consultation history
+ *   GET  /apps/consultly/wallet/topup            — recharge catalog (lazy)
+ *   POST /apps/consultly/wallet/recharge         — start a recharge
+ *   GET  /apps/consultly/support/requests        — support requests (lazy)
+ *   POST /apps/consultly/support/requests        — submit a new request
+ *   PUT  /apps/consultly/support/requests/:id/read
+ *
+ * This file never reads a customer id from the URL, query string, or
+ * localStorage, and never sends one to the backend.
  */
 (function () {
   "use strict";
@@ -28,16 +33,28 @@
 
   var ICONS = {
     chat:
-      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
-      '<path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">' +
+      '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>',
     voice:
-      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">' +
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">' +
       '<path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/></svg>',
     video:
-      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
       '<path d="M23 7L16 12L23 17V7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
       '<path d="M14 5H3C1.9 5 1 5.9 1 7V17C1 18.1 1.9 19 3 19H14C15.1 19 16 18.1 16 17V7C16 5.9 15.1 5.1 14 5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   };
+
+  var CREDIT_ICON =
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+  var DEBIT_ICON =
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>';
+
+  var COMM_TYPE_LABELS = { voice: "Voice call", video: "Video call", chat: "Chat" };
+  var COMM_FILTERS = [
+    { key: "all", label: "All" },
+    { key: "calls", label: "Calls" },
+    { key: "chat", label: "Chats" },
+  ];
 
   var DEFAULT_AVATAR_SVG =
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
@@ -77,17 +94,694 @@
     return mins + "m " + secs + "s";
   }
 
-  function formatDate(iso) {
+  function isSameCalendarDay(a, b) {
+    return (
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate()
+    );
+  }
+
+  function formatDayLabel(date) {
+    var today = new Date();
+    var yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    if (isSameCalendarDay(date, today)) return "Today";
+    if (isSameCalendarDay(date, yesterday)) return "Yesterday";
+    return date.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: date.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
+    });
+  }
+
+  function formatClockTime(iso) {
+    if (!iso) return "";
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function formatFullDate(iso) {
     if (!iso) return "";
     var d = new Date(iso);
     if (isNaN(d.getTime())) return "";
     return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
   }
 
-  // Returns the shopper to THIS exact page after signing in — unlike
-  // consultant-profile.js's buildLoginUrl (which returns to a generic
-  // landing), My Profile's required UX is: not logged in -> Shopify login ->
-  // back to /pages/my-profile.
+  function memberSinceYear(iso) {
+    if (!iso) return null;
+    var d = new Date(iso);
+    return isNaN(d.getTime()) ? null : d.getFullYear();
+  }
+
+  // Buckets an already-sorted (newest first) list into { date, items[] }
+  // groups by calendar day, so a "Today"/"Yesterday"/date heading only
+  // appears where the data actually changes day.
+  function groupByDay(list) {
+    var groups = [];
+    (list || []).forEach(function (item) {
+      var d = item.createdAt ? new Date(item.createdAt) : null;
+      var last = groups[groups.length - 1];
+      if (d && last && isSameCalendarDay(last.date, d)) {
+        last.items.push(item);
+      } else {
+        groups.push({ date: d || new Date(0), items: [item] });
+      }
+    });
+    return groups;
+  }
+
+  function dayGroupedListMarkup(list, rowFn) {
+    var groups = groupByDay(list);
+    return groups
+      .map(function (group) {
+        var rows = group.items.map(rowFn).join("");
+        return (
+          (groups.length > 1
+            ? '<p class="consultly-my-profile__day-label">' + escapeHtml(formatDayLabel(group.date)) + "</p>"
+            : "") +
+          '<ul class="consultly-my-profile__row-list">' + rows + "</ul>"
+        );
+      })
+      .join("");
+  }
+
+  function emptyStateMarkup(title, text) {
+    return (
+      '<div class="consultly-my-profile__empty-block">' +
+      '<p class="consultly-my-profile__empty-title">' + escapeHtml(title) + "</p>" +
+      '<p class="consultly-my-profile__empty-text">' + escapeHtml(text) + "</p>" +
+      "</div>"
+    );
+  }
+
+  function errorStateMarkup(text, retryAction) {
+    return (
+      '<div class="consultly-my-profile__empty-block">' +
+      '<p class="consultly-my-profile__empty-title">Something went wrong</p>' +
+      '<p class="consultly-my-profile__empty-text">' + escapeHtml(text) + "</p>" +
+      '<button type="button" class="consultly-my-profile__retry" data-action="' + retryAction + '">Try again</button>' +
+      "</div>"
+    );
+  }
+
+  function skeletonRowsMarkup(count) {
+    var row =
+      '<div class="consultly-my-profile__skeleton-row">' +
+      '<span class="consultly-my-profile__skeleton-circle"></span>' +
+      '<span class="consultly-my-profile__skeleton-line"></span>' +
+      "</div>";
+    return new Array(count || 3).fill(row).join("");
+  }
+
+  // ---------------------------------------------------------------- header
+
+  function renderHeader(customer) {
+    var name = customer.fullname || "My Profile";
+    var email = customer.email || "";
+    var imgSrc = customer.profileImage || DEFAULT_AVATAR;
+    var balance = customer.walletBalance != null ? customer.walletBalance : 0;
+    var memberYear = memberSinceYear(customer.memberSince);
+
+    return (
+      '<div class="consultly-my-profile__header">' +
+      '<div class="consultly-my-profile__identity">' +
+      '<img class="consultly-my-profile__avatar" src="' + escapeHtml(imgSrc) + '" alt="' + escapeHtml(name) + '" />' +
+      '<div class="consultly-my-profile__identity-text">' +
+      '<h1 class="consultly-my-profile__name">' + escapeHtml(name) + "</h1>" +
+      (email ? '<p class="consultly-my-profile__email">' + escapeHtml(email) + "</p>" : "") +
+      (memberYear
+        ? '<p class="consultly-my-profile__member-since">Member since ' + memberYear + "</p>"
+        : "") +
+      "</div>" +
+      "</div>" +
+      '<div class="consultly-my-profile__header-divider" aria-hidden="true"></div>' +
+      '<div class="consultly-my-profile__balance">' +
+      '<span class="consultly-my-profile__balance-label">Available balance</span>' +
+      '<span class="consultly-my-profile__balance-amount">' +
+      escapeHtml(customer.walletCurrency || "") + escapeHtml(formatAmount(balance)) + "</span>" +
+      '<button type="button" class="consultly-my-profile__add-money-link" data-action="goto-tab" data-tab="wallet" data-wallet-view="topup">Add money</button>' +
+      "</div>" +
+      "</div>"
+    );
+  }
+
+  // ----------------------------------------------------------------- tabs
+
+  function visibleTabs(options) {
+    return [
+      { key: "wallet", label: "Wallet" },
+      { key: "comm", label: "Communications", hidden: !options.showConsultationHistory },
+      { key: "support", label: "Support" },
+    ].filter(function (t) { return !t.hidden; });
+  }
+
+  function renderTabs(activeTab, options) {
+    return (
+      '<nav class="consultly-my-profile__tabs" aria-label="Account sections">' +
+      visibleTabs(options).map(function (t) {
+        return (
+          '<button type="button" class="consultly-my-profile__tab' +
+          (t.key === activeTab ? " consultly-my-profile__tab--active" : "") +
+          '" data-action="goto-tab" data-tab="' + t.key + '">' +
+          escapeHtml(t.label) +
+          "</button>"
+        );
+      }).join("") +
+      "</nav>"
+    );
+  }
+
+  // --------------------------------------------------------------- wallet
+
+  function walletRowMarkup(entry) {
+    var isCredit = entry.direction === "credit";
+    var tone = isCredit ? "credit" : "debit";
+    var title = (entry.description && entry.description.trim()) ||
+      (entry.transactionType
+        ? entry.transactionType.replace(/_/g, " ").replace(/^\w/, function (c) { return c.toUpperCase(); })
+        : "Transaction");
+    var tags = "";
+    if (entry.referenceType) {
+      tags += '<span class="consultly-my-profile__tag">' + escapeHtml(entry.referenceType) + "</span>";
+    }
+    if (entry.status && entry.status !== "success") {
+      tags += '<span class="consultly-my-profile__tag">' + escapeHtml(entry.status) + "</span>";
+    }
+    return (
+      '<li class="consultly-my-profile__row">' +
+      '<span class="consultly-my-profile__row-icon" data-tone="' + tone + '">' +
+      (isCredit ? CREDIT_ICON : DEBIT_ICON) +
+      "</span>" +
+      '<div class="consultly-my-profile__row-main">' +
+      '<span class="consultly-my-profile__row-title">' + escapeHtml(title) + "</span>" +
+      (tags ? '<span class="consultly-my-profile__row-meta">' + tags + "</span>" : "") +
+      "</div>" +
+      '<div class="consultly-my-profile__row-side">' +
+      '<span class="consultly-my-profile__row-amount" data-tone="' + tone + '">' +
+      (isCredit ? "+" : "−") +
+      escapeHtml(entry.currency || "") +
+      escapeHtml(formatAmount(entry.amount)) +
+      "</span>" +
+      '<span class="consultly-my-profile__row-time">' + escapeHtml(formatClockTime(entry.createdAt)) + "</span>" +
+      "</div>" +
+      "</li>"
+    );
+  }
+
+  function renderWalletActivity(walletHistory) {
+    return walletHistory.length
+      ? dayGroupedListMarkup(walletHistory, walletRowMarkup)
+      : emptyStateMarkup(
+          "No wallet activity yet",
+          "Money you add, and amounts spent on calls or chats, will show up here.",
+        );
+  }
+
+  function renderTopupOption(option, currency) {
+    var total = Number(option.totalCoin || 0) + Number(option.extraCoin || 0);
+    var hasBonus = Number(option.extraCoin) > 0;
+    return (
+      '<button type="button" class="consultly-my-profile__topup-card" data-action="recharge" data-amount="' +
+      escapeHtml(option.totalCoin) + '">' +
+      '<span class="consultly-my-profile__topup-amount">' + escapeHtml(currency || "") + escapeHtml(formatAmount(option.totalCoin)) + "</span>" +
+      (hasBonus
+        ? '<span class="consultly-my-profile__topup-bonus">+' + escapeHtml(currency || "") + escapeHtml(formatAmount(option.extraCoin)) + " bonus</span>"
+        : "") +
+      '<span class="consultly-my-profile__topup-total">Get ' + escapeHtml(currency || "") + escapeHtml(formatAmount(total)) + " total</span>" +
+      "</button>"
+    );
+  }
+
+  function renderWalletTopup(state) {
+    if (state.topupError) {
+      return errorStateMarkup(state.topupError, "retry-topup");
+    }
+    if (state.topupLoading || !state.topupCatalog) {
+      return '<div class="consultly-my-profile__topup-grid">' +
+        '<span class="consultly-my-profile__topup-skeleton"></span>' +
+        '<span class="consultly-my-profile__topup-skeleton"></span>' +
+        '<span class="consultly-my-profile__topup-skeleton"></span>' +
+        "</div>";
+    }
+    var options = state.topupCatalog.voucherCode || [];
+    if (!options.length) {
+      return emptyStateMarkup(
+        "No top-up options available",
+        "The store hasn't set up any recharge options yet. Check back later.",
+      );
+    }
+    var currency = state.topupCatalog.shopCurrency;
+    return (
+      (state.rechargeError
+        ? '<p class="consultly-my-profile__inline-error">' + escapeHtml(state.rechargeError) + "</p>"
+        : "") +
+      (state.recharging
+        ? '<p class="consultly-my-profile__inline-status">Opening checkout…</p>'
+        : "") +
+      '<div class="consultly-my-profile__topup-grid">' +
+      options.map(function (o) { return renderTopupOption(o, currency); }).join("") +
+      "</div>"
+    );
+  }
+
+  function renderWalletTab(state) {
+    var walletHistory = state.data.walletHistory || [];
+    var showActivity = state.options.showWalletHistory;
+    var subNav = showActivity
+      ? '<div class="consultly-my-profile__sub-nav">' +
+        '<button type="button" class="consultly-my-profile__sub-tab' +
+        (state.walletView === "topup" ? " consultly-my-profile__sub-tab--active" : "") +
+        '" data-action="wallet-view" data-wallet-view="topup">Add money</button>' +
+        '<button type="button" class="consultly-my-profile__sub-tab' +
+        (state.walletView === "activity" ? " consultly-my-profile__sub-tab--active" : "") +
+        '" data-action="wallet-view" data-wallet-view="activity">Wallet activity</button>' +
+        "</div>"
+      : "";
+    var effectiveView = showActivity ? state.walletView : "topup";
+    return (
+      '<section class="consultly-my-profile__section">' +
+      subNav +
+      (effectiveView === "topup"
+        ? renderWalletTopup(state)
+        : renderWalletActivity(walletHistory)) +
+      "</section>"
+    );
+  }
+
+  // ------------------------------------------------------------- comms
+
+  function consultationRowMarkup(entry) {
+    var icon = ICONS[entry.type] || ICONS.chat;
+    var typeLabel = COMM_TYPE_LABELS[entry.type] || entry.type || "Consultation";
+    var duration = formatDuration(entry.duration);
+    return (
+      '<li class="consultly-my-profile__row">' +
+      '<span class="consultly-my-profile__row-icon">' + icon + "</span>" +
+      '<div class="consultly-my-profile__row-main">' +
+      '<span class="consultly-my-profile__row-title">' + escapeHtml(entry.consultantName) + "</span>" +
+      '<span class="consultly-my-profile__row-meta">' + escapeHtml(typeLabel) + " · " + escapeHtml(duration) + "</span>" +
+      "</div>" +
+      '<div class="consultly-my-profile__row-side">' +
+      '<span class="consultly-my-profile__row-amount" data-tone="debit">' +
+      "−" + escapeHtml(formatAmount(entry.amount)) +
+      "</span>" +
+      '<span class="consultly-my-profile__row-time">' + escapeHtml(formatClockTime(entry.createdAt)) + "</span>" +
+      "</div>" +
+      "</li>"
+    );
+  }
+
+  function filterConsultations(list, filterKey) {
+    if (filterKey === "all") return list;
+    if (filterKey === "calls") {
+      return list.filter(function (e) { return e.type === "voice" || e.type === "video"; });
+    }
+    return list.filter(function (e) { return e.type === filterKey; });
+  }
+
+  function renderCommTab(state) {
+    var all = state.data.consultationHistory || [];
+    var filtered = filterConsultations(all, state.commFilter);
+    var filterButtons = COMM_FILTERS.map(function (f) {
+      return (
+        '<button type="button" class="consultly-my-profile__filter-pill' +
+        (state.commFilter === f.key ? " consultly-my-profile__filter-pill--active" : "") +
+        '" data-action="comm-filter" data-comm-filter="' + f.key + '">' + escapeHtml(f.label) + "</button>"
+      );
+    }).join("");
+
+    return (
+      '<section class="consultly-my-profile__section">' +
+      '<div class="consultly-my-profile__section-head">' +
+      '<h2 class="consultly-my-profile__section-title">Communications</h2>' +
+      '<div class="consultly-my-profile__filter-row" role="tablist" aria-label="Filter communications">' +
+      filterButtons +
+      "</div>" +
+      "</div>" +
+      (filtered.length
+        ? dayGroupedListMarkup(filtered, consultationRowMarkup)
+        : emptyStateMarkup(
+            all.length === 0 ? "No consultations yet" : "Nothing matches this filter",
+            all.length === 0
+              ? "Your calls and chats with consultants will show up here."
+              : "Try a different filter to see more activity.",
+          )) +
+      "</section>"
+    );
+  }
+
+  // ----------------------------------------------------------------- support
+
+  function statusBadgeMarkup(status) {
+    var cls = "consultly-my-profile__badge--attention";
+    if (status === "replied") cls = "consultly-my-profile__badge--success";
+    if (status === "closed") cls = "consultly-my-profile__badge--muted";
+    return '<span class="consultly-my-profile__badge ' + cls + '">' + escapeHtml(status) + "</span>";
+  }
+
+  function supportRequestMarkup(request, isOpen) {
+    var replies = request.replies || [];
+    return (
+      '<div class="consultly-my-profile__support-item">' +
+      '<button type="button" class="consultly-my-profile__support-summary" data-action="toggle-request" data-request-id="' +
+      escapeHtml(request._id) + '">' +
+      '<span class="consultly-my-profile__support-subject">' + escapeHtml(request.subject) + "</span>" +
+      '<span class="consultly-my-profile__support-badges">' +
+      (request.consultantHasUnreadReply
+        ? '<span class="consultly-my-profile__badge consultly-my-profile__badge--attention">New reply</span>'
+        : "") +
+      statusBadgeMarkup(request.status) +
+      "</span>" +
+      "</button>" +
+      '<p class="consultly-my-profile__support-date">' + escapeHtml(formatFullDate(request.createdAt)) + "</p>" +
+      (isOpen
+        ? '<div class="consultly-my-profile__support-detail">' +
+          '<p class="consultly-my-profile__support-detail-label">Your message</p>' +
+          '<div class="consultly-my-profile__message-bubble">' + escapeHtml(request.message) + "</div>" +
+          (replies.length
+            ? '<p class="consultly-my-profile__support-detail-label">Store replies</p>' +
+              replies.map(function (r) {
+                return (
+                  '<div class="consultly-my-profile__reply-bubble">' +
+                  '<span class="consultly-my-profile__reply-meta">Store · ' + escapeHtml(formatFullDate(r.repliedAt)) + "</span>" +
+                  '<p class="consultly-my-profile__reply-text">' + escapeHtml(r.message) + "</p>" +
+                  "</div>"
+                );
+              }).join("")
+            : '<p class="consultly-my-profile__empty-text">Waiting for the store to reply.</p>') +
+          "</div>"
+        : "") +
+      "</div>"
+    );
+  }
+
+  function renderSupportForm(state) {
+    if (!state.showSupportForm) return "";
+    return (
+      '<form class="consultly-my-profile__support-form" data-action="submit-support">' +
+      (state.supportFormError
+        ? '<div class="consultly-my-profile__alert-error">' + escapeHtml(state.supportFormError) + "</div>"
+        : "") +
+      (state.supportFormSuccess
+        ? '<div class="consultly-my-profile__alert-success">' + escapeHtml(state.supportFormSuccess) + "</div>"
+        : "") +
+      '<label class="consultly-my-profile__field-label" for="consultly-my-profile-subject">Subject</label>' +
+      '<input id="consultly-my-profile-subject" class="consultly-my-profile__field-input" type="text" name="subject" maxlength="200" placeholder="What is your query about?" />' +
+      '<label class="consultly-my-profile__field-label" for="consultly-my-profile-message">Message</label>' +
+      '<textarea id="consultly-my-profile-message" class="consultly-my-profile__field-input" name="message" rows="4" maxlength="5000" placeholder="Describe what you need help with..."></textarea>' +
+      '<button type="submit" class="consultly-my-profile__login-button" ' +
+      (state.supportSubmitting ? "disabled" : "") + ">" +
+      (state.supportSubmitting ? "Sending…" : "Send to store") +
+      "</button>" +
+      "</form>"
+    );
+  }
+
+  function renderSupportTab(state) {
+    var body;
+    if (state.supportError) {
+      body = errorStateMarkup(state.supportError, "retry-support");
+    } else if (state.supportLoading || state.supportRequests === null) {
+      body = skeletonRowsMarkup(2);
+    } else if (state.supportRequests.length === 0) {
+      body = emptyStateMarkup("No support requests yet", 'Use "New request" to contact the store.');
+    } else {
+      body =
+        '<div class="consultly-my-profile__support-list">' +
+        state.supportRequests
+          .map(function (r) { return supportRequestMarkup(r, state.openRequestId === r._id); })
+          .join("") +
+        "</div>";
+    }
+
+    return (
+      '<section class="consultly-my-profile__section">' +
+      '<div class="consultly-my-profile__section-head">' +
+      '<h2 class="consultly-my-profile__section-title">Support</h2>' +
+      '<button type="button" class="consultly-my-profile__filter-pill" data-action="toggle-support-form">' +
+      (state.showSupportForm ? "Close" : "New request") +
+      "</button>" +
+      "</div>" +
+      renderSupportForm(state) +
+      body +
+      "</section>"
+    );
+  }
+
+  // --------------------------------------------------------------- root render
+
+  function render(root, state) {
+    var customer = state.data.customer || {};
+    // A merchant may turn Communications off after it was already the
+    // active tab in this session (or it's the first render) — fall back to
+    // Wallet rather than rendering a tab that isn't in the nav at all.
+    if (state.activeTab === "comm" && !state.options.showConsultationHistory) {
+      state.activeTab = "wallet";
+    }
+    var body;
+    if (state.activeTab === "wallet") body = renderWalletTab(state);
+    else if (state.activeTab === "comm") body = renderCommTab(state);
+    else body = renderSupportTab(state);
+
+    root.innerHTML = renderHeader(customer) + renderTabs(state.activeTab, state.options) + body;
+
+    var avatarEl = root.querySelector(".consultly-my-profile__avatar");
+    if (avatarEl) {
+      avatarEl.addEventListener(
+        "error",
+        function () { avatarEl.src = DEFAULT_AVATAR; },
+        { once: true },
+      );
+    }
+  }
+
+  // ------------------------------------------------------------- controller
+
+  function createController(root, apiBase, shop, options) {
+    var state = {
+      data: {},
+      options: options,
+      activeTab: "wallet",
+      walletView: options.showWalletHistory ? "activity" : "topup",
+      commFilter: "all",
+      topupCatalog: null,
+      topupLoading: false,
+      topupError: null,
+      recharging: false,
+      rechargeError: null,
+      supportRequests: null,
+      supportLoading: false,
+      supportError: null,
+      showSupportForm: false,
+      supportSubmitting: false,
+      supportFormError: null,
+      supportFormSuccess: null,
+      openRequestId: null,
+    };
+
+    function rerender() {
+      render(root, state);
+    }
+
+    function fetchTopup(force) {
+      if (state.topupLoading) return;
+      if (state.topupCatalog && !force) return;
+      state.topupLoading = true;
+      state.topupError = null;
+      rerender();
+      fetch(apiBase.replace(/\/customer\/me$/, "/wallet/topup"), {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          state.topupLoading = false;
+          if (!data || data.success !== true || !data.authenticated) {
+            state.topupError = "Unable to load top-up options.";
+          } else {
+            state.topupCatalog = data;
+          }
+          rerender();
+        })
+        .catch(function (err) {
+          logErr("topup fetch failed:", err);
+          state.topupLoading = false;
+          state.topupError = "Unable to load top-up options.";
+          rerender();
+        });
+    }
+
+    function recharge(amount) {
+      if (state.recharging) return;
+      state.recharging = true;
+      state.rechargeError = null;
+      rerender();
+      var newWindow = window.open("", "_blank");
+      fetch(apiBase.replace(/\/customer\/me$/, "/wallet/recharge"), {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ amount: amount }),
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          state.recharging = false;
+          if (data && data.success && data.invoiceUrl) {
+            if (newWindow) newWindow.location.href = data.invoiceUrl;
+          } else {
+            if (newWindow) newWindow.close();
+            state.rechargeError = (data && data.message) || "Unable to start recharge. Please try again.";
+          }
+          rerender();
+        })
+        .catch(function (err) {
+          logErr("recharge failed:", err);
+          if (newWindow) newWindow.close();
+          state.recharging = false;
+          state.rechargeError = "Unable to start recharge. Please try again.";
+          rerender();
+        });
+    }
+
+    function fetchSupport(force) {
+      if (state.supportLoading) return;
+      if (state.supportRequests !== null && !force) return;
+      state.supportLoading = true;
+      state.supportError = null;
+      rerender();
+      fetch(apiBase.replace(/\/customer\/me$/, "/support/requests"), {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          state.supportLoading = false;
+          if (!data || data.success !== true || !data.authenticated) {
+            state.supportError = "Unable to load your support requests.";
+          } else {
+            state.supportRequests = data.data || [];
+          }
+          rerender();
+        })
+        .catch(function (err) {
+          logErr("support fetch failed:", err);
+          state.supportLoading = false;
+          state.supportError = "Unable to load your support requests.";
+          rerender();
+        });
+    }
+
+    function submitSupport(subject, message) {
+      state.supportSubmitting = true;
+      state.supportFormError = null;
+      state.supportFormSuccess = null;
+      rerender();
+      fetch(apiBase.replace(/\/customer\/me$/, "/support/requests"), {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ subject: subject, message: message }),
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          state.supportSubmitting = false;
+          if (data && data.success) {
+            state.supportFormSuccess = data.message || "Your query has been sent to the store.";
+            fetchSupport(true);
+          } else {
+            state.supportFormError = (data && data.message) || "Unable to send your query. Please try again.";
+          }
+          rerender();
+        })
+        .catch(function (err) {
+          logErr("support submit failed:", err);
+          state.supportSubmitting = false;
+          state.supportFormError = "Unable to send your query. Please try again.";
+          rerender();
+        });
+    }
+
+    function markRequestRead(requestId) {
+      fetch(apiBase.replace(/\/customer\/me$/, "/support/requests/" + encodeURIComponent(requestId) + "/read"), {
+        method: "PUT",
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      }).catch(function (err) { logErr("mark read failed:", err); });
+      if (state.supportRequests) {
+        state.supportRequests = state.supportRequests.map(function (r) {
+          return r._id === requestId ? Object.assign({}, r, { consultantHasUnreadReply: false }) : r;
+        });
+      }
+    }
+
+    root.addEventListener("click", function (evt) {
+      var el = evt.target.closest("[data-action]");
+      if (!el) return;
+      var action = el.getAttribute("data-action");
+
+      if (action === "goto-tab") {
+        state.activeTab = el.getAttribute("data-tab");
+        if (el.getAttribute("data-wallet-view")) {
+          state.walletView = el.getAttribute("data-wallet-view");
+        }
+        if (state.activeTab === "wallet" && state.walletView === "topup") fetchTopup(false);
+        if (state.activeTab === "support") fetchSupport(false);
+        rerender();
+      } else if (action === "wallet-view") {
+        state.walletView = el.getAttribute("data-wallet-view");
+        if (state.walletView === "topup") fetchTopup(false);
+        rerender();
+      } else if (action === "comm-filter") {
+        state.commFilter = el.getAttribute("data-comm-filter");
+        rerender();
+      } else if (action === "recharge") {
+        recharge(Number(el.getAttribute("data-amount")));
+      } else if (action === "retry-topup") {
+        fetchTopup(true);
+      } else if (action === "retry-support") {
+        fetchSupport(true);
+      } else if (action === "toggle-support-form") {
+        state.showSupportForm = !state.showSupportForm;
+        state.supportFormError = null;
+        state.supportFormSuccess = null;
+        rerender();
+      } else if (action === "toggle-request") {
+        var id = el.getAttribute("data-request-id");
+        state.openRequestId = state.openRequestId === id ? null : id;
+        if (state.openRequestId) {
+          var req = (state.supportRequests || []).find(function (r) { return r._id === id; });
+          if (req && req.consultantHasUnreadReply) markRequestRead(id);
+        }
+        rerender();
+      }
+    });
+
+    root.addEventListener("submit", function (evt) {
+      var form = evt.target.closest('[data-action="submit-support"]');
+      if (!form) return;
+      evt.preventDefault();
+      var subject = form.querySelector('[name="subject"]').value.trim();
+      var message = form.querySelector('[name="message"]').value.trim();
+      if (!subject || !message) {
+        state.supportFormError = "Subject and message are required.";
+        rerender();
+        return;
+      }
+      submitSupport(subject, message);
+    });
+
+    return {
+      setData: function (data) {
+        state.data = data;
+        rerender();
+      },
+    };
+  }
+
+  // ------------------------------------------------------------- bootstrap
+
   function buildLoginUrl(shop) {
     var returnTo = window.location.pathname + window.location.search;
     return "https://" + shop + "/account/login?return_to=" + encodeURIComponent(returnTo);
@@ -113,133 +807,6 @@
     if (btn) btn.addEventListener("click", onRetry);
   }
 
-  function walletHistoryRowMarkup(entry) {
-    var isCredit = entry.direction === "credit";
-    var sign = isCredit ? "+" : "−";
-    var amountClass = isCredit
-      ? "consultly-my-profile__amount--credit"
-      : "consultly-my-profile__amount--debit";
-    return (
-      '<li class="consultly-my-profile__history-row">' +
-      '<div class="consultly-my-profile__history-main">' +
-      '<span class="consultly-my-profile__history-title">' +
-      escapeHtml(entry.description || entry.transactionType || "Transaction") +
-      "</span>" +
-      '<span class="consultly-my-profile__history-date">' +
-      escapeHtml(formatDate(entry.createdAt)) +
-      "</span>" +
-      "</div>" +
-      '<span class="consultly-my-profile__amount ' +
-      amountClass +
-      '">' +
-      sign +
-      escapeHtml(entry.currency || "") +
-      escapeHtml(formatAmount(entry.amount)) +
-      "</span>" +
-      "</li>"
-    );
-  }
-
-  function consultationHistoryRowMarkup(entry) {
-    var icon = ICONS[entry.type] || ICONS.chat;
-    var statusLabel = entry.status === "completed" || entry.status === "ended" ? "Completed" : entry.status;
-    return (
-      '<li class="consultly-my-profile__history-row">' +
-      '<span class="consultly-my-profile__history-icon">' +
-      icon +
-      "</span>" +
-      '<div class="consultly-my-profile__history-main">' +
-      '<span class="consultly-my-profile__history-title">' +
-      escapeHtml(entry.consultantName) +
-      " · " +
-      escapeHtml(entry.type) +
-      "</span>" +
-      '<span class="consultly-my-profile__history-date">' +
-      escapeHtml(formatDate(entry.createdAt)) +
-      " · " +
-      escapeHtml(formatDuration(entry.duration)) +
-      " · " +
-      escapeHtml(statusLabel) +
-      "</span>" +
-      "</div>" +
-      '<span class="consultly-my-profile__amount consultly-my-profile__amount--debit">' +
-      "−" +
-      escapeHtml(formatAmount(entry.amount)) +
-      "</span>" +
-      "</li>"
-    );
-  }
-
-  function renderProfile(root, data, options) {
-    var customer = data.customer || {};
-    var name = customer.fullname || "My Profile";
-    var email = customer.email || "";
-    var imgSrc = customer.profileImage || DEFAULT_AVATAR;
-    var balance = customer.walletBalance != null ? customer.walletBalance : 0;
-
-    var walletHistoryHtml = "";
-    if (options.showWalletHistory) {
-      var walletRows = (data.walletHistory || []).map(walletHistoryRowMarkup).join("");
-      walletHistoryHtml =
-        '<section class="consultly-my-profile__section">' +
-        '<h2 class="consultly-my-profile__section-title">Wallet History</h2>' +
-        (walletRows
-          ? '<ul class="consultly-my-profile__history-list">' + walletRows + "</ul>"
-          : '<p class="consultly-my-profile__empty">No transactions yet.</p>') +
-        "</section>";
-    }
-
-    var consultationHistoryHtml = "";
-    if (options.showConsultationHistory) {
-      var consultationRows = (data.consultationHistory || [])
-        .map(consultationHistoryRowMarkup)
-        .join("");
-      consultationHistoryHtml =
-        '<section class="consultly-my-profile__section">' +
-        '<h2 class="consultly-my-profile__section-title">Consultation History</h2>' +
-        (consultationRows
-          ? '<ul class="consultly-my-profile__history-list">' + consultationRows + "</ul>"
-          : '<p class="consultly-my-profile__empty">No consultations yet.</p>') +
-        "</section>";
-    }
-
-    root.innerHTML =
-      '<div class="consultly-my-profile__header">' +
-      '<img class="consultly-my-profile__avatar" src="' +
-      escapeHtml(imgSrc) +
-      '" alt="' +
-      escapeHtml(name) +
-      '" />' +
-      '<div class="consultly-my-profile__header-info">' +
-      '<h1 class="consultly-my-profile__name">' +
-      escapeHtml(name) +
-      "</h1>" +
-      (email
-        ? '<p class="consultly-my-profile__email">' + escapeHtml(email) + "</p>"
-        : "") +
-      "</div>" +
-      '<div class="consultly-my-profile__balance-card">' +
-      '<span class="consultly-my-profile__balance-label">Balance</span>' +
-      '<span class="consultly-my-profile__balance-amount">$' +
-      escapeHtml(formatAmount(balance)) +
-      "</span>" +
-      "</div>" +
-      "</div>" +
-      walletHistoryHtml +
-      consultationHistoryHtml;
-
-    var avatarEl = root.querySelector(".consultly-my-profile__avatar");
-    if (avatarEl) {
-      avatarEl.addEventListener(
-        "error",
-        function () {
-          avatarEl.src = DEFAULT_AVATAR;
-        },
-        { once: true },
-      );
-    }
-  }
-
   function initMyProfile(container) {
     log("current page detected:", window.location.pathname);
     if (container.getAttribute("data-consultly-initialized") === "1") {
@@ -256,32 +823,25 @@
 
     var apiBase = container.getAttribute("data-api-base");
     var shop = container.getAttribute("data-shop");
-    var showWalletHistory = container.getAttribute("data-show-wallet-history") === "true";
-    var showConsultationHistory =
-      container.getAttribute("data-show-consultation-history") === "true";
+    var options = {
+      showWalletHistory: container.getAttribute("data-show-wallet-history") === "true",
+      showConsultationHistory: container.getAttribute("data-show-consultation-history") === "true",
+    };
 
     if (!apiBase || !shop) {
       logErr("API URL/shop could not be constructed — data-api-base or data-shop attribute missing");
-      renderError(root, function () {
-        initMyProfileLoad();
-      });
+      renderError(root, function () { initMyProfileLoad(); });
       return;
     }
 
     function initMyProfileLoad() {
-      root.innerHTML =
-        '<p class="consultly-my-profile__placeholder">Loading your profile…</p>';
-
+      root.innerHTML = '<p class="consultly-my-profile__placeholder">Loading your profile…</p>';
       log("API request starting:", apiBase);
 
-      fetch(apiBase, {
-        credentials: "same-origin",
-        headers: { Accept: "application/json" },
-      })
+      fetch(apiBase, { credentials: "same-origin", headers: { Accept: "application/json" } })
         .then(function (res) {
           log("API response status:", res.status);
           if (res.status === 401 || res.status === 403) {
-            logErr("Backend returned", res.status, "— treating as not authenticated");
             var authErr = new Error("not_authenticated");
             authErr.notAuthenticated = true;
             throw authErr;
@@ -291,11 +851,8 @@
         })
         .then(function (data) {
           log("profile data received:", data);
-          if (!data || data.success !== true) {
-            throw new Error("Unexpected response shape");
-          }
+          if (!data || data.success !== true) throw new Error("Unexpected response shape");
 
-          log("customer authentication state:", data.authenticated === true);
           if (!data.authenticated) {
             log("customer is not logged in — rendering sign-in prompt");
             renderLoginRequired(root, shop);
@@ -306,20 +863,10 @@
             renderError(root, initMyProfileLoad);
             return;
           }
-          log("customer identity available:", data.customer.id);
-
-          if (
-            !(data.walletHistory && data.walletHistory.length) &&
-            !(data.consultationHistory && data.consultationHistory.length)
-          ) {
-            log("profile data received but history is empty — rendering with empty states");
-          }
 
           try {
-            renderProfile(root, data, {
-              showWalletHistory: showWalletHistory,
-              showConsultationHistory: showConsultationHistory,
-            });
+            var controller = createController(root, apiBase, shop, options);
+            controller.setData(data);
             log("render complete");
           } catch (renderErr) {
             logErr("Rendering failed:", renderErr);
@@ -342,9 +889,6 @@
   function initAll() {
     var blocks = document.querySelectorAll(".consultly-my-profile");
     log("initAll fired — found", blocks.length, "My Profile block(s) on page");
-    if (!blocks.length) {
-      logErr("No .consultly-my-profile block found in the DOM on this page load");
-    }
     blocks.forEach(initMyProfile);
   }
 

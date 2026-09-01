@@ -31,8 +31,6 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const ConsultantList = lazy(() => import("./pages/ConsultantList"));
 const AddConsultant = lazy(() => import("./pages/AddConsultant"));
 const Faq = lazy(() => import("./pages/Faq"));
-const Voucher = lazy(() => import("./pages/Voucher"));
-const History = lazy(() => import("./pages/History"));
 const VoucherSettings = lazy(() => import("./pages/VoucherSettings"));
 const VoucherTable = lazy(() => import("./pages/VoucherTable"));
 const WithdrawalRequest = lazy(() => import("./pages/WithdrawalRequest"));
@@ -90,13 +88,6 @@ const VideoCallingPage = lazy(
 );
 
 const UserChat = lazy(() => import("./components/ClientDashbord/UserChat"));
-const ProfileSection = lazy(
-  () => import("./components/ClientDashbord/ProfileSection"),
-);
-const CallChatLogs = lazy(() => import("./pages/CallChatLogs"));
-const UserSupport = lazy(
-  () => import("./components/ClientDashbord/UserSupport"),
-);
 
 const LoginForm = lazy(
   () => import("./components/ConsultantDashboard/LoginForm"),
@@ -344,21 +335,6 @@ export default function App() {
             />
 
             <Route path="/fcm-token" element={<FcmTokenWindow />} />
-
-            <Route
-              path="/profile"
-              element={
-                <ProtectStoreFront>
-                  <ProfileSection />
-                </ProtectStoreFront>
-              }
-            >
-              <Route index element={<Voucher />} />
-              <Route path="voucher" element={<Voucher />} />
-              <Route path="history" element={<History />} />
-              <Route path="call-chat-logs" element={<CallChatLogs />} />
-              <Route path="support" element={<UserSupport />} />
-            </Route>
 
             <Route path="/push-call-incoming" element={<PushCallIncoming />} />
 

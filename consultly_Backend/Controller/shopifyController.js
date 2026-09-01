@@ -25,7 +25,14 @@ const { User } = require("../Modal/userSchema");
 const { WalletHistory } = require("../Modal/walletHistory");
 const { TransactionHistroy } = require("../Modal/transactionHistroy");
 const { getConsultantsForShop } = require("./usersController");
-const { getConsultantProfileForShop } = require("./consultantController");
+const {
+  getConsultantProfileForShop,
+  createSupportRequestCore,
+  listSupportRequestsCore,
+  markSupportReplyReadCore,
+} = require("./consultantController");
+const { buildVoucherCatalogPayload } = require("./userDetailsController");
+const { createRechargeDraftOrderCore } = require("./shopifyDraftOrderController");
 const { getCommunicationStatus } = require("../services/subscriptionMinutes");
 const mongoose = require("mongoose");
 const {
@@ -1497,7 +1504,7 @@ const proxyCustomerProfileJson = async (req, res) => {
       return res.status(200).json({ success: true, authenticated: false });
     }
 
-    const [walletHistory, conversations] = await Promise.all([
+    const [walletHistory, conversations, shopDoc] = await Promise.all([
       WalletHistory.find({ userId: userResult.userId, shop_id: userResult.shop_id })
         .sort({ createdAt: -1 })
         .limit(50)
@@ -1510,6 +1517,7 @@ const proxyCustomerProfileJson = async (req, res) => {
         .sort({ createdAt: -1 })
         .limit(50)
         .lean(),
+      getCachedShopDoc(shop),
     ]);
 
     const safeCustomer = {
@@ -1520,6 +1528,11 @@ const proxyCustomerProfileJson = async (req, res) => {
         ? `${process.env.APP_URL}/${String(user.profileImage).replace(/\\/g, "/")}`
         : null,
       walletBalance: user.walletBalance || 0,
+      // The header shows this balance before the Wallet tab (and its own
+      // shopCurrency-aware fetch) ever loads — without it, the balance
+      // silently rendered with a hardcoded "$" regardless of the shop's
+      // actual currency.
+      walletCurrency: shopDoc?.currency || null,
       memberSince: user.createdAt,
     };
 
@@ -1565,6 +1578,177 @@ const proxyCustomerProfileJson = async (req, res) => {
     return res
       .status(500)
       .json({ success: false, message: "Failed to load profile" });
+  }
+};
+
+/**
+ * JSON App Proxy endpoint for the My Profile block's "Add money" section —
+ * the shop's existing recharge catalog (getVouchersController's own data,
+ * via the shared buildVoucherCatalogPayload), resolved by shop domain
+ * instead of a Bearer-token-authenticated adminId. Same identity resolution
+ * as proxyCustomerProfileJson.
+ */
+const proxyWalletTopupJson = async (req, res) => {
+  try {
+    const shop = req.query.shop;
+    if (!shop) {
+      return res.status(400).json({ success: false, message: "Missing shop" });
+    }
+
+    const userResult = await resolveStorefrontCustomer(req, shop);
+    if (!userResult?.userId) {
+      res.set("Cache-Control", "no-store");
+      return res.status(200).json({ success: true, authenticated: false });
+    }
+    setAppSessionCookie(res, userResult.token);
+
+    const shopDoc = await shopModel
+      .findOne({ shop })
+      .select("vouchers currency _id shop");
+    if (!shopDoc) {
+      return res.status(404).json({ success: false, message: "Shop not found" });
+    }
+
+    const catalog = await buildVoucherCatalogPayload(shopDoc);
+    res.set("Cache-Control", "no-store");
+    return res.status(200).json({ success: true, authenticated: true, ...catalog });
+  } catch (err) {
+    console.error("[app-proxy] /consultly/wallet/topup error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to load top-up options" });
+  }
+};
+
+/**
+ * JSON App Proxy endpoint for the My Profile block's "Add money" action —
+ * creates the same Shopify draft-order recharge as the (now unreachable)
+ * React app's /draft-order/create-draft-order, via the shared
+ * createRechargeDraftOrderCore, but resolves the customer server-side
+ * (resolveStorefrontCustomer) instead of trusting a userId sent from the
+ * browser, and only accepts an amount that matches one of the shop's own
+ * configured top-up options — a real financial document (a Shopify draft
+ * order) should never be created for a client-chosen arbitrary amount.
+ */
+const proxyWalletRechargeJson = async (req, res) => {
+  try {
+    const shop = req.query.shop;
+    if (!shop) {
+      return res.status(400).json({ success: false, message: "Missing shop" });
+    }
+
+    const userResult = await resolveStorefrontCustomer(req, shop);
+    if (!userResult?.userId) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Please sign in to add money to your wallet." });
+    }
+    setAppSessionCookie(res, userResult.token);
+
+    const shopDoc = await shopModel.findOne({ shop });
+    if (!shopDoc) {
+      return res.status(404).json({ success: false, message: "Shop not found" });
+    }
+
+    const amount = Number(req.body?.amount);
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ success: false, message: "Invalid amount" });
+    }
+
+    const validAmounts = (shopDoc.vouchers || []).map((v) => Number(v.totalCoin));
+    if (!validAmounts.includes(amount)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "That top-up option is no longer available." });
+    }
+
+    return createRechargeDraftOrderCore(
+      { shop, shopAccessToken: shopDoc, userId: userResult.userId, amount, title: "Recharge Amount" },
+      res,
+    );
+  } catch (err) {
+    console.error("[app-proxy] /consultly/wallet/recharge error:", err);
+    return res.status(500).json({ success: false, message: "Failed to start recharge" });
+  }
+};
+
+/**
+ * JSON App Proxy endpoints for the My Profile block's Support section —
+ * same ConsultantSupportRequest collection/business rules as the Consultant
+ * Dashboard's support requests (submitConsultantSupportRequest /
+ * getConsultantSupportRequests / markConsultantSupportReplyRead), via their
+ * shared core functions, but resolving identity via resolveStorefrontCustomer
+ * instead of a Bearer token.
+ */
+const proxySupportRequestsJson = async (req, res) => {
+  try {
+    const shop = req.query.shop;
+    if (!shop) {
+      return res.status(400).json({ success: false, message: "Missing shop" });
+    }
+
+    const userResult = await resolveStorefrontCustomer(req, shop);
+    if (!userResult?.userId) {
+      res.set("Cache-Control", "no-store");
+      return res.status(200).json({ success: true, authenticated: false });
+    }
+    setAppSessionCookie(res, userResult.token);
+    res.set("Cache-Control", "no-store");
+    return listSupportRequestsCore(userResult.userId, res);
+  } catch (err) {
+    console.error("[app-proxy] /consultly/support/requests GET error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch support requests" });
+  }
+};
+
+const proxySubmitSupportRequestJson = async (req, res) => {
+  try {
+    const shop = req.query.shop;
+    if (!shop) {
+      return res.status(400).json({ success: false, message: "Missing shop" });
+    }
+
+    const userResult = await resolveStorefrontCustomer(req, shop);
+    if (!userResult?.userId) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Please sign in to contact support." });
+    }
+    setAppSessionCookie(res, userResult.token);
+
+    const { subject, message } = req.body || {};
+    return createSupportRequestCore(
+      userResult.userId,
+      { subject, message, shopId: userResult.shop_id },
+      res,
+    );
+  } catch (err) {
+    console.error("[app-proxy] /consultly/support/requests POST error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to send support request" });
+  }
+};
+
+const proxyMarkSupportReplyReadJson = async (req, res) => {
+  try {
+    const shop = req.query.shop;
+    if (!shop) {
+      return res.status(400).json({ success: false, message: "Missing shop" });
+    }
+
+    const userResult = await resolveStorefrontCustomer(req, shop);
+    if (!userResult?.userId) {
+      return res.status(401).json({ success: false, message: "Please sign in." });
+    }
+    setAppSessionCookie(res, userResult.token);
+
+    return markSupportReplyReadCore(userResult.userId, req.params.requestId, res);
+  } catch (err) {
+    console.error("[app-proxy] /consultly/support/requests/:id/read error:", err);
+    return res.status(500).json({ success: false, message: "Failed to update request" });
   }
 };
 const proxyShopifyCallAccepted = (req, res) => {
@@ -1630,6 +1814,11 @@ module.exports = {
   proxySHopifyConsultantChat,
   proxyShopifyViewProfile,
   proxyCustomerProfileJson,
+  proxyWalletTopupJson,
+  proxyWalletRechargeJson,
+  proxySupportRequestsJson,
+  proxySubmitSupportRequestJson,
+  proxyMarkSupportReplyReadJson,
   proxyShopifyCallAccepted,
   proxyShopifyStorefrontChat,
   proxyShopifyCallIdentity,

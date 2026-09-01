@@ -191,11 +191,11 @@ function Faq() {
               <br />
               <a
                 style={{ fontSize: "14px" }}
-                href={`https://${adminDetails_.shop}/apps/consultly`}
+                href={`https://${adminDetails_.shop}/pages/my-profile`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                https://{adminDetails_?.shop}/apps/consultly/profile
+                https://{adminDetails_?.shop}/pages/my-profile
               </a>
               <br />
               <br />

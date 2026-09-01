@@ -14,7 +14,10 @@ import styles from "./SignInRequired.module.css";
  */
 export default function SignInRequired({
     shop,
-    returnTo = "/apps/consultly/profile",
+    // "/apps/consultly/profile" (the old iframe profile route) is gone —
+    // callers should pass an explicit returnTo; this generic fallback no
+    // longer assumes the caller is the profile page.
+    returnTo = "/",
     title = "Sign in Required",
     lead = "Please sign in to access your profile.",
     detail = "Your profile, wallet, consultations and bookings will become available immediately after login.",

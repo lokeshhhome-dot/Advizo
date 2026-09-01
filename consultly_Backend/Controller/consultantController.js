@@ -26,6 +26,7 @@ const {
   authorizeUserResource,
   authorizeChatParticipant,
   resolveAuthenticatedUserId,
+  userBelongsToShop,
 } = require("../Auth/auth");
 const { shopModel } = require("../Modal/shopify");
 const {
@@ -1580,17 +1581,14 @@ const tokenVerifyController = async (req, res) => {
   }
 };
 
-const submitConsultantSupportRequest = async (req, res) => {
+// Core create logic, parametrized by an already-resolved authUserId — reused
+// by both the Bearer-token route below (submitConsultantSupportRequest,
+// used by the Consultant Dashboard) and the App-Proxy storefront route
+// (proxySubmitSupportRequestJson in shopifyController.js, used by the
+// customer-facing My Profile Theme Extension block), so the actual request
+// logic/validation/email-send only exists once.
+const createSupportRequestCore = async (authUserId, { subject, message, shopId, isDummyAccount }, res) => {
   try {
-    const authUserId = await resolveAuthenticatedUserId(req);
-    if (!authUserId) {
-      return res.status(401).json({
-        success: false,
-        message: "Authentication required",
-      });
-    }
-
-    const { subject, message, shopId, isDummyAccount } = req.body || {};
     const cleanSubject = String(subject || "").trim();
     const cleanMessage = String(message || "").trim();
 
@@ -1634,8 +1632,8 @@ const submitConsultantSupportRequest = async (req, res) => {
       });
     }
 
-    if (!(await assertAuthenticatedUserShop(req, res, resolvedShopId))) {
-      return;
+    if (!(await userBelongsToShop(authUserId, resolvedShopId))) {
+      return res.status(403).json({ success: false, message: "Forbidden" });
     }
 
     const shopDoc = await shopModel
@@ -1703,13 +1701,23 @@ const submitConsultantSupportRequest = async (req, res) => {
   }
 };
 
-const getConsultantSupportRequests = async (req, res) => {
-  try {
-    const authUserId = await resolveAuthenticatedUserId(req);
-    if (!authUserId) {
-      return res.status(401).json({ success: false, message: "Authentication required" });
-    }
+// Bearer-token entry point (Consultant Dashboard) — unchanged behavior,
+// just delegates to the shared core above.
+const submitConsultantSupportRequest = async (req, res) => {
+  const authUserId = await resolveAuthenticatedUserId(req);
+  if (!authUserId) {
+    return res.status(401).json({
+      success: false,
+      message: "Authentication required",
+    });
+  }
+  return createSupportRequestCore(authUserId, req.body || {}, res);
+};
 
+// Core list logic, parametrized by an already-resolved authUserId — see
+// createSupportRequestCore's comment for why this split exists.
+const listSupportRequestsCore = async (authUserId, res) => {
+  try {
     const requests = await ConsultantSupportRequest.find({
       consultantId: authUserId,
     })
@@ -1728,6 +1736,15 @@ const getConsultantSupportRequests = async (req, res) => {
       message: "Failed to fetch support requests",
     });
   }
+};
+
+// Bearer-token entry point (Consultant Dashboard) — unchanged behavior.
+const getConsultantSupportRequests = async (req, res) => {
+  const authUserId = await resolveAuthenticatedUserId(req);
+  if (!authUserId) {
+    return res.status(401).json({ success: false, message: "Authentication required" });
+  }
+  return listSupportRequestsCore(authUserId, res);
 };
 
 const getConsultantNotifications = async (request, response) => {
@@ -1920,14 +1937,10 @@ const markConsultantNotificationsRead = async (request, response) => {
   }
 };
 
-const markConsultantSupportReplyRead = async (req, res) => {
+// Core mark-read logic, parametrized by an already-resolved authUserId —
+// see createSupportRequestCore's comment for why this split exists.
+const markSupportReplyReadCore = async (authUserId, requestId, res) => {
   try {
-    const authUserId = await resolveAuthenticatedUserId(req);
-    const { requestId } = req.params;
-
-    if (!authUserId) {
-      return res.status(401).json({ success: false, message: "Authentication required" });
-    }
     if (!mongoose.Types.ObjectId.isValid(requestId)) {
       return res.status(400).json({ success: false, message: "Invalid request ID" });
     }
@@ -1942,6 +1955,15 @@ const markConsultantSupportReplyRead = async (req, res) => {
     console.error("markConsultantSupportReplyRead error:", error);
     return res.status(500).json({ success: false, message: "Failed to update request" });
   }
+};
+
+// Bearer-token entry point (Consultant Dashboard) — unchanged behavior.
+const markConsultantSupportReplyRead = async (req, res) => {
+  const authUserId = await resolveAuthenticatedUserId(req);
+  if (!authUserId) {
+    return res.status(401).json({ success: false, message: "Authentication required" });
+  }
+  return markSupportReplyReadCore(authUserId, req.params.requestId, res);
 };
 
 module.exports = {
@@ -1972,6 +1994,9 @@ module.exports = {
   submitConsultantSupportRequest,
   getConsultantSupportRequests,
   markConsultantSupportReplyRead,
+  createSupportRequestCore,
+  listSupportRequestsCore,
+  markSupportReplyReadCore,
   getConsultantNotifications,
   markConsultantNotificationsRead,
 };

@@ -14,38 +14,15 @@ const { getShopAccessToken } = require("../Utils/shopifyToken");
  */
 
 
-const createDraftOrder = async (req, res) => {
+// Core recharge logic, parametrized by an already-authorized userId and an
+// already-resolved shop doc — reused by both the Bearer-token route below
+// (createDraftOrder, used by the now-unreachable React app) and the
+// App-Proxy storefront route (proxyWalletRechargeJson in
+// shopifyController.js, used by the customer-facing My Profile Theme
+// Extension block), so the actual GraphQL draft-order creation only exists
+// once. Callers are responsible for authorizing userId before calling this.
+const createRechargeDraftOrderCore = async ({ shop, shopAccessToken, userId, amount, title }, res) => {
     try {
-        const { shop, amount, title, userId } = req.body;
-
-        if (!amount || !title || !userId) {
-            return res
-                .status(400)
-                .json({ success: false, message: "All fields are required" });
-        }
-
-        if (!mongoose.Types.ObjectId.isValid(userId)) {
-            return res
-                .status(400)
-                .json({ success: false, message: "Invalid user ID" });
-        }
-
-        const shopAccessToken = await shopModel.findOne({ shop });
-        if (!shopAccessToken) {
-            return res
-                .status(400)
-                .json({ success: false, message: "Invalid shop" });
-        }
-
-        if (
-            !(await authorizeUserResource(req, res, {
-                userId,
-                shopId: shopAccessToken._id,
-            }))
-        ) {
-            return;
-        }
-
         let customerId = null;
         const user = await User.findById(userId).select("shopifyCustomerId");
         if (user) {
@@ -164,4 +141,48 @@ const createDraftOrder = async (req, res) => {
     }
 };
 
-module.exports = { createDraftOrder };
+// Bearer-token entry point — unchanged validation/behavior, now delegating
+// the actual draft-order creation to the shared core above.
+const createDraftOrder = async (req, res) => {
+    try {
+        const { shop, amount, title, userId } = req.body;
+
+        if (!amount || !title || !userId) {
+            return res
+                .status(400)
+                .json({ success: false, message: "All fields are required" });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res
+                .status(400)
+                .json({ success: false, message: "Invalid user ID" });
+        }
+
+        const shopAccessToken = await shopModel.findOne({ shop });
+        if (!shopAccessToken) {
+            return res
+                .status(400)
+                .json({ success: false, message: "Invalid shop" });
+        }
+
+        if (
+            !(await authorizeUserResource(req, res, {
+                userId,
+                shopId: shopAccessToken._id,
+            }))
+        ) {
+            return;
+        }
+
+        return createRechargeDraftOrderCore({ shop, shopAccessToken, userId, amount, title }, res);
+    } catch (error) {
+        console.log("createDraftOrder error:", error.response?.data || error.message);
+        res.status(500).json({
+            success: false,
+            message: "Server error while creating draft order"
+        });
+    }
+};
+
+module.exports = { createDraftOrder, createRechargeDraftOrderCore };

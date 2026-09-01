@@ -74,6 +74,25 @@ const getUserById = async (req, res) => {
     }
 };
 
+// Shared core: builds the recharge-catalog payload from an already-resolved
+// shop doc (must have vouchers/currency/_id/shop selected). Reused by the
+// Bearer-token route below (getVouchersController) AND the App-Proxy
+// storefront route (proxyWalletTopupJson in shopifyController.js, used by
+// the customer-facing My Profile Theme Extension block) — one source of
+// truth for what a "voucher" actually is here (a wallet top-up catalog, not
+// redeemable codes) and for the communication-status flag piggybacked onto it.
+const buildVoucherCatalogPayload = async (shopDoc) => {
+    const commStatus = await getCommunicationStatus(shopDoc._id);
+    return {
+        voucherCode: shopDoc.vouchers,
+        shopCurrency: shopDoc.currency,
+        id: shopDoc._id,
+        shop: shopDoc.shop,
+        communicationDisabled: !commStatus.allowed,
+        remainingMinutes: commStatus.remainingMinutes,
+    };
+};
+
 const getVouchersController = async (req, res) => {
     try {
         const { adminId } = req.params;
@@ -101,15 +120,7 @@ const getVouchersController = async (req, res) => {
         }
         // Storefront pages fetch vouchers on load — piggyback the shop-level
         // communication flag so buttons disable without a new endpoint.
-        const commStatus = await getCommunicationStatus(admin._id);
-        const vouchers = {
-            voucherCode: admin.vouchers,
-            shopCurrency: admin.currency,
-            id: admin._id,
-            shop: admin.shop,
-            communicationDisabled: !commStatus.allowed,
-            remainingMinutes: commStatus.remainingMinutes,
-        }
+        const vouchers = await buildVoucherCatalogPayload(admin);
         res.status(200).json({
             success: true,
             message: "Vouchers retrieved successfully",
@@ -278,6 +289,7 @@ module.exports =
     getAllUsers,
     getUserById,
     getVouchersController,
+    buildVoucherCatalogPayload,
     getAppStatusController,
     getUserWalletHistroy,
     getcallSessionsController,

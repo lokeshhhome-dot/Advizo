@@ -24,7 +24,11 @@ const STEP_ICONS = {
 
 const REQUIRED_STORE_MENUS = [
   { path: "/apps/consultly", label: "Home" },
-  { path: "/apps/consultly/profile", label: "Profile" },
+  // /pages/my-profile is the live customer profile (native Theme
+  // Extension block) — /apps/consultly/profile was the old iframe launcher,
+  // removed. Kept in sync with REQUIRED_MENU_PATHS in
+  // consultly_Backend/Utils/menuPathUtils.js.
+  { path: "/pages/my-profile", label: "Profile" },
   { path: "/apps/consultly/login", label: "Consultant login" },
 ];
 

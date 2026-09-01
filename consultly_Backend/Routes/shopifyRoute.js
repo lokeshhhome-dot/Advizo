@@ -11,6 +11,11 @@ const { installShopifyApp,
     proxySHopifyConsultantChat,
     proxyShopifyViewProfile,
     proxyCustomerProfileJson,
+    proxyWalletTopupJson,
+    proxyWalletRechargeJson,
+    proxySupportRequestsJson,
+    proxySubmitSupportRequestJson,
+    proxyMarkSupportReplyReadJson,
     proxyShopifyCallAccepted,
     proxyShopifyStorefrontChat,
     proxyShopifyCallIdentity,
@@ -62,6 +67,21 @@ shopifyRoute.get('/consultly/chats', verifyAppProxy, proxyShopifyStorefrontChat)
 // /apps/consultly/customer/me, rendered on /pages/my-profile. Replaces the
 // old /consultly/profile iframe launcher (proxyProfileSection, removed).
 shopifyRoute.get('/consultly/customer/me', verifyAppProxy, proxyCustomerProfileJson);
+// My Profile block: Add Money (wallet top-up catalog + recharge) — reuses
+// the same recharge-catalog/draft-order logic as the (now unreachable)
+// React app's endpoints, via shared core functions in
+// userDetailsController.js / shopifyDraftOrderController.js. See
+// proxyWalletTopupJson / proxyWalletRechargeJson in shopifyController.js.
+shopifyRoute.get('/consultly/wallet/topup', verifyAppProxy, proxyWalletTopupJson);
+shopifyRoute.post('/consultly/wallet/recharge', verifyAppProxy, proxyWalletRechargeJson);
+// My Profile block: Support — reuses the same ConsultantSupportRequest
+// collection/business rules as the Consultant Dashboard's support requests,
+// via shared core functions in consultantController.js. See
+// proxySupportRequestsJson / proxySubmitSupportRequestJson /
+// proxyMarkSupportReplyReadJson in shopifyController.js.
+shopifyRoute.get('/consultly/support/requests', verifyAppProxy, proxySupportRequestsJson);
+shopifyRoute.post('/consultly/support/requests', verifyAppProxy, proxySubmitSupportRequestJson);
+shopifyRoute.put('/consultly/support/requests/:requestId/read', verifyAppProxy, proxyMarkSupportReplyReadJson);
 shopifyRoute.get('/consultly/video-calling-page', verifyAppProxy, proxyShopifyCallAccepted);
 // JSON identity endpoint for the Theme Extension's native call widget
 // (consultly_CallWidget) — see proxyShopifyCallIdentity's own comment.
