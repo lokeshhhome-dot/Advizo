@@ -63,6 +63,7 @@
 
 /* ---------- The centered call card ---------- */
 .callCard {
+    position: relative;
     width: 100%;
     max-width: 980px;
     height: 100%;
@@ -85,102 +86,119 @@
     to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* ---------- Header (in-flow, never overlaps the stage) ---------- */
-.callHeader {
+/* ---------- Close button (top-right, floats over the card) ----------
+   Matches the customer-side call widget's own .consultly-call-widget-close —
+   a dedicated close affordance distinct from the in-flow end-call control
+   below, both wired to the same handleEndCall since there's no
+   "minimize/hide" concept for an active call on either side. */
+.closeButton {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 2;
+    width: 34px;
+    height: 34px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 14px 18px;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--call-text);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.closeButton:hover { background: var(--surface-strong); }
+
+/* ---------- Header — two rows: name/call-type, then status/timer ----------
+   Same structure as the customer-side call widget's header (ui.js/ui.css):
+   row 1 is name + call-type pill, row 2 is a persistent status dot+label on
+   the left and the live timer on the right. Replaces what used to be a
+   single row (back-button + avatar + name) with status only ever shown as
+   scattered inline-colored text inside the video placeholder. */
+.callHeader {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 18px 56px 14px 20px;
     background: rgba(255, 255, 255, 0.03);
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     flex-shrink: 0;
 }
 
-.callHeaderLeft {
+.callHeaderRow {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 12px;
-    flex: 1;
-    min-width: 0;
-}
-
-.callHeaderRight {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-}
-
-.callTimer {
-    font-size: 15px;
-    font-weight: 700;
-    color: #fff;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 1px;
-    padding: 6px 14px;
-    border-radius: 999px;
-    background: rgba(var(--call-accent-rgb), 0.9);
-    box-shadow: 0 4px 14px rgba(var(--call-accent-rgb), 0.35);
-}
-
-.backButton {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: none;
-    background: var(--surface);
-    color: var(--call-text);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.15s ease, background 0.15s ease;
-    flex-shrink: 0;
-}
-
-.backButton:hover { background: var(--surface-strong); transform: scale(1.05); }
-.backButton:focus-visible,
-.controlButton:focus-visible,
-.selfExpandButton:focus-visible {
-    outline: 2px solid rgba(var(--call-accent-rgb), 0.9);
-    outline-offset: 2px;
-}
-
-.callInfo {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    color: var(--call-text);
-    min-width: 0;
-}
-
-.callAvatar {
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    object-fit: cover;
-    background: rgba(var(--call-accent-rgb), 0.9);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    font-size: 17px;
-    border: 2px solid rgba(255, 255, 255, 0.25);
-    flex-shrink: 0;
 }
 
 .callName {
+    margin: 0;
     font-size: 16px;
     font-weight: 600;
     color: var(--call-text);
-    margin-bottom: 1px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.callStatus { font-size: 12.5px; color: var(--call-muted); }
+.callTypeLabel {
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--call-muted);
+    background: var(--surface);
+    padding: 3px 8px;
+    border-radius: 999px;
+}
+
+.callStatusLine {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    color: var(--call-muted);
+}
+
+.statusDot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgba(244, 246, 248, 0.4);
+    flex-shrink: 0;
+}
+
+.statusDotPending {
+    background: #f5a623;
+    animation: statusDotPulse 1.4s ease-in-out infinite;
+}
+
+.statusDotLive { background: #4ade80; }
+
+@keyframes statusDotPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .statusDotPending { animation: none; }
+}
+
+.callTimer {
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    color: var(--call-muted);
+}
+
+.closeButton:focus-visible,
+.controlButton:focus-visible,
+.selfExpandButton:focus-visible {
+    outline: 2px solid rgba(var(--call-accent-rgb), 0.9);
+    outline-offset: 2px;
+}
 
 /* ---------- Stage ---------- */
 .videoArea {
@@ -450,10 +468,8 @@
     .videoCallContainer { padding: 0; }
     /* Phone: the card becomes the full surface — edge to edge. */
     .callCard { max-width: 100%; max-height: 100%; border-radius: 0; }
-    .callHeader { padding: 12px 14px; }
-    .backButton { width: 36px; height: 36px; }
-    .backButton svg { width: 20px; height: 20px; }
-    .callAvatar { width: 38px; height: 38px; font-size: 15px; }
+    .callHeader { padding: 16px 48px 12px 14px; }
+    .closeButton { width: 30px; height: 30px; top: 12px; right: 12px; }
     .callName { font-size: 15px; }
     .videoPlaceholderText { font-size: 17px; }
     .localVideo { width: 108px; height: 148px; bottom: 12px; right: 12px; }

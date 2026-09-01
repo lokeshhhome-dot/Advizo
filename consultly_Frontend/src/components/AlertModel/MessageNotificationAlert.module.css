@@ -1,0 +1,134 @@
+/* =========================================================================
+   Message notification — a calm, compact "you can read this when ready"
+   surface, visually opposite to IncommingCallAlert.module.css on purpose:
+   light, quiet, no pulsing, no decision buttons. Optimized for previewing,
+   not deciding.
+   ========================================================================= */
+
+.card {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 2050;
+    width: 320px;
+    max-width: calc(100vw - 24px);
+    box-sizing: border-box;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: var(--ds-surface, #ffffff);
+    border: 1px solid var(--ds-border, rgba(16, 35, 28, 0.1));
+    box-shadow: 0 12px 32px rgba(16, 35, 28, 0.14);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    cursor: pointer;
+    animation: msgAlertIn 0.25s ease-out;
+}
+
+@keyframes msgAlertIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .card { animation: none; }
+}
+
+.avatarWrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    background: var(--ds-surface-2, #f1efe6);
+}
+
+.unreadDot {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: #2f9e6a;
+    border: 2px solid var(--ds-surface, #ffffff);
+}
+
+.content {
+    flex: 1;
+    min-width: 0;
+}
+
+.top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.senderName {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 650;
+    color: var(--ds-text, #10231c);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.closeBtn {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: var(--ds-text-subtle, #8b9991);
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.closeBtn:hover {
+    background: var(--ds-surface-2, #f1efe6);
+    color: var(--ds-text, #10231c);
+}
+
+.label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin: 2px 0 4px;
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--ds-brand, #14563c);
+}
+
+.label svg { width: 12px; height: 12px; }
+
+.preview {
+    margin: 0;
+    font-size: 13px;
+    color: var(--ds-text-muted, #5c6b64);
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+@media (max-width: 420px) {
+    .card { top: 12px; right: 12px; left: 12px; width: auto; }
+}

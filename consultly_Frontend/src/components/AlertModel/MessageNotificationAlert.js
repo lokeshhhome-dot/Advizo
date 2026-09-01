@@ -1,4 +1,7 @@
-import React, { useEffect } from "react";
+import React from "react";
+import styles from "./MessageNotificationAlert.module.css";
+import { getProfileImageUrl, handleProfileImageError } from "../../utils/getProfileImageUrl";
+
 export default function PopupNotification({ message, onClose, onOpen }) {
   if (!message) return null;
   const openChatPartnerId = localStorage.getItem("___U-B");
@@ -10,73 +13,45 @@ export default function PopupNotification({ message, onClose, onOpen }) {
   }
 
   return (
-    <>
-      <style>{`
-          .bs-popup {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            width: 330px;
-            background: rgba(20,20,20,0.4);
-            backdrop-filter: blur(12px);
-            border-radius: 8px;
-            padding: 1rem;
-            z-index: 99999;
-            color: #fff;
-            animation: slideUp .4s ease forwards;
-          }
-  
-          @keyframes slideUp {
-            from { opacity: 0; transform: translateY(50px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-  
-          .bs-popup img {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-          }
-  
-          .bs-close-btn {
-            position: absolute;
-            top: 8px;
-            right: 12px;
-            font-size: 22px;
-            background: none;
-            border: none;
-            color: #fff;
-            cursor: pointer;
-          }
-        `}</style>
-
-      <div
-        className="bs-popup d-flex align-items-center gap-3"
-        style={{ cursor: onOpen ? "pointer" : "default" }}
-        onClick={() => onOpen?.(message)}
-      >
-        <button
-          className="bs-close-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            onClose();
-          }}
-        >
-          ×
-        </button>
-
+    <div
+      className={styles.card}
+      role="status"
+      aria-label={`New message from ${message.senderName || "User"}`}
+      onClick={() => onOpen?.(message)}
+    >
+      <div className={styles.avatarWrap}>
         <img
-          src={"https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg"}
-          alt={message.senderName || "User"}
+          className={styles.avatar}
+          src={getProfileImageUrl(message.avatar)}
+          onError={handleProfileImageError}
+          alt=""
         />
-
-        <div>
-          <h5 className="fw-bold mb-1">
-            {message.senderName || "User"}
-          </h5>
-          <p>{message.text || "New message received"}</p>
-        </div>
+        <span className={styles.unreadDot} aria-hidden="true" />
       </div>
-    </>
+
+      <div className={styles.content}>
+        <div className={styles.top}>
+          <p className={styles.senderName}>{message.senderName || "User"}</p>
+          <button
+            type="button"
+            className={styles.closeBtn}
+            aria-label="Dismiss"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
+          >
+            ×
+          </button>
+        </div>
+        <p className={styles.label}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" />
+          </svg>
+          New message
+        </p>
+        <p className={styles.preview}>{message.text || "New message received"}</p>
+      </div>
+    </div>
   );
 }
-

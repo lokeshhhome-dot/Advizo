@@ -18,6 +18,7 @@ import { closeCallWindow } from "../../utils/callWindow";
 import useCallNetworkQuality from "../../hooks/useCallNetworkQuality";
 import NetworkIndicator from "./NetworkIndicator";
 import useCameraSwitch from "../../hooks/useCameraSwitch";
+import useSpeakerSwitch from "../../hooks/useSpeakerSwitch";
 import axios from "axios";
 import profileImageDefault from "../../../src/assets/avatar-or-person-sign-profile-picture-portrait-icon-user-profile-symbol.webp";
 
@@ -174,6 +175,29 @@ function VideoCallingPage({ config, onCallEnded } = {}) {
     const timer = setTimeout(() => setCameraSwitchError(""), 2600);
     return () => clearTimeout(timer);
   }, [cameraSwitchError]);
+
+  // Speaker/output-device switching — shown for BOTH call types (unlike
+  // camera/switch-camera, which only ever apply to video), matching the
+  // customer-side call widget's own control set.
+  const {
+    canSwitch: canSwitchSpeaker,
+    switching: switchingSpeaker,
+    switchSpeaker,
+  } = useSpeakerSwitch({ enabled: inCall });
+  const [speakerSwitchError, setSpeakerSwitchError] = useState("");
+
+  const handleSpeakerToggle = async () => {
+    if (switchingSpeaker) return;
+    setSpeakerSwitchError("");
+    const result = await switchSpeaker();
+    if (!result.ok && result.message) setSpeakerSwitchError(result.message);
+  };
+
+  useEffect(() => {
+    if (!speakerSwitchError) return undefined;
+    const timer = setTimeout(() => setSpeakerSwitchError(""), 2600);
+    return () => clearTimeout(timer);
+  }, [speakerSwitchError]);
 
   useEffect(() => {
     const onAudioBlocked = () => setAudioBlocked(true);
@@ -1447,6 +1471,40 @@ function VideoCallingPage({ config, onCallEnded } = {}) {
     }
   }, [userType, bothUserConnected]);
 
+  // Consolidates what used to be three separately-repeated ternaries
+  // (header name, two video-placeholder text blocks) into one value — same
+  // existing fields, same fallback behavior, just computed once.
+  const displayName =
+    (userType === "client" ? callerDetails?.receiver?.fullname : callerDetails?.caller?.fullname) ||
+    (userType === "client" ? "Consultant" : "Caller");
+
+  // Matches the customer-side call widget's own STATUS_TEXT map (ui.js) —
+  // same states, same header treatment on both sides. Purely a display-layer
+  // read of state that already existed and was previously shown as scattered
+  // inline-colored text inside the video placeholder instead of one
+  // persistent header status line.
+  const statusKey = callSessionEnded
+    ? "ended"
+    : callRejected
+      ? "rejected"
+      : bothUserConnected
+        ? "connected"
+        : isRinging
+          ? "ringing"
+          : "checking";
+  const STATUS_LABEL = {
+    checking: "Connecting…",
+    ringing: userType === "client" ? "Ringing…" : "Calling…",
+    connected: "Connected",
+    ended: "Call ended",
+    rejected: "Declined",
+  };
+  const STATUS_DOT_CLASS = {
+    connected: styles.statusDotLive,
+    checking: styles.statusDotPending,
+    ringing: styles.statusDotPending,
+  };
+
   if (endingOnRefresh) {
     return (
       <div className={containerClassName} style={containerStyle}>
@@ -1462,52 +1520,33 @@ function VideoCallingPage({ config, onCallEnded } = {}) {
   return (
     <div className={containerClassName} style={containerStyle}>
       <div className={styles.callCard} style={embeddedCallCardStyle || undefined}>
+      <button
+        type="button"
+        className={styles.closeButton}
+        onClick={handleEndCall}
+        aria-label="End call"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
+      </button>
       <div className={styles.callHeader}>
-        <div className={styles.callHeaderLeft}>
-          <button
-            className={styles.backButton}
-            onClick={handleEndCall}
-            aria-label="End call"
-          >
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-            >
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <div className={styles.callInfo}>
-            <div className={styles.callAvatar}>
-              <img
-                className={styles.callAvatar}
-                src={getProfileImageUrl()}
-                alt="profile"
-              />
-            </div>
-            <div>
-              <div className={styles.callName}>
-                {userType === "client"
-                  ? callerDetails?.receiver?.fullname
-                  : callerDetails?.caller?.fullname}
-              </div>
-              <div className={styles.callStatus}>
-              </div>
-            </div>
-          </div>
+        <div className={styles.callHeaderRow}>
+          <p className={styles.callName}>{displayName}</p>
+          <span className={styles.callTypeLabel}>{isVideoCall ? "Video Call" : "Voice Call"}</span>
         </div>
-
-        {bothUserConnected && (
-          <div className={styles.callHeaderRight}>
+        <div className={styles.callHeaderRow}>
+          <div className={styles.callStatusLine}>
+            <span className={`${styles.statusDot} ${STATUS_DOT_CLASS[statusKey] || ""}`} />
+            <span>{STATUS_LABEL[statusKey] || statusKey}</span>
+          </div>
+          {bothUserConnected && (
             <div className={styles.callTimer}>
               {String(time.minutes).padStart(2, "0")}:
               {String(time.seconds).padStart(2, "0")}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <div className={styles.videoArea}>
@@ -1549,6 +1588,11 @@ function VideoCallingPage({ config, onCallEnded } = {}) {
             {cameraSwitchError}
           </div>
         )}
+        {speakerSwitchError && (
+          <div className={styles.cameraToast} role="status">
+            {speakerSwitchError}
+          </div>
+        )}
         <div className={styles.remoteVideo}>
           {isVideoCall ? (
             <>
@@ -1572,17 +1616,7 @@ function VideoCallingPage({ config, onCallEnded } = {}) {
                     />
                   </div>
                   <p className={styles.videoPlaceholderText}>
-                    {!inCall
-                      ? userType === "client"
-                        ? callerDetails?.receiver?.fullname
-                        : callerDetails?.caller?.fullname ||
-                          "Waiting for video..."
-                      : `${
-                          (userType === "client"
-                            ? callerDetails?.receiver?.fullname
-                            : callerDetails?.caller?.fullname) ||
-                          (userType === "client" ? "Consultant" : "Caller")
-                        } (Camera off)`}
+                    {!inCall ? displayName : `${displayName} (Camera off)`}
                   </p>
                 </div>
               )}
@@ -1600,32 +1634,7 @@ function VideoCallingPage({ config, onCallEnded } = {}) {
                   alt="profile"
                 />
               </div>
-              <p className={styles.videoPlaceholderText}>
-                {userType === "client"
-                  ? callerDetails?.receiver?.fullname
-                  : callerDetails?.caller?.fullname || "Calling..."}
-              </p>
-
-              {callRejected || callSessionEnded ? (
-                <p
-                  className={styles.videoPlaceholderText}
-                  style={{ color: "red" }}
-                >
-                  {callSessionEnded ? "Call Ended" : "Call Rejected"}
-                </p>
-              ) : (
-                <>
-                  <p
-                    style={{ color: isRinging ? "white" : "green" }}
-                    className={styles.videoPlaceholderText}
-                  >
-                    {isRinging ? "Ringing..." : "Connected..."}
-                  </p>
-                  <p style={{ fontSize: "12px", color: "white" }}>
-                    {callType === "voice" ? "Voice Call" : "Video Call"}
-                  </p>
-                </>
-              )}
+              <p className={styles.videoPlaceholderText}>{displayName}</p>
             </div>
           )}
         </div>
@@ -1810,6 +1819,21 @@ function VideoCallingPage({ config, onCallEnded } = {}) {
             </svg>
           </button>
         )}
+        <button
+          type="button"
+          className={`${styles.controlButton} ${switchingSpeaker ? styles.controlButtonBusy : ""}`}
+          onClick={handleSpeakerToggle}
+          disabled={!canSwitchSpeaker || switchingSpeaker}
+          aria-label="Switch audio output"
+          aria-busy={switchingSpeaker}
+          title={canSwitchSpeaker ? "Switch audio output" : "Not supported on this device"}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+            <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+            <path d="M18.5 5.5a9 9 0 0 1 0 13" />
+          </svg>
+        </button>
         <button
           className={`${styles.controlButton} ${styles.endCallButton}`}
           onClick={handleEndCall}

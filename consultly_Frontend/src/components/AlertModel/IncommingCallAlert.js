@@ -7,7 +7,19 @@ import { checkMicPermission } from "../ConsultantCards/ConsultantCards";
 import TestRingtone from "../../pages/TestRingtone";
 import axios from "axios";
 import VideoCallModal from "./VideoCallModal";
-import userDefultProfile from "../../assets/avatar-or-person-sign-profile-picture-portrait-icon-user-profile-symbol.webp"
+import styles from "./IncommingCallAlert.module.css";
+
+// incoming-call's socket payload (server-io.js) never carries an avatar —
+// only callerId/callerName/callType/channelName/shop — so this shows real
+// initials instead of a fabricated/stock photo pretending to be the caller.
+const AVATAR_COLORS = ["#4a6cf7", "#12b76a", "#f79009", "#0ea5e9", "#a855f7", "#ec4899", "#14b8a6"];
+const avatarColor = (name = "") => {
+  let sum = 0;
+  for (let i = 0; i < name.length; i += 1) sum += name.charCodeAt(i);
+  return AVATAR_COLORS[sum % AVATAR_COLORS.length];
+};
+const initials = (name = "") =>
+  name.trim().split(/\s+/).slice(0, 2).map((w) => w[0] || "").join("").toUpperCase() || "?";
 
 export default function IncomingCallAlert() {
   const dispatch = useDispatch();
@@ -123,6 +135,8 @@ export default function IncomingCallAlert() {
     dispatch(setIncomingCall(null));
   };
 
+  const isVideoCall = callType === "video";
+
   return (
     <>
       <VideoCallModal
@@ -131,99 +145,55 @@ export default function IncomingCallAlert() {
       />
       {incomingCall && (
         <>
-      <TestRingtone incomingCall={incomingCall} />
-      <div
-        style={{
-          position: "fixed",
-          top: "20px",
-          right: "20px",
-          width: "320px",
-          backgroundColor: "#ffffff",
-          boxShadow: "0px 4px 14px rgba(0, 0, 0, 0.15)",
-          borderRadius: "12px",
-          zIndex: 1000,
-          padding: "10px",
-          fontFamily: "Arial, sans-serif",
-        }}
-      >
-        {/* Header */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            marginBottom: "12px",
-          }}
-        >
-          <img
-            src={userDefultProfile}
-            alt="Caller Avatar"
-            style={{
-              width: "60px",
-              height: "60px",
-              borderRadius: "50%",
-              marginRight: "12px",
-              objectFit: "cover",
-            }}
-          />
-          <div>
-            <p
-              style={{
-                margin: 0,
-                fontSize: "15px",
-                fontWeight: "600",
-                color: "#222",
-              }}
-            >
-              {callType} call
+          <TestRingtone incomingCall={incomingCall} />
+          <div className={styles.card} role="alertdialog" aria-label={`Incoming ${callType} call from ${callerName}`}>
+            <p className={styles.kicker}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384" />
+              </svg>
+              Incoming call
             </p>
-            <p style={{ margin: 0, fontSize: "14px", color: "#555" }}>
-              {callerName} is calling you
-            </p>
+
+            <div className={styles.body}>
+              <div className={styles.avatarWrap}>
+                <span className={styles.avatarRing} aria-hidden="true" />
+                <span className={styles.avatar} style={{ background: avatarColor(callerName || "") }}>
+                  {initials(callerName)}
+                </span>
+              </div>
+              <div className={styles.info}>
+                <p className={styles.callerName}>{callerName || "Unknown"}</p>
+                <p className={styles.callTypeLabel}>
+                  {isVideoCall ? (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M23 7l-7 5 7 5V7z" />
+                      <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384" />
+                    </svg>
+                  )}
+                  {isVideoCall ? "Incoming video call" : "Incoming voice call"}
+                </p>
+              </div>
+            </div>
+
+            <div className={styles.actions}>
+              <button type="button" className={styles.declineBtn} onClick={handleReject}>
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M21 15.5c0 .3-.1.5-.3.7l-2.9 2.9c-.2.2-.5.3-.8.3-2.1-.1-4.3-.7-6.4-1.9C8.5 16.3 6.5 14.3 5.2 12.2 4 10.1 3.4 7.9 3.3 5.8c0-.3.1-.6.3-.8l2.9-2.9c.4-.4 1-.5 1.5-.2.2.1.3.3.4.5l1.5 3.5c.2.4.1.9-.2 1.2L8.4 8.4c.9 2.2 2.5 3.8 4.7 4.7l1.3-1.3c.3-.3.8-.4 1.2-.2l3.5 1.5c.2.1.4.2.5.4.3.5.2 1.1-.2 1.5l-.4.5z" transform="rotate(135 12 12)" />
+                </svg>
+                Decline
+              </button>
+              <button type="button" className={styles.acceptBtn} onClick={handleAccept}>
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M21 15.5c0 .3-.1.5-.3.7l-2.9 2.9c-.2.2-.5.3-.8.3-2.1-.1-4.3-.7-6.4-1.9C8.5 16.3 6.5 14.3 5.2 12.2 4 10.1 3.4 7.9 3.3 5.8c0-.3.1-.6.3-.8l2.9-2.9c.4-.4 1-.5 1.5-.2.2.1.3.3.4.5l1.5 3.5c.2.4.1.9-.2 1.2L8.4 8.4c.9 2.2 2.5 3.8 4.7 4.7l1.3-1.3c.3-.3.8-.4 1.2-.2l3.5 1.5c.2.1.4.2.5.4.3.5.2 1.1-.2 1.5l-.4.5z" />
+                </svg>
+                Accept
+              </button>
+            </div>
           </div>
-        </div>
-
-        {/* Buttons */}
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <button
-            onClick={handleAccept}
-            style={{
-              flex: 1,
-              backgroundColor: "#28a745",
-              color: "#fff",
-              border: "none",
-              borderRadius: "8px",
-              padding: "5px",
-              fontSize: "14px",
-              cursor: "pointer",
-              marginRight: "8px",
-              transition: "background 0.2s ease",
-            }}
-            onMouseOver={(e) => (e.target.style.backgroundColor = "#218838")}
-            onMouseOut={(e) => (e.target.style.backgroundColor = "#28a745")}
-          >
-            Accept
-          </button>
-
-          <button
-            onClick={handleReject}
-            style={{
-              flex: 1,
-              backgroundColor: "#dc3545",
-              color: "#fff",
-              border: "none",
-              borderRadius: "8px",
-              padding: "5px",
-              fontSize: "14px",
-              cursor: "pointer",
-              transition: "background 0.2s ease",
-            }}
-            onMouseOver={(e) => (e.target.style.backgroundColor = "#c82333")}
-            onMouseOut={(e) => (e.target.style.backgroundColor = "#dc3545")}
-          >
-            Reject
-          </button>
-        </div>
-      </div>
         </>
       )}
     </>

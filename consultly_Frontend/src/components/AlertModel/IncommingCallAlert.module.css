@@ -1,0 +1,161 @@
+/* =========================================================================
+   Incoming call alert — a dedicated "you must decide now" surface, visually
+   opposite to the message notification (MessageNotificationAlert.module.css)
+   on purpose: dark, bold, pulsing, with two large decision buttons — not a
+   toast. Dark surface matches the call modal itself (VideoCallingPage's
+   .callCard / the customer-side call widget's panel) so accepting feels
+   like walking into the same product, not a different app.
+   ========================================================================= */
+
+.card {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 2100;
+    width: 320px;
+    max-width: calc(100vw - 24px);
+    box-sizing: border-box;
+    padding: 20px;
+    border-radius: 20px;
+    background: linear-gradient(180deg, #1c222c, #12161d);
+    color: #f4f6f8;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    animation: callAlertIn 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes callAlertIn {
+    from { opacity: 0; transform: translateY(-12px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .card { animation: none; }
+}
+
+.kicker {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 14px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #4ade80;
+}
+
+.kicker svg { width: 13px; height: 13px; }
+
+.body {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.avatarWrap {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+}
+
+.avatarRing {
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 2px solid rgba(74, 222, 128, 0.55);
+    animation: ringPulse 1.6s ease-out infinite;
+}
+
+@keyframes ringPulse {
+    0% { transform: scale(0.9); opacity: 1; }
+    100% { transform: scale(1.35); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .avatarRing { animation: none; opacity: 0.6; }
+}
+
+.avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.info { min-width: 0; }
+
+.callerName {
+    margin: 0 0 3px;
+    font-size: 16px;
+    font-weight: 650;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.callTypeLabel {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font-size: 13px;
+    color: rgba(244, 246, 248, 0.68);
+}
+
+.callTypeLabel svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+.actions {
+    display: flex;
+    gap: 10px;
+}
+
+.declineBtn,
+.acceptBtn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 44px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 650;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.declineBtn svg,
+.acceptBtn svg { width: 17px; height: 17px; }
+
+.declineBtn {
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    background: rgba(239, 68, 68, 0.12);
+    color: #f87171;
+}
+
+.declineBtn:hover { background: rgba(239, 68, 68, 0.2); }
+
+.acceptBtn {
+    border: none;
+    background: #22c55e;
+    color: #0b1710;
+    box-shadow: 0 6px 18px rgba(34, 197, 94, 0.35);
+}
+
+.acceptBtn:hover { background: #16a34a; color: #fff; }
+.declineBtn:active,
+.acceptBtn:active { transform: scale(0.97); }
+
+@media (max-width: 420px) {
+    .card { top: 12px; right: 12px; left: 12px; width: auto; }
+}
