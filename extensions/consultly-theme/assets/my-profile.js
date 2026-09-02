@@ -49,12 +49,14 @@
   var DEBIT_ICON =
     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>';
 
+  // Communication has no filter UI — calls, video calls and chats always
+  // render together as one chronological history (see renderCommTab).
   var COMM_TYPE_LABELS = { voice: "Voice call", video: "Video call", chat: "Chat" };
-  var COMM_FILTERS = [
-    { key: "all", label: "All" },
-    { key: "calls", label: "Calls" },
-    { key: "chat", label: "Chats" },
-  ];
+
+  // Both history lists (Wallet Activity, Communications) page in batches of
+  // this size via infinite scroll — see loadMorePage/PAGE_SIZE below and the
+  // matching PAGE_SIZE_DEFAULT in shopifyController.js.
+  var PAGE_SIZE = 5;
 
   var DEFAULT_AVATAR_SVG =
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
@@ -195,6 +197,57 @@
     return new Array(count || 3).fill(row).join("");
   }
 
+  // ------------------------------------------------- infinite-scroll lists
+  //
+  // Shared by Wallet Activity and Communications: renders the accumulated
+  // day-grouped rows plus exactly one tail element (inline loader / inline
+  // retry / invisible sentinel / nothing) depending on the section's current
+  // paging state. scrollListInnerMarkup is also used on its own to update
+  // JUST the scroll container's content in place (loadMorePage/
+  // renderScrollContainer below) without touching the rest of the page, so
+  // the container's own scroll position survives a "load more".
+
+  function scrollListInnerMarkup(sectionState, rowFn, sentinelKey) {
+    var tail;
+    if (sectionState.loading) {
+      tail =
+        '<div class="consultly-my-profile__inline-loader" role="status" aria-live="polite">' +
+        '<span class="consultly-my-profile__inline-loader-dot" aria-hidden="true"></span>Loading…' +
+        "</div>";
+    } else if (sectionState.error) {
+      tail =
+        '<div class="consultly-my-profile__inline-error-row">' +
+        "<span>" + escapeHtml(sectionState.error) + "</span>" +
+        '<button type="button" class="consultly-my-profile__retry" data-action="retry-' +
+        sentinelKey + '-page">Try again</button>' +
+        "</div>";
+    } else if (sectionState.hasMore) {
+      tail =
+        '<div class="consultly-my-profile__sentinel" data-sentinel="' + sentinelKey + '" aria-hidden="true"></div>';
+    } else {
+      tail = "";
+    }
+    return dayGroupedListMarkup(sectionState.items, rowFn) + tail;
+  }
+
+  function scrollListMarkup(sectionState, rowFn, emptyTitle, emptyText, sentinelKey) {
+    if (sectionState.items.length === 0) {
+      // Zero records: no scroll container at all, so there is nothing to
+      // scroll and no chance of a stray scrollbar — just the approved empty
+      // state (sectionState.error can only be non-null here on a genuinely
+      // failed FIRST load, since page-1 always comes from the already-
+      // guarded customer/me response).
+      return sectionState.error
+        ? errorStateMarkup(sectionState.error, "retry-" + sentinelKey + "-page")
+        : emptyStateMarkup(emptyTitle, emptyText);
+    }
+    return (
+      '<div class="consultly-my-profile__scroll-list" data-scroll="' + sentinelKey + '" tabindex="0">' +
+      scrollListInnerMarkup(sectionState, rowFn, sentinelKey) +
+      "</div>"
+    );
+  }
+
   // ---------------------------------------------------------------- header
 
   function renderHeader(customer) {
@@ -290,13 +343,14 @@
     );
   }
 
-  function renderWalletActivity(walletHistory) {
-    return walletHistory.length
-      ? dayGroupedListMarkup(walletHistory, walletRowMarkup)
-      : emptyStateMarkup(
-          "No wallet activity yet",
-          "Money you add, and amounts spent on calls or chats, will show up here.",
-        );
+  function renderWalletActivity(state) {
+    return scrollListMarkup(
+      state.wallet,
+      walletRowMarkup,
+      "No wallet activity yet",
+      "Money you add, and amounts spent on calls or chats, will show up here.",
+      "wallet",
+    );
   }
 
   function renderTopupOption(option, currency) {
@@ -347,7 +401,6 @@
   }
 
   function renderWalletTab(state) {
-    var walletHistory = state.data.walletHistory || [];
     var showActivity = state.options.showWalletHistory;
     var subNav = showActivity
       ? '<div class="consultly-my-profile__sub-nav">' +
@@ -365,7 +418,7 @@
       subNav +
       (effectiveView === "topup"
         ? renderWalletTopup(state)
-        : renderWalletActivity(walletHistory)) +
+        : renderWalletActivity(state)) +
       "</section>"
     );
   }
@@ -393,41 +446,22 @@
     );
   }
 
-  function filterConsultations(list, filterKey) {
-    if (filterKey === "all") return list;
-    if (filterKey === "calls") {
-      return list.filter(function (e) { return e.type === "voice" || e.type === "video"; });
-    }
-    return list.filter(function (e) { return e.type === filterKey; });
-  }
-
+  // No filter UI — Communication is always the unified chronological history
+  // of every voice call, video call, and chat together (see PRIMARY
+  // REQUIREMENT: filters removed).
   function renderCommTab(state) {
-    var all = state.data.consultationHistory || [];
-    var filtered = filterConsultations(all, state.commFilter);
-    var filterButtons = COMM_FILTERS.map(function (f) {
-      return (
-        '<button type="button" class="consultly-my-profile__filter-pill' +
-        (state.commFilter === f.key ? " consultly-my-profile__filter-pill--active" : "") +
-        '" data-action="comm-filter" data-comm-filter="' + f.key + '">' + escapeHtml(f.label) + "</button>"
-      );
-    }).join("");
-
     return (
       '<section class="consultly-my-profile__section">' +
       '<div class="consultly-my-profile__section-head">' +
       '<h2 class="consultly-my-profile__section-title">Communications</h2>' +
-      '<div class="consultly-my-profile__filter-row" role="tablist" aria-label="Filter communications">' +
-      filterButtons +
       "</div>" +
-      "</div>" +
-      (filtered.length
-        ? dayGroupedListMarkup(filtered, consultationRowMarkup)
-        : emptyStateMarkup(
-            all.length === 0 ? "No consultations yet" : "Nothing matches this filter",
-            all.length === 0
-              ? "Your calls and chats with consultants will show up here."
-              : "Try a different filter to see more activity.",
-          )) +
+      scrollListMarkup(
+        state.comm,
+        consultationRowMarkup,
+        "No consultations yet",
+        "Your calls and chats with consultants will show up here.",
+        "comm",
+      ) +
       "</section>"
     );
   }
@@ -565,7 +599,8 @@
       options: options,
       activeTab: "wallet",
       walletView: options.showWalletHistory ? "activity" : "topup",
-      commFilter: "all",
+      wallet: { items: [], hasMore: false, nextCursor: null, loading: false, error: null },
+      comm: { items: [], hasMore: false, nextCursor: null, loading: false, error: null },
       topupCatalog: null,
       topupLoading: false,
       topupError: null,
@@ -581,8 +616,109 @@
       openRequestId: null,
     };
 
+    // One IntersectionObserver per infinite-scroll section. Each one's
+    // target (the sentinel div) is destroyed and recreated every time that
+    // section's markup regenerates, so it's disconnected/reattached rather
+    // than created once — see observeSentinel.
+    var observers = { wallet: null, comm: null };
+
     function rerender() {
       render(root, state);
+      syncObservers();
+    }
+
+    function scrollContainerEl(key) {
+      return root.querySelector('.consultly-my-profile__scroll-list[data-scroll="' + key + '"]');
+    }
+
+    function observeSentinel(key, containerEl) {
+      if (observers[key]) {
+        observers[key].disconnect();
+        observers[key] = null;
+      }
+      if (typeof IntersectionObserver === "undefined") return;
+      var sentinelEl = containerEl.querySelector('[data-sentinel="' + key + '"]');
+      if (!sentinelEl) return;
+      observers[key] = new IntersectionObserver(
+        function (entries) {
+          if (entries[0] && entries[0].isIntersecting) loadMorePage(key);
+        },
+        // rootMargin preloads the next batch slightly before the sentinel is
+        // fully in view, so it feels continuous rather than snapping.
+        { root: containerEl, rootMargin: "80px", threshold: 0 },
+      );
+      observers[key].observe(sentinelEl);
+    }
+
+    // Reconciles both sections' observers against whichever scroll
+    // container(s) actually exist after a FULL re-render (a tab switch may
+    // have just removed one, or the active tab may not use one at all).
+    function syncObservers() {
+      ["wallet", "comm"].forEach(function (key) {
+        var containerEl = scrollContainerEl(key);
+        if (containerEl) {
+          observeSentinel(key, containerEl);
+        } else if (observers[key]) {
+          observers[key].disconnect();
+          observers[key] = null;
+        }
+      });
+    }
+
+    // Updates ONLY the given section's scroll container in place (not the
+    // whole page) and restores its scrollTop afterward — a full rerender()
+    // would reset that element's scroll position to 0 the instant its
+    // innerHTML is replaced, which would look exactly like the just-loaded
+    // records vanishing.
+    function renderScrollContainer(key) {
+      var containerEl = scrollContainerEl(key);
+      if (!containerEl) return; // user navigated away from this tab/view mid-request
+      var prevScrollTop = containerEl.scrollTop;
+      var sectionState = key === "wallet" ? state.wallet : state.comm;
+      var rowFn = key === "wallet" ? walletRowMarkup : consultationRowMarkup;
+      containerEl.innerHTML = scrollListInnerMarkup(sectionState, rowFn, key);
+      containerEl.scrollTop = prevScrollTop;
+      observeSentinel(key, containerEl);
+    }
+
+    function loadMorePage(key) {
+      var sectionState = key === "wallet" ? state.wallet : state.comm;
+      if (sectionState.loading || !sectionState.hasMore) return;
+      sectionState.loading = true;
+      sectionState.error = null;
+      renderScrollContainer(key);
+
+      var endpoint = key === "wallet" ? "/wallet/history" : "/communications/history";
+      var url =
+        apiBase.replace(/\/customer\/me$/, endpoint) +
+        "?cursor=" + encodeURIComponent(sectionState.nextCursor) +
+        "&limit=" + PAGE_SIZE;
+
+      fetch(url, { credentials: "same-origin", headers: { Accept: "application/json" } })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          sectionState.loading = false;
+          if (!data || data.success !== true || !data.authenticated) {
+            sectionState.error = "Unable to load more.";
+          } else {
+            // Belt-and-suspenders de-dup on top of the cursor's own
+            // structural guarantee — a batch can never introduce a record
+            // already present in this section.
+            var seen = {};
+            sectionState.items.forEach(function (item) { seen[item.id] = true; });
+            var fresh = (data.data || []).filter(function (item) { return !seen[item.id]; });
+            sectionState.items = sectionState.items.concat(fresh);
+            sectionState.hasMore = Boolean(data.hasMore);
+            sectionState.nextCursor = data.nextCursor || null;
+          }
+          renderScrollContainer(key);
+        })
+        .catch(function (err) {
+          logErr(key + " page fetch failed:", err);
+          sectionState.loading = false;
+          sectionState.error = "Unable to load more.";
+          renderScrollContainer(key);
+        });
     }
 
     function fetchTopup(force) {
@@ -733,15 +869,16 @@
         state.walletView = el.getAttribute("data-wallet-view");
         if (state.walletView === "topup") fetchTopup(false);
         rerender();
-      } else if (action === "comm-filter") {
-        state.commFilter = el.getAttribute("data-comm-filter");
-        rerender();
       } else if (action === "recharge") {
         recharge(Number(el.getAttribute("data-amount")));
       } else if (action === "retry-topup") {
         fetchTopup(true);
       } else if (action === "retry-support") {
         fetchSupport(true);
+      } else if (action === "retry-wallet-page") {
+        loadMorePage("wallet");
+      } else if (action === "retry-comm-page") {
+        loadMorePage("comm");
       } else if (action === "toggle-support-form") {
         state.showSupportForm = !state.showSupportForm;
         state.supportFormError = null;
@@ -775,6 +912,20 @@
     return {
       setData: function (data) {
         state.data = data;
+        state.wallet = {
+          items: data.walletHistory || [],
+          hasMore: Boolean(data.walletHistoryHasMore),
+          nextCursor: data.walletHistoryNextCursor || null,
+          loading: false,
+          error: null,
+        };
+        state.comm = {
+          items: data.consultationHistory || [],
+          hasMore: Boolean(data.consultationHistoryHasMore),
+          nextCursor: data.consultationHistoryNextCursor || null,
+          loading: false,
+          error: null,
+        };
         rerender();
       },
     };

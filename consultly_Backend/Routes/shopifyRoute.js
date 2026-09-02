@@ -11,6 +11,8 @@ const { installShopifyApp,
     proxySHopifyConsultantChat,
     proxyShopifyViewProfile,
     proxyCustomerProfileJson,
+    proxyWalletHistoryPageJson,
+    proxyCommunicationsHistoryPageJson,
     proxyWalletTopupJson,
     proxyWalletRechargeJson,
     proxySupportRequestsJson,
@@ -67,6 +69,12 @@ shopifyRoute.get('/consultly/chats', verifyAppProxy, proxyShopifyStorefrontChat)
 // /apps/consultly/customer/me, rendered on /pages/my-profile. Replaces the
 // old /consultly/profile iframe launcher (proxyProfileSection, removed).
 shopifyRoute.get('/consultly/customer/me', verifyAppProxy, proxyCustomerProfileJson);
+// My Profile block: infinite-scroll "load more" pages for Wallet Activity /
+// Communications — same page-fetching core proxyCustomerProfileJson uses for
+// its own first page. See proxyWalletHistoryPageJson /
+// proxyCommunicationsHistoryPageJson in shopifyController.js.
+shopifyRoute.get('/consultly/wallet/history', verifyAppProxy, proxyWalletHistoryPageJson);
+shopifyRoute.get('/consultly/communications/history', verifyAppProxy, proxyCommunicationsHistoryPageJson);
 // My Profile block: Add Money (wallet top-up catalog + recharge) — reuses
 // the same recharge-catalog/draft-order logic as the (now unreachable)
 // React app's endpoints, via shared core functions in

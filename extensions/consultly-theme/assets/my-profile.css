@@ -304,11 +304,9 @@
   margin-bottom: 0;
 }
 
-.consultly-my-profile__filter-row {
-  display: flex;
-  gap: 6px;
-}
-
+/* .filter-pill is the plain (non-active) pill style — reused as-is by the
+   Support section's "New request" toggle. Communication has no filters
+   (removed), so its --active state and the row wrapper are gone with it. */
 .consultly-my-profile__filter-pill {
   padding: 6px 13px;
   min-height: 30px;
@@ -326,13 +324,6 @@
 .consultly-my-profile__filter-pill:hover {
   border-color: var(--myp-brand);
   color: var(--myp-brand);
-}
-
-.consultly-my-profile__filter-pill--active,
-.consultly-my-profile__filter-pill--active:hover {
-  background: var(--myp-brand);
-  border-color: var(--myp-brand);
-  color: #fff;
 }
 
 .consultly-my-profile__empty-block {
@@ -472,6 +463,86 @@
 .consultly-my-profile__row-time {
   font-size: 11px;
   color: var(--myp-text-subtle);
+}
+
+/* ---------- infinite-scroll list container (Wallet Activity / Communications) ----------
+   overflow-y:auto (not "scroll") is what makes 5-or-fewer records show with
+   no scrollbar at all — a scrollbar only ever appears once content actually
+   exceeds max-height. Scrolling happens inside this element, never on the
+   page itself. */
+.consultly-my-profile__scroll-list {
+  max-height: 340px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.consultly-my-profile__scroll-list:focus-visible {
+  outline: 2px solid var(--myp-brand);
+  outline-offset: -2px;
+}
+
+.consultly-my-profile__scroll-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.consultly-my-profile__scroll-list::-webkit-scrollbar-thumb {
+  background: var(--myp-border);
+  border-radius: 3px;
+}
+
+/* Invisible trigger the IntersectionObserver watches — never shown itself. */
+.consultly-my-profile__sentinel {
+  height: 1px;
+}
+
+.consultly-my-profile__inline-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 0 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--myp-text-muted);
+}
+
+.consultly-my-profile__inline-loader-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--myp-brand);
+  animation: consultlyMypPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes consultlyMypPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.consultly-my-profile__inline-error-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 0 4px;
+  font-size: 12.5px;
+  color: var(--myp-danger);
+  text-align: center;
+}
+
+.consultly-my-profile__inline-error-row .consultly-my-profile__retry {
+  min-height: 32px;
+  padding: 0 14px;
+  font-size: 12.5px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .consultly-my-profile__inline-loader-dot {
+    animation: none;
+  }
 }
 
 /* ---------- skeleton rows (loading state) ---------- */
@@ -785,16 +856,6 @@
     padding: 16px;
   }
 
-  .consultly-my-profile__filter-row {
-    width: 100%;
-  }
-
-  .consultly-my-profile__filter-pill {
-    flex: 1;
-    text-align: center;
-    padding: 6px 8px;
-  }
-
   .consultly-my-profile__topup-grid {
     grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
     gap: 10px;
@@ -808,5 +869,12 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 6px;
+  }
+
+  /* A tall internal list on a small phone still leaves the user re-scrolling
+     inside a cramped window — a shorter box here keeps both the section and
+     the page itself comfortably scrollable. */
+  .consultly-my-profile__scroll-list {
+    max-height: 280px;
   }
 }

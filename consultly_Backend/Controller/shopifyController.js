@@ -1461,6 +1461,80 @@ const exchangeChatSession = async (req, res) => {
   }
 };
 
+const PAGE_SIZE_DEFAULT = 5;
+const PAGE_SIZE_MAX = 20;
+
+const clampPageLimit = (raw) => {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return PAGE_SIZE_DEFAULT;
+  return Math.min(Math.floor(n), PAGE_SIZE_MAX);
+};
+
+// _id (not createdAt) is the pagination cursor for both history lists below —
+// it is strictly unique and monotonically increasing with insert order for
+// documents created by this app, so a page boundary can never land two
+// records on the exact same cursor value the way two createdAt timestamps
+// occasionally can (same millisecond), which is what would otherwise risk a
+// duplicated or skipped row at a page boundary.
+const fetchWalletHistoryPage = async (userId, shopId, { cursor, limit }) => {
+  const query = { userId, shop_id: shopId };
+  if (cursor && mongoose.Types.ObjectId.isValid(cursor)) {
+    query._id = { $lt: cursor };
+  }
+  const docs = await WalletHistory.find(query)
+    .sort({ _id: -1 })
+    .limit(limit + 1)
+    .lean();
+  const hasMore = docs.length > limit;
+  const page = docs.slice(0, limit);
+  return {
+    items: page.map((entry) => ({
+      id: entry._id,
+      amount: entry.amount,
+      currency: entry.currency,
+      transactionType: entry.transactionType,
+      direction: entry.direction,
+      referenceType: entry.referenceType,
+      status: entry.status,
+      description: entry.description,
+      createdAt: entry.createdAt,
+    })),
+    hasMore,
+    nextCursor: hasMore ? String(page[page.length - 1]._id) : null,
+  };
+};
+
+const fetchConsultationHistoryPage = async (userId, { cursor, limit }) => {
+  const query = { $or: [{ senderId: userId }, { receiverId: userId }] };
+  if (cursor && mongoose.Types.ObjectId.isValid(cursor)) {
+    query._id = { $lt: cursor };
+  }
+  const docs = await TransactionHistroy.find(query)
+    .populate("senderId", "fullname")
+    .populate("receiverId", "fullname")
+    .sort({ _id: -1 })
+    .limit(limit + 1)
+    .lean();
+  const hasMore = docs.length > limit;
+  const page = docs.slice(0, limit);
+  const items = page.map((entry) => {
+    const isSender = String(entry.senderId?._id || entry.senderId) === String(userId);
+    const consultant = isSender ? entry.receiverId : entry.senderId;
+    return {
+      id: entry._id,
+      type: entry.type,
+      status: entry.status,
+      duration: entry.totalSeconds || entry.duration || 0,
+      amount: entry.totalAmount || entry.amount || 0,
+      consultantName: consultant?.fullname || "Consultant",
+      startTime: entry.startTime,
+      endTime: entry.endTime,
+      createdAt: entry.createdAt,
+    };
+  });
+  return { items, hasMore, nextCursor: hasMore ? String(page[page.length - 1]._id) : null };
+};
+
 /**
  * JSON App Proxy endpoint for the Theme App Extension's My Profile block
  * (my-profile.liquid / my-profile.js, rendered on /pages/my-profile).
@@ -1471,6 +1545,11 @@ const exchangeChatSession = async (req, res) => {
  * iframing the old React app. Deliberately does NOT return the app JWT —
  * the block never needs a bearer token client-side, since every field it
  * needs is resolved here using the already-authenticated identity.
+ *
+ * Returns only the FIRST page (PAGE_SIZE_DEFAULT) of each history list —
+ * the block's own infinite-scroll fetches further pages from
+ * proxyWalletHistoryPageJson / proxyCommunicationsHistoryPageJson using the
+ * *HasMore/*NextCursor fields below, via the exact same page-fetching core.
  */
 const proxyCustomerProfileJson = async (req, res) => {
   try {
@@ -1504,19 +1583,15 @@ const proxyCustomerProfileJson = async (req, res) => {
       return res.status(200).json({ success: true, authenticated: false });
     }
 
-    const [walletHistory, conversations, shopDoc] = await Promise.all([
-      WalletHistory.find({ userId: userResult.userId, shop_id: userResult.shop_id })
-        .sort({ createdAt: -1 })
-        .limit(50)
-        .lean(),
-      TransactionHistroy.find({
-        $or: [{ senderId: userResult.userId }, { receiverId: userResult.userId }],
-      })
-        .populate("senderId", "fullname")
-        .populate("receiverId", "fullname")
-        .sort({ createdAt: -1 })
-        .limit(50)
-        .lean(),
+    const [walletPage, commPage, shopDoc] = await Promise.all([
+      fetchWalletHistoryPage(userResult.userId, userResult.shop_id, {
+        cursor: null,
+        limit: PAGE_SIZE_DEFAULT,
+      }),
+      fetchConsultationHistoryPage(userResult.userId, {
+        cursor: null,
+        limit: PAGE_SIZE_DEFAULT,
+      }),
       getCachedShopDoc(shop),
     ]);
 
@@ -1536,48 +1611,98 @@ const proxyCustomerProfileJson = async (req, res) => {
       memberSince: user.createdAt,
     };
 
-    const safeWalletHistory = walletHistory.map((entry) => ({
-      id: entry._id,
-      amount: entry.amount,
-      currency: entry.currency,
-      transactionType: entry.transactionType,
-      direction: entry.direction,
-      referenceType: entry.referenceType,
-      status: entry.status,
-      description: entry.description,
-      createdAt: entry.createdAt,
-    }));
-
-    const safeConsultationHistory = conversations.map((entry) => {
-      const isSender =
-        String(entry.senderId?._id || entry.senderId) === String(userResult.userId);
-      const consultant = isSender ? entry.receiverId : entry.senderId;
-      return {
-        id: entry._id,
-        type: entry.type,
-        status: entry.status,
-        duration: entry.totalSeconds || entry.duration || 0,
-        amount: entry.totalAmount || entry.amount || 0,
-        consultantName: consultant?.fullname || "Consultant",
-        startTime: entry.startTime,
-        endTime: entry.endTime,
-        createdAt: entry.createdAt,
-      };
-    });
-
     res.set("Cache-Control", "no-store");
     return res.status(200).json({
       success: true,
       authenticated: true,
       customer: safeCustomer,
-      walletHistory: safeWalletHistory,
-      consultationHistory: safeConsultationHistory,
+      walletHistory: walletPage.items,
+      walletHistoryHasMore: walletPage.hasMore,
+      walletHistoryNextCursor: walletPage.nextCursor,
+      consultationHistory: commPage.items,
+      consultationHistoryHasMore: commPage.hasMore,
+      consultationHistoryNextCursor: commPage.nextCursor,
     });
   } catch (err) {
     console.error("[app-proxy] /consultly/customer/me error:", err);
     return res
       .status(500)
       .json({ success: false, message: "Failed to load profile" });
+  }
+};
+
+/**
+ * "Load more" pages for the My Profile block's Wallet Activity / Communications
+ * infinite scroll — same identity resolution and the exact same page-fetching
+ * core (fetchWalletHistoryPage / fetchConsultationHistoryPage) as the first
+ * page already embedded in proxyCustomerProfileJson above, just called again
+ * with the cursor the client got back from the previous page.
+ */
+const proxyWalletHistoryPageJson = async (req, res) => {
+  try {
+    const shop = req.query.shop;
+    if (!shop) {
+      return res.status(400).json({ success: false, message: "Missing shop" });
+    }
+
+    const userResult = await resolveStorefrontCustomer(req, shop);
+    if (!userResult?.userId) {
+      res.set("Cache-Control", "no-store");
+      return res.status(200).json({ success: true, authenticated: false });
+    }
+    setAppSessionCookie(res, userResult.token);
+
+    const page = await fetchWalletHistoryPage(userResult.userId, userResult.shop_id, {
+      cursor: req.query.cursor,
+      limit: clampPageLimit(req.query.limit),
+    });
+
+    res.set("Cache-Control", "no-store");
+    return res.status(200).json({
+      success: true,
+      authenticated: true,
+      data: page.items,
+      hasMore: page.hasMore,
+      nextCursor: page.nextCursor,
+    });
+  } catch (err) {
+    console.error("[app-proxy] /consultly/wallet/history error:", err);
+    return res.status(500).json({ success: false, message: "Failed to load wallet activity" });
+  }
+};
+
+const proxyCommunicationsHistoryPageJson = async (req, res) => {
+  try {
+    const shop = req.query.shop;
+    if (!shop) {
+      return res.status(400).json({ success: false, message: "Missing shop" });
+    }
+
+    const userResult = await resolveStorefrontCustomer(req, shop);
+    if (!userResult?.userId) {
+      res.set("Cache-Control", "no-store");
+      return res.status(200).json({ success: true, authenticated: false });
+    }
+    setAppSessionCookie(res, userResult.token);
+
+    const page = await fetchConsultationHistoryPage(userResult.userId, {
+      cursor: req.query.cursor,
+      limit: clampPageLimit(req.query.limit),
+    });
+
+    res.set("Cache-Control", "no-store");
+    return res.status(200).json({
+      success: true,
+      authenticated: true,
+      data: page.items,
+      hasMore: page.hasMore,
+      nextCursor: page.nextCursor,
+    });
+  } catch (err) {
+    console.error("[app-proxy] /consultly/communications/history error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to load communications" });
   }
 };
 
@@ -1814,6 +1939,8 @@ module.exports = {
   proxySHopifyConsultantChat,
   proxyShopifyViewProfile,
   proxyCustomerProfileJson,
+  proxyWalletHistoryPageJson,
+  proxyCommunicationsHistoryPageJson,
   proxyWalletTopupJson,
   proxyWalletRechargeJson,
   proxySupportRequestsJson,
