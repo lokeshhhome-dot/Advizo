@@ -492,11 +492,6 @@
   border-radius: 3px;
 }
 
-/* Invisible trigger the IntersectionObserver watches — never shown itself. */
-.consultly-my-profile__sentinel {
-  height: 1px;
-}
-
 .consultly-my-profile__inline-loader {
   display: flex;
   align-items: center;

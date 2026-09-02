@@ -1461,7 +1461,7 @@ const exchangeChatSession = async (req, res) => {
   }
 };
 
-const PAGE_SIZE_DEFAULT = 5;
+const PAGE_SIZE_DEFAULT = 10;
 const PAGE_SIZE_MAX = 20;
 
 const clampPageLimit = (raw) => {

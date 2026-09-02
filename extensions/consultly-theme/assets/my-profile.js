@@ -56,7 +56,7 @@
   // Both history lists (Wallet Activity, Communications) page in batches of
   // this size via infinite scroll — see loadMorePage/PAGE_SIZE below and the
   // matching PAGE_SIZE_DEFAULT in shopifyController.js.
-  var PAGE_SIZE = 5;
+  var PAGE_SIZE = 10;
 
   var DEFAULT_AVATAR_SVG =
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
@@ -200,14 +200,17 @@
   // ------------------------------------------------- infinite-scroll lists
   //
   // Shared by Wallet Activity and Communications: renders the accumulated
-  // day-grouped rows plus exactly one tail element (inline loader / inline
-  // retry / invisible sentinel / nothing) depending on the section's current
-  // paging state. scrollListInnerMarkup is also used on its own to update
-  // JUST the scroll container's content in place (loadMorePage/
+  // day-grouped rows plus, while more can still load, exactly one tail
+  // element (inline loader / inline retry / nothing). Triggering the next
+  // page is the scroll container's own "scroll" listener (see
+  // attachScrollListener/handleSectionScroll in createController) checking
+  // scrollHeight/scrollTop/clientHeight directly — no sentinel element is
+  // needed for that. scrollListInnerMarkup is also used on its own to
+  // update JUST the scroll container's content in place (loadMorePage/
   // renderScrollContainer below) without touching the rest of the page, so
   // the container's own scroll position survives a "load more".
 
-  function scrollListInnerMarkup(sectionState, rowFn, sentinelKey) {
+  function scrollListInnerMarkup(sectionState, rowFn, sectionKey) {
     var tail;
     if (sectionState.loading) {
       tail =
@@ -219,18 +222,15 @@
         '<div class="consultly-my-profile__inline-error-row">' +
         "<span>" + escapeHtml(sectionState.error) + "</span>" +
         '<button type="button" class="consultly-my-profile__retry" data-action="retry-' +
-        sentinelKey + '-page">Try again</button>' +
+        sectionKey + '-page">Try again</button>' +
         "</div>";
-    } else if (sectionState.hasMore) {
-      tail =
-        '<div class="consultly-my-profile__sentinel" data-sentinel="' + sentinelKey + '" aria-hidden="true"></div>';
     } else {
       tail = "";
     }
     return dayGroupedListMarkup(sectionState.items, rowFn) + tail;
   }
 
-  function scrollListMarkup(sectionState, rowFn, emptyTitle, emptyText, sentinelKey) {
+  function scrollListMarkup(sectionState, rowFn, emptyTitle, emptyText, sectionKey) {
     if (sectionState.items.length === 0) {
       // Zero records: no scroll container at all, so there is nothing to
       // scroll and no chance of a stray scrollbar — just the approved empty
@@ -238,12 +238,12 @@
       // failed FIRST load, since page-1 always comes from the already-
       // guarded customer/me response).
       return sectionState.error
-        ? errorStateMarkup(sectionState.error, "retry-" + sentinelKey + "-page")
+        ? errorStateMarkup(sectionState.error, "retry-" + sectionKey + "-page")
         : emptyStateMarkup(emptyTitle, emptyText);
     }
     return (
-      '<div class="consultly-my-profile__scroll-list" data-scroll="' + sentinelKey + '" tabindex="0">' +
-      scrollListInnerMarkup(sectionState, rowFn, sentinelKey) +
+      '<div class="consultly-my-profile__scroll-list" data-scroll="' + sectionKey + '" tabindex="0">' +
+      scrollListInnerMarkup(sectionState, rowFn, sectionKey) +
       "</div>"
     );
   }
@@ -616,51 +616,78 @@
       openRequestId: null,
     };
 
-    // One IntersectionObserver per infinite-scroll section. Each one's
-    // target (the sentinel div) is destroyed and recreated every time that
-    // section's markup regenerates, so it's disconnected/reattached rather
-    // than created once — see observeSentinel.
-    var observers = { wallet: null, comm: null };
+    // One scroll listener per infinite-scroll section, bound directly to
+    // the container element (not a child sentinel) — a plain "scrollTop vs
+    // scrollHeight" check on real scroll events, which is what section 7 of
+    // this rebuild asked for after the IntersectionObserver/sentinel
+    // approach proved unreliable inside a nested scroll container on some
+    // browsers. The container element itself survives renderScrollContainer
+    // (only its innerHTML is replaced), so the listener stays valid across
+    // "load more" updates and only needs reattaching after a FULL rerender()
+    // actually recreates the container node (tab switch, wallet-view switch).
+    var scrollListeners = { wallet: null, comm: null };
 
     function rerender() {
       render(root, state);
-      syncObservers();
+      syncScrollListeners();
     }
 
     function scrollContainerEl(key) {
       return root.querySelector('.consultly-my-profile__scroll-list[data-scroll="' + key + '"]');
     }
 
-    function observeSentinel(key, containerEl) {
-      if (observers[key]) {
-        observers[key].disconnect();
-        observers[key] = null;
+    function detachScrollListener(key) {
+      var existing = scrollListeners[key];
+      if (existing) {
+        existing.el.removeEventListener("scroll", existing.handler);
+        scrollListeners[key] = null;
       }
-      if (typeof IntersectionObserver === "undefined") return;
-      var sentinelEl = containerEl.querySelector('[data-sentinel="' + key + '"]');
-      if (!sentinelEl) return;
-      observers[key] = new IntersectionObserver(
-        function (entries) {
-          if (entries[0] && entries[0].isIntersecting) loadMorePage(key);
-        },
-        // rootMargin preloads the next batch slightly before the sentinel is
-        // fully in view, so it feels continuous rather than snapping.
-        { root: containerEl, rootMargin: "80px", threshold: 0 },
-      );
-      observers[key].observe(sentinelEl);
     }
 
-    // Reconciles both sections' observers against whichever scroll
+    function handleSectionScroll(key, containerEl) {
+      var sectionState = key === "wallet" ? state.wallet : state.comm;
+      if (sectionState.loading || !sectionState.hasMore) return;
+      var distanceFromBottom =
+        containerEl.scrollHeight - containerEl.scrollTop - containerEl.clientHeight;
+      // Start the next fetch a little before the user hits the literal last
+      // pixel, so it feels instant rather than snapping into place.
+      if (distanceFromBottom < 120) {
+        loadMorePage(key);
+      }
+    }
+
+    function attachScrollListener(key, containerEl) {
+      detachScrollListener(key);
+      var ticking = false;
+      var handler = function () {
+        // rAF-throttled: at most one check per animation frame no matter how
+        // many scroll events fire in between.
+        if (ticking) return;
+        ticking = true;
+        window.requestAnimationFrame(function () {
+          ticking = false;
+          handleSectionScroll(key, containerEl);
+        });
+      };
+      containerEl.addEventListener("scroll", handler, { passive: true });
+      scrollListeners[key] = { el: containerEl, handler: handler };
+      // A container shorter than its content but not yet scrolled (e.g. the
+      // very first render, or after a page loads and still leaves room) gets
+      // one immediate check so scrolling isn't required just to discover
+      // more already fits on screen.
+      handleSectionScroll(key, containerEl);
+    }
+
+    // Reconciles both sections' scroll listeners against whichever
     // container(s) actually exist after a FULL re-render (a tab switch may
     // have just removed one, or the active tab may not use one at all).
-    function syncObservers() {
+    function syncScrollListeners() {
       ["wallet", "comm"].forEach(function (key) {
         var containerEl = scrollContainerEl(key);
         if (containerEl) {
-          observeSentinel(key, containerEl);
-        } else if (observers[key]) {
-          observers[key].disconnect();
-          observers[key] = null;
+          attachScrollListener(key, containerEl);
+        } else {
+          detachScrollListener(key);
         }
       });
     }
@@ -669,7 +696,9 @@
     // whole page) and restores its scrollTop afterward — a full rerender()
     // would reset that element's scroll position to 0 the instant its
     // innerHTML is replaced, which would look exactly like the just-loaded
-    // records vanishing.
+    // records vanishing. The container node itself is untouched here, so
+    // its scroll listener (attached in syncScrollListeners) is still valid
+    // and does not need reattaching.
     function renderScrollContainer(key) {
       var containerEl = scrollContainerEl(key);
       if (!containerEl) return; // user navigated away from this tab/view mid-request
@@ -678,7 +707,11 @@
       var rowFn = key === "wallet" ? walletRowMarkup : consultationRowMarkup;
       containerEl.innerHTML = scrollListInnerMarkup(sectionState, rowFn, key);
       containerEl.scrollTop = prevScrollTop;
-      observeSentinel(key, containerEl);
+      // The just-appended batch may still leave the container short of a
+      // full scrollbar's worth of content (e.g. short rows on a tall
+      // screen) — check again immediately rather than waiting for a scroll
+      // event that may never come.
+      handleSectionScroll(key, containerEl);
     }
 
     function loadMorePage(key) {
