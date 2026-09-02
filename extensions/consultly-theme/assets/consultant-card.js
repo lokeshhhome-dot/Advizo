@@ -37,9 +37,9 @@
       '<path d="M14 5H3C1.9 5 1 5.9 1 7V17C1 18.1 1.9 19 3 19H14C15.1 19 16 18.1 16 17V7C16 5.9 15.1 5.1 14 5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   };
 
-  // Star used for the (currently demo — see PROFILE_DEMO_DEFAULTS) rating
-  // summary. Plain inline SVG, matching the rest of ICONS above — no emoji,
-  // no icon-font/library dependency.
+  // Star used for the real rating summary (see getProfileExtras). Plain
+  // inline SVG, matching the rest of ICONS above — no emoji, no icon-font/
+  // library dependency.
   var STAR_ICON_FILLED =
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">' +
     '<path d="M12 2.5l2.9 6.6 7.1.7-5.4 4.7 1.6 7-6.2-3.8-6.2 3.8 1.6-7-5.4-4.7 7.1-.7z"/></svg>';
@@ -951,36 +951,29 @@
       .join("");
   }
 
-  // ---- Profile modal "extras" (rating/reviews/consultation count/social
-  // links) — DEMO DATA, isolated in this one object per the explicit
-  // instruction to make future backend integration a drop-in change.
+  // ---- Profile modal "extras" ----
   //
-  // None of these fields exist anywhere in the /apps/consultly/consultant
-  // API response today (confirmed: no rating/review/session-count/social
-  // link field on the consultant schema). getProfileExtras() below checks
-  // for each real field FIRST and only falls back to a demo value when the
-  // real one is absent — so the moment the backend/Consultant Dashboard adds
-  // c.rating / c.reviewCount / c.totalConsultations / c.socialLinks, this
-  // component picks them up automatically with zero further changes here.
+  // Rating and consultation-count are REAL, database-backed fields now —
+  // c.ratingSummary ({average, total, distribution}) and
+  // c.totalConversations, both added to the /apps/consultly/consultant
+  // response by proxyConsultantProfileJson (shopifyController.js), computed
+  // by ratingController.js's getConsultantRatingSummary /
+  // getConsultantTotalConversations from the Rating and TransactionHistroy
+  // collections. No fallback/demo number is used for either — a consultant
+  // with zero ratings shows "No ratings yet", never a fabricated average.
   //
-  // SHOW_DEMO_SOCIAL_LINKS is a separate, explicit switch: unlike a rounded
-  // rating number, a social icon is a literal clickable link a real shopper
-  // could open — set this to `false` (or delete PROFILE_DEMO_DEFAULTS.socialLinks)
-  // before this reaches real customers on a shop with no real Consultant
-  // Dashboard social-link data yet, so no icon points at a placeholder URL.
+  // socialLinks has no backend field yet (confirmed: no social-link column
+  // on the consultant schema) — that piece stays demo data, isolated here
+  // exactly as before. SHOW_DEMO_SOCIAL_LINKS is the kill switch: unlike a
+  // rounded rating number, a social icon is a literal clickable link a real
+  // shopper could open — set this to `false` before this reaches real
+  // customers on a shop with no real Consultant Dashboard social-link data.
   var SHOW_DEMO_SOCIAL_LINKS = true;
-  var PROFILE_DEMO_DEFAULTS = {
-    rating: 4.9,
-    reviewCount: 128,
-    // Demo distribution, most-stars first (5★ … 1★) — purely illustrative.
-    ratingBreakdown: [72, 20, 5, 2, 1],
-    consultationsCompleted: 1248,
-    socialLinks: {
-      linkedin: "https://www.linkedin.com/",
-      twitter: "https://x.com/",
-      instagram: "https://www.instagram.com/",
-      website: "",
-    },
+  var SOCIAL_LINKS_DEMO_DEFAULT = {
+    linkedin: "https://www.linkedin.com/",
+    twitter: "https://x.com/",
+    instagram: "https://www.instagram.com/",
+    website: "",
   };
 
   function getProfileExtras(c) {
@@ -991,23 +984,22 @@
         return Boolean(c.socialLinks[k]);
       });
 
+    var ratingSummary = c.ratingSummary || { average: null, total: 0, distribution: [0, 0, 0, 0, 0] };
+    var hasRatings = Number(ratingSummary.total) > 0 && ratingSummary.average != null;
+
     return {
-      rating: c.rating != null ? Number(c.rating) : PROFILE_DEMO_DEFAULTS.rating,
-      reviewCount:
-        c.reviewCount != null ? Number(c.reviewCount) : PROFILE_DEMO_DEFAULTS.reviewCount,
-      ratingBreakdown: Array.isArray(c.ratingBreakdown)
-        ? c.ratingBreakdown
-        : PROFILE_DEMO_DEFAULTS.ratingBreakdown,
-      consultationsCompleted:
-        c.totalConsultations != null
-          ? Number(c.totalConsultations)
-          : PROFILE_DEMO_DEFAULTS.consultationsCompleted,
+      hasRatings: hasRatings,
+      rating: hasRatings ? Number(ratingSummary.average) : null,
+      reviewCount: Number(ratingSummary.total) || 0,
+      ratingBreakdown: Array.isArray(ratingSummary.distribution)
+        ? ratingSummary.distribution
+        : [0, 0, 0, 0, 0],
+      consultationsCompleted: c.totalConversations != null ? Number(c.totalConversations) : 0,
       socialLinks: hasRealSocialLinks
         ? c.socialLinks
         : SHOW_DEMO_SOCIAL_LINKS
-          ? PROFILE_DEMO_DEFAULTS.socialLinks
+          ? SOCIAL_LINKS_DEMO_DEFAULT
           : {},
-      isDemoRating: c.rating == null,
       isDemoSocialLinks: !hasRealSocialLinks,
     };
   }
@@ -1106,8 +1098,10 @@
       '<div class="consultly-profile-modal__header-row">' +
       statusHtml +
       '<span class="consultly-profile-modal__rating-inline">' +
-      '<span class="consultly-profile-modal__stars">' + starRowMarkup(extras.rating) + "</span>" +
-      '<span>' + extras.rating.toFixed(1) + " · " + extras.reviewCount + " reviews</span>" +
+      (extras.hasRatings
+        ? '<span class="consultly-profile-modal__stars">' + starRowMarkup(extras.rating) + "</span>" +
+          "<span>" + extras.rating.toFixed(1) + " · " + extras.reviewCount + " review" + (extras.reviewCount === 1 ? "" : "s") + "</span>"
+        : "<span>No ratings yet</span>") +
       "</span>" +
       "</div>" +
       "</div>";
@@ -1174,20 +1168,22 @@
         : "") +
       "</section>";
 
-    // Rating & Reviews — see getProfileExtras()'s own comment: demo data
-    // until the backend has a real rating/review field, clearly isolated
-    // there rather than invented inline here.
+    // Rating & Reviews — real, database-backed (see getProfileExtras()'s own
+    // comment). A consultant with zero ratings gets an honest empty state,
+    // never a fabricated average.
     var ratingHtml =
       '<section class="consultly-profile-modal__section">' +
       '<h2 class="consultly-profile-modal__section-title">Rating &amp; Reviews</h2>' +
-      '<div class="consultly-profile-modal__rating-summary">' +
-      '<span class="consultly-profile-modal__rating-number">' + extras.rating.toFixed(1) + "</span>" +
-      '<div>' +
-      '<span class="consultly-profile-modal__stars">' + starRowMarkup(extras.rating) + "</span>" +
-      '<p class="consultly-profile-modal__rating-count">' + extras.reviewCount + " reviews</p>" +
-      "</div>" +
-      "</div>" +
-      '<div class="consultly-profile-modal__rating-bars">' + ratingBreakdownMarkup(extras.ratingBreakdown) + "</div>" +
+      (extras.hasRatings
+        ? '<div class="consultly-profile-modal__rating-summary">' +
+          '<span class="consultly-profile-modal__rating-number">' + extras.rating.toFixed(1) + "</span>" +
+          "<div>" +
+          '<span class="consultly-profile-modal__stars">' + starRowMarkup(extras.rating) + "</span>" +
+          '<p class="consultly-profile-modal__rating-count">' + extras.reviewCount + " review" + (extras.reviewCount === 1 ? "" : "s") + "</p>" +
+          "</div>" +
+          "</div>" +
+          '<div class="consultly-profile-modal__rating-bars">' + ratingBreakdownMarkup(extras.ratingBreakdown) + "</div>"
+        : '<p class="consultly-profile-modal__rating-empty">No ratings yet.</p>') +
       "</section>";
 
     var socialHtml = "";

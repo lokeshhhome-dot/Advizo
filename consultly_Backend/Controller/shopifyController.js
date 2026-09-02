@@ -26,6 +26,10 @@ const { WalletHistory } = require("../Modal/walletHistory");
 const { TransactionHistroy } = require("../Modal/transactionHistroy");
 const { getConsultantsForShop } = require("./usersController");
 const {
+  getConsultantRatingSummary,
+  getConsultantTotalConversations,
+} = require("./ratingController");
+const {
   getConsultantProfileForShop,
   createSupportRequestCore,
   listSupportRequestsCore,
@@ -773,7 +777,11 @@ const proxyConsultantProfileJson = async (req, res) => {
 
     // Same shop-level minute-pool flag the listing endpoint exposes — reused
     // via the existing service, not recomputed differently here.
-    const commStatus = await getCommunicationStatus(String(shopDocId));
+    const [commStatus, ratingSummary, totalConversations] = await Promise.all([
+      getCommunicationStatus(String(shopDocId)),
+      getConsultantRatingSummary(consultant._id),
+      getConsultantTotalConversations(consultant._id),
+    ]);
 
     const safeConsultant = {
       id: consultant._id,
@@ -793,6 +801,12 @@ const proxyConsultantProfileJson = async (req, res) => {
       isBusy: consultant.isBusy,
       bio: consultant.bio,
       // walletBalance intentionally omitted — see function comment above.
+      // Real, database-backed — see getConsultantRatingSummary/
+      // getConsultantTotalConversations (ratingController.js). average is
+      // null and total is 0 when there are no ratings yet; callers must
+      // render "No ratings yet" for that case rather than a fake number.
+      ratingSummary,
+      totalConversations,
     };
 
     res.set("Cache-Control", "no-store");

@@ -27,11 +27,45 @@
   margin: 0 0 12px;
 }
 
-.consultly-consultant-profile__placeholder {
-  color: #6c757d;
-  font-size: 14px;
-  padding: 32px 0;
-  text-align: center;
+.consultly-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Boot spinner — the very first thing shown, both in the static Liquid
+   markup (before this file's JS even runs) and while it fetches profile
+   data. A spinner reads as "working on it"; the text it replaced didn't. */
+.consultly-consultant-profile__boot-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 0;
+}
+
+.consultly-consultant-profile__boot-spinner-ring {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid rgba(20, 86, 60, 0.15);
+  border-top-color: #14563c;
+  animation: consultlyConsultantProfileSpin 0.8s linear infinite;
+}
+
+@keyframes consultlyConsultantProfileSpin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .consultly-consultant-profile__boot-spinner-ring {
+    animation-duration: 1.6s;
+  }
 }
 
 .consultly-consultant-profile__state {

@@ -52,7 +52,10 @@
     {%- endif -%}
 
     <div class="consultly-consultant-profile__root" aria-live="polite">
-      <p class="consultly-consultant-profile__placeholder">{{ 'consultant_profile.loading' | t }}</p>
+      <div class="consultly-consultant-profile__boot-spinner" role="status">
+        <span class="consultly-consultant-profile__boot-spinner-ring" aria-hidden="true"></span>
+        <span class="consultly-visually-hidden">{{ 'consultant_profile.loading' | t }}</span>
+      </div>
     </div>
   </div>
 

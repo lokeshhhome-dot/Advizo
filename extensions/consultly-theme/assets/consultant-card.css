@@ -892,6 +892,12 @@
   color: #5c6b64;
 }
 
+.consultly-profile-modal__rating-empty {
+  margin: 0;
+  font-size: 13px;
+  color: #8a94a0;
+}
+
 .consultly-profile-modal__rating-bars {
   display: flex;
   flex-direction: column;

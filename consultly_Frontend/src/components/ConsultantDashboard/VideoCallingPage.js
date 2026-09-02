@@ -21,6 +21,7 @@ import useCameraSwitch from "../../hooks/useCameraSwitch";
 import useSpeakerSwitch from "../../hooks/useSpeakerSwitch";
 import axios from "axios";
 import profileImageDefault from "../../../src/assets/avatar-or-person-sign-profile-picture-portrait-icon-user-profile-symbol.webp";
+import RatingModal from "../ClientDashbord/RatingModal";
 
 // Session statuses from which the call can never resume. The DB is the source
 // of truth: if the poll sees one of these, the other side already rejected /
@@ -134,6 +135,12 @@ function VideoCallingPage({ config, onCallEnded } = {}) {
   const [callActive, setCallActive] = useState(true);
   const callEndedRef = useRef(false);
   const timerSyncedRef = useRef(false);
+  // Rating prompt (customer side only) — keyed by transactionId so the SAME
+  // ended call can't open the popup twice even though handleServerCallEnded
+  // and handleEndCall(serverInitiated) can both independently observe the
+  // same end (see promptRatingOrLeave below).
+  const [ratingPrompt, setRatingPrompt] = useState(null);
+  const ratingPromptShownForRef = useRef(null);
   const billingStorageKey = channelNameParam
     ? `call_billing_active_${channelNameParam}`
     : null;
@@ -608,7 +615,9 @@ function VideoCallingPage({ config, onCallEnded } = {}) {
       if (callEndedRef.current) return;
       callEndedRef.current = true;
       cleanupCallUI(false);
-      leaveCallPage();
+      if (!promptRatingOrLeave(data?.trnaID || data?.transactionId)) {
+        leaveCallPage();
+      }
     };
 
     socket.on("callEnded", handleServerCallEnded);
@@ -1220,6 +1229,29 @@ function VideoCallingPage({ config, onCallEnded } = {}) {
     };
   };
 
+  // Customer-side only (never the consultant) — shows the rating prompt for
+  // the just-ended call instead of leaving immediately, IF this transaction
+  // hasn't already shown one (handleServerCallEnded's "callEnded" and
+  // handleEndCall(true)'s server-initiated branch can both fire for the
+  // same insufficient-balance/minutes-exhausted auto-end). Returns true when
+  // it took over — the caller must NOT call leaveCallPage() itself in that
+  // case; the modal calls it once the customer skips or submits.
+  const promptRatingOrLeave = (explicitTxnId) => {
+    const stored = getStoredCallSession();
+    const txnId =
+      parseStoredId(explicitTxnId) ||
+      parseStoredId(transactionId) ||
+      parseStoredId(localStorage.getItem("endFromClient")) ||
+      parseStoredId(stored?.transactionId) ||
+      parseStoredId(stored?.transtionId);
+    if (userType === "client" && txnId && ratingPromptShownForRef.current !== txnId) {
+      ratingPromptShownForRef.current = txnId;
+      setRatingPrompt({ transactionId: txnId });
+      return true;
+    }
+    return false;
+  };
+
   const leaveCallPage = () => {
     localStorage.removeItem("callStartTime");
     localStorage.removeItem("endFromClient");
@@ -1327,14 +1359,14 @@ function VideoCallingPage({ config, onCallEnded } = {}) {
 
     if (serverInitiated) {
       cleanupCallUI(false);
-      leaveCallPage();
+      if (!promptRatingOrLeave()) leaveCallPage();
       return;
     }
 
     const payload = buildCallEndPayload(clientDurationSeconds);
 
     const result = await emitCallEndedToServer(payload);
-    leaveCallPage();
+    if (!promptRatingOrLeave(payload.transactionId)) leaveCallPage();
   };
 
   useEffect(() => {
@@ -1518,6 +1550,7 @@ function VideoCallingPage({ config, onCallEnded } = {}) {
   }
 
   return (
+    <>
     <div className={containerClassName} style={containerStyle}>
       <div className={styles.callCard} style={embeddedCallCardStyle || undefined}>
       <button
@@ -1855,6 +1888,22 @@ function VideoCallingPage({ config, onCallEnded } = {}) {
       </div>
       </div>
     </div>
+    <RatingModal
+      show={Boolean(ratingPrompt)}
+      consultationId={ratingPrompt?.transactionId}
+      consultantName={displayName}
+      consultantAvatar={
+        userType === "client"
+          ? callerDetails?.receiver?.profileImage
+          : callerDetails?.caller?.profileImage
+      }
+      consultationType={callType}
+      onClose={() => {
+        setRatingPrompt(null);
+        leaveCallPage();
+      }}
+    />
+    </>
   );
 }
 

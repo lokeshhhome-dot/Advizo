@@ -392,7 +392,10 @@
 
     function initConsultantProfileLoad() {
       root.innerHTML =
-        '<p class="consultly-consultant-profile__placeholder">Loading consultant profile…</p>';
+        '<div class="consultly-consultant-profile__boot-spinner" role="status">' +
+        '<span class="consultly-consultant-profile__boot-spinner-ring" aria-hidden="true"></span>' +
+        '<span class="consultly-visually-hidden">Loading consultant profile…</span>' +
+        "</div>";
 
       log("About to build API URL (base =", apiBase + ")");
       var fetchUrl = apiBase + "/" + encodeURIComponent(consultantId);

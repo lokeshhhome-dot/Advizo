@@ -176,6 +176,7 @@ const { userRouter } = require("./Routes/userRoutes");
 const { adminRoute } = require("./Routes/adminRoute");
 const { adminPrincingRoute } = require("./Routes/adminPrincingRoutes");
 const { aiRoute } = require("./Routes/aiRoutes");
+const { ratingRoutes } = require("./Routes/ratingRoutes");
 
 
 app.use("/api/call", callRoutes);
@@ -200,6 +201,7 @@ app.use("/api/admin", adminRoute);
 app.use("/api/admin/ai", aiRoute);
 app.use("/api/princing", adminPrincingRoute)
 app.use("/api/pricing-callback", adminPrincingRoute)
+app.use("/api/ratings", ratingRoutes);
 
 ioServer(server);
 

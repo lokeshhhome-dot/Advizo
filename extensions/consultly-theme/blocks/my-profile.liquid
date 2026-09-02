@@ -57,7 +57,10 @@
     {%- endif -%}
 
     <div class="consultly-my-profile__root" aria-live="polite">
-      <p class="consultly-my-profile__placeholder">{{ 'my_profile.loading' | t }}</p>
+      <div class="consultly-my-profile__boot-spinner" role="status">
+        <span class="consultly-my-profile__boot-spinner-ring" aria-hidden="true"></span>
+        <span class="consultly-visually-hidden">{{ 'my_profile.loading' | t }}</span>
+      </div>
     </div>
   </div>
 

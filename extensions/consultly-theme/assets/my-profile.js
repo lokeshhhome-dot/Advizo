@@ -1019,7 +1019,11 @@
     }
 
     function initMyProfileLoad() {
-      root.innerHTML = '<p class="consultly-my-profile__placeholder">Loading your profile…</p>';
+      root.innerHTML =
+        '<div class="consultly-my-profile__boot-spinner" role="status">' +
+        '<span class="consultly-my-profile__boot-spinner-ring" aria-hidden="true"></span>' +
+        '<span class="consultly-visually-hidden">Loading your profile…</span>' +
+        "</div>";
       log("API request starting:", apiBase);
 
       fetch(apiBase, { credentials: "same-origin", headers: { Accept: "application/json" } })

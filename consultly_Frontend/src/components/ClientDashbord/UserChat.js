@@ -23,6 +23,7 @@ import {
   handleProfileImageError,
 } from "../../utils/getProfileImageUrl";
 import { prepareSessionLogin, SESSION_TYPES } from "../../utils/browserSession";
+import RatingModal from "./RatingModal";
 
 function formatSessionDuration(totalSeconds) {
   const s = Math.max(0, Math.floor(totalSeconds || 0));
@@ -718,6 +719,32 @@ const UserChat = ({
   // closeOrGoBack() below navigates/closes this component right after.
   const [lastSessionSeconds, setLastSessionSeconds] = useState(0);
 
+  // chatTimer.transactionId is wiped back to null by the SAME Redux update
+  // that flips chatTimer.isRunning to false (setChatTimerStopped), so the
+  // prevIsRunningRef effect below can't read it directly once a chat has
+  // ended — this ref keeps the last real value around long enough to open
+  // the rating prompt for it.
+  const lastTransactionIdRef = useRef(null);
+  useEffect(() => {
+    if (chatTimer.transactionId) {
+      lastTransactionIdRef.current = chatTimer.transactionId;
+    }
+  }, [chatTimer.transactionId]);
+
+  // Rating prompt: keyed by transactionId so the SAME ended chat can never
+  // open the popup twice even though stopChatTimer/autoChatEnded/the
+  // isRunning-transition effect below can each independently detect the
+  // same end.
+  const [ratingPromptTxId, setRatingPromptTxId] = useState(null);
+  const ratingShownForRef = useRef(null);
+  const beginRatingPrompt = () => {
+    const txId = lastTransactionIdRef.current;
+    if (!txId || ratingShownForRef.current === txId) return false;
+    ratingShownForRef.current = txId;
+    setRatingPromptTxId(txId);
+    return true; // caller must NOT closeOrGoBack() yet — the modal does it on skip/submit
+  };
+
   useEffect(() => {
     if (!chatTimer.isRunning || !chatTimer.startTime) return;
 
@@ -749,7 +776,7 @@ const UserChat = ({
     setShowChatEndToast(false);
     setShowChatLock((prev) => !prev);
     localStorage.removeItem("chatTimer");
-    closeOrGoBack();
+    if (!beginRatingPrompt()) closeOrGoBack();
   };
 
   useEffect(() => {
@@ -768,7 +795,7 @@ const UserChat = ({
       setRefreshed((prev) => !prev);
       setShowChatEndToast(true);
       setShowChatLock((prev) => !prev);
-      closeOrGoBack();
+      if (!beginRatingPrompt()) closeOrGoBack();
     }
   }, [autoChatEnded, seconds]);
 
@@ -778,7 +805,7 @@ const UserChat = ({
       setShowChatEndToast(true);
       seIsLock(false);
       setWaitingForAccept(false);
-      closeOrGoBack();
+      if (!beginRatingPrompt()) closeOrGoBack();
     }
     prevIsRunningRef.current = chatTimer.isRunning;
   }, [chatTimer.isRunning, seconds]);
@@ -1056,6 +1083,17 @@ const UserChat = ({
         show={showChatEndToast}
         message={endedToastMessage}
         onClose={() => setShowChatEndToast(false)}
+      />
+      <RatingModal
+        show={Boolean(ratingPromptTxId)}
+        consultationId={ratingPromptTxId}
+        consultantName={consultantName}
+        consultantAvatar={consultantOverview?.consultant?.profileImage}
+        consultationType="chat"
+        onClose={() => {
+          setRatingPromptTxId(null);
+          closeOrGoBack();
+        }}
       />
     </Fragment>
   );

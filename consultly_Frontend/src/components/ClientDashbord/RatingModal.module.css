@@ -1,0 +1,240 @@
+/* Self-contained tokens — this modal is mounted from both UserChat.js and
+   VideoCallingPage.js, neither of which is guaranteed to have any other
+   stylesheet's custom properties loaded, so it defines its own (same
+   forest-green Advizo brand used elsewhere on these customer-facing pages). */
+
+.ratingModalRoot {
+  --rm-ink: #14213d;
+  --rm-brand: #14563c;
+  --rm-brand-soft: #e9f2ec;
+  --rm-border: #e6e1d3;
+  --rm-text-muted: #5c6b62;
+  --rm-danger: #b1443a;
+  --rm-danger-soft: #f8ebe9;
+  --bs-modal-zindex: 999999999;
+}
+
+.ratingModalBackdrop {
+  --bs-backdrop-zindex: 999999998;
+}
+
+.ratingModalDialog {
+  max-width: 400px;
+  width: 100%;
+  margin: 24px auto;
+}
+
+.ratingModalContent {
+  border: none;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(20, 33, 61, 0.3);
+}
+
+.panel {
+  padding: 28px 24px 24px;
+  font-family: inherit;
+  color: var(--rm-ink);
+  box-sizing: border-box;
+}
+
+.title {
+  margin: 0 0 16px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--rm-ink);
+  text-align: center;
+}
+
+.consultantRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--rm-brand-soft);
+}
+
+.consultantName {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--rm-ink);
+}
+
+.starRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.star {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--rm-border);
+  transition: color 0.12s ease, transform 0.12s ease;
+}
+
+.star:hover {
+  transform: scale(1.08);
+}
+
+.starActive {
+  color: #f0a93a;
+}
+
+.ratingLabel {
+  text-align: center;
+  min-height: 18px;
+  margin: 0 0 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--rm-text-muted);
+}
+
+.feedbackLabel {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--rm-ink);
+  margin-bottom: 6px;
+}
+
+.feedbackInput {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--rm-border);
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--rm-ink);
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.feedbackInput:focus {
+  outline: 2px solid var(--rm-brand);
+  outline-offset: 1px;
+}
+
+.feedbackInput:disabled {
+  opacity: 0.6;
+}
+
+.errorText {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--rm-danger-soft);
+  color: var(--rm-danger);
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.skipBtn,
+.submitBtn {
+  flex: 1;
+  min-height: 44px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: filter 0.15s ease, background 0.15s ease;
+}
+
+.skipBtn {
+  border: 1px solid var(--rm-border);
+  background: #fff;
+  color: var(--rm-text-muted);
+}
+
+.skipBtn:hover:not(:disabled) {
+  background: #f6f4ee;
+}
+
+.submitBtn {
+  border: none;
+  background: var(--rm-brand);
+  color: #fff;
+}
+
+.submitBtn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.submitBtn:disabled {
+  background: var(--rm-border);
+  color: #fff;
+  cursor: not-allowed;
+}
+
+.skipBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.successState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px 0;
+  text-align: center;
+}
+
+.successIcon {
+  color: var(--rm-brand);
+}
+
+.successText {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--rm-ink);
+}
+
+@media (max-width: 480px) {
+  .ratingModalDialog {
+    max-width: 100%;
+    margin: 0;
+    align-items: flex-end;
+    display: flex;
+    min-height: 100%;
+  }
+
+  .ratingModalContent {
+    border-radius: 20px 20px 0 0;
+    width: 100%;
+  }
+
+  .panel {
+    padding: 24px 18px 20px;
+  }
+
+  .star {
+    width: 40px;
+    height: 40px;
+  }
+}
