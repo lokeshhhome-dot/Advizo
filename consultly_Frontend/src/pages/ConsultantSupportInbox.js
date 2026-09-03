@@ -1,37 +1,32 @@
-import React, { useCallback, useContext, useEffect, useState } from "react";
+import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
   Page,
-  Layout,
-  Badge,
-  Text,
   Modal,
   TextField,
   BlockStack,
   Banner,
+  Text,
 } from "@shopify/polaris";
-import { IndexTable } from "@shopify/polaris";
-import IndexTableList from "../components/consultant-list/IndexTableList";
 import axios from "axios";
 import { useAppBridge } from "../components/createContext/AppBridgeContext";
 import { getAppBridgeToken } from "../utils/getAppBridgeToken";
 import { ToastContext } from "../components/AlertModel/PolariesTostContext";
+import { FullPageSpinner } from "../components/loading/PageSkeletons";
+import styles from "./ConsultantSupportInbox.module.css";
 
-const headings = [
-  { title: "Sr. No.", alignment: "start" },
-  { title: "Requester", alignment: "start" },
-  { title: "Subject", alignment: "start" },
-  { title: "Status", alignment: "center" },
-  { title: "Date", alignment: "center" },
-  { title: "Action", alignment: "center" },
-];
+const PAGE_SIZE = 10;
 
-const statusTone = (status) => {
-  if (status === "replied") return "success";
-  if (status === "closed") return "subdued";
-  return "attention";
+const STATUS_LABEL = {
+  open: "Open",
+  replied: "Replied",
+  closed: "Closed",
 };
 
-const PAGE_LIMIT = 10;
+function statusBadgeClass(status) {
+  if (status === "replied") return styles.statusReplied;
+  if (status === "closed") return styles.statusClosed;
+  return styles.statusOpen;
+}
 
 function ConsultantSupportInbox() {
   const app = useAppBridge();
@@ -42,6 +37,8 @@ function ConsultantSupportInbox() {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [replyText, setReplyText] = useState("");
   const [replyLoading, setReplyLoading] = useState(false);
+  const [queryValue, setQueryValue] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -73,15 +70,36 @@ function ConsultantSupportInbox() {
     fetchRequests();
   }, [fetchRequests]);
 
-  // Keep the current page valid when the data shrinks (e.g. after a refresh)
-  useEffect(() => {
-    const totalPages = Math.max(1, Math.ceil(requests.length / PAGE_LIMIT));
-    if (page > totalPages) setPage(totalPages);
-  }, [requests, page]);
+  const filteredRequests = useMemo(() => {
+    return requests.filter((request) => {
+      const matchesStatus =
+        statusFilter === "all" || request.status === statusFilter;
 
-  const paginatedRequests = requests.slice(
-    (page - 1) * PAGE_LIMIT,
-    page * PAGE_LIMIT,
+      let matchesQuery = true;
+      if (queryValue.trim()) {
+        const query = queryValue.toLowerCase();
+        matchesQuery = [
+          request.consultantName,
+          request.consultantEmail,
+          request.subject,
+        ].some((value) => String(value ?? "").toLowerCase().includes(query));
+      }
+
+      return matchesStatus && matchesQuery;
+    });
+  }, [requests, statusFilter, queryValue]);
+
+  // Reset to page 1 whenever the filtered set changes shape, so a search
+  // that narrows the results doesn't leave the view on a now-empty page.
+  useEffect(() => {
+    setPage(1);
+  }, [queryValue, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRequests.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedRequests = filteredRequests.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
   );
 
   const openRequest = async (request) => {
@@ -130,89 +148,170 @@ function ConsultantSupportInbox() {
     }
   };
 
-  const renderRow = (request, index) => (
-    <IndexTable.Row id={request._id} key={request._id} position={index}>
-      <IndexTable.Cell>
-        <Text as="span" variant="bodyMd">
-          {(page - 1) * PAGE_LIMIT + index + 1}
-        </Text>
-      </IndexTable.Cell>
-      <IndexTable.Cell>
-        <BlockStack gap="100">
-          <Text as="span" variant="bodyMd" fontWeight="semibold">
-            {request.consultantName ||
-              (request.requesterType === "user" ? "Customer" : "Consultant")}
-          </Text>
-          <Text as="span" variant="bodySm" tone="subdued">
-            {request.consultantEmail || "—"}
-          </Text>
-          <span>
-            <Badge tone={request.requesterType === "user" ? "info" : undefined}>
-              {request.requesterType === "user" ? "Customer" : "Consultant"}
-            </Badge>
-          </span>
-        </BlockStack>
-      </IndexTable.Cell>
-      <IndexTable.Cell>
-        <Text as="span" variant="bodyMd">
-          {request.subject}
-          {request.adminHasUnread ? (
-            <Badge tone="attention">New</Badge>
-          ) : null}
-        </Text>
-      </IndexTable.Cell>
-      <IndexTable.Cell>
-        <Badge tone={statusTone(request.status)}>{request.status}</Badge>
-      </IndexTable.Cell>
-      <IndexTable.Cell>
-        <Text as="span" variant="bodyMd" tone="subdued">
-          {request.createdAt
-            ? new Date(request.createdAt).toLocaleString()
-            : "—"}
-        </Text>
-      </IndexTable.Cell>
-      <IndexTable.Cell>
-        <button
-          type="button"
-          onClick={() => openRequest(request)}
-          style={{
-            border: "1px solid #2563eb",
-            background: "#fff",
-            color: "#2563eb",
-            borderRadius: "8px",
-            padding: "6px 12px",
-            cursor: "pointer",
-            fontWeight: 600,
-          }}
-        >
-          View & Reply
-        </button>
-      </IndexTable.Cell>
-    </IndexTable.Row>
-  );
+  if (adminIdLocal && loading && !requests.length) {
+    return <FullPageSpinner label="Loading support requests" />;
+  }
 
   return (
-    <Page
-      title="Support Inbox"
-      subtitle="View consultant and customer queries and send replies from here."
-      primaryAction={{ content: "Refresh", onAction: fetchRequests }}
-    >
-      <Layout>
-        <Layout.Section>
-          <IndexTableList
-            headings={headings}
-            data={paginatedRequests}
-            loading={loading}
-            renderRow={renderRow}
-            resourceName={{ singular: "request", plural: "requests" }}
-            hideFilters
-            page={page}
-            setPage={setPage}
-            limit={PAGE_LIMIT}
-            totalItems={requests.length}
-          />
-        </Layout.Section>
-      </Layout>
+    <Page fullWidth>
+      <div className={styles.page}>
+        <div className={styles.header}>
+          <div className={styles.headerLeft}>
+            <h1 className={styles.title}>Support Inbox</h1>
+            <p className={styles.subtitle}>
+              View consultant and customer queries and send replies from here.
+            </p>
+          </div>
+          <button
+            type="button"
+            className={styles.refreshButton}
+            onClick={fetchRequests}
+          >
+            Refresh
+          </button>
+        </div>
+
+        <div className={styles.card}>
+          <div className={styles.toolbar}>
+            <div className={styles.searchWrap}>
+              <span className={styles.searchIcon}>🔍</span>
+              <input
+                className={styles.searchInput}
+                value={queryValue}
+                onChange={(e) => setQueryValue(e.target.value)}
+                placeholder="Search requests"
+              />
+            </div>
+            <div className={styles.toolbarRight}>
+              <select
+                className={styles.statusSelect}
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="all">All statuses</option>
+                <option value="open">Open</option>
+                <option value="replied">Replied</option>
+                <option value="closed">Closed</option>
+              </select>
+              <span className={styles.resultsCount}>
+                {filteredRequests.length} result
+                {filteredRequests.length === 1 ? "" : "s"}
+              </span>
+            </div>
+          </div>
+
+          {pagedRequests.length === 0 ? (
+            <div className={styles.emptyState}>
+              {requests.length === 0
+                ? "No support requests yet."
+                : "No requests match your search."}
+            </div>
+          ) : (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Sr. No.</th>
+                    <th>Requester</th>
+                    <th>Subject</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {pagedRequests.map((request, index) => (
+                    <tr key={request._id}>
+                      <td>{(currentPage - 1) * PAGE_SIZE + index + 1}</td>
+                      <td>
+                        <div className={styles.requesterCell}>
+                          <span className={styles.requesterName}>
+                            {request.consultantName ||
+                              (request.requesterType === "user"
+                                ? "Customer"
+                                : "Consultant")}
+                          </span>
+                          <span className={styles.requesterEmail}>
+                            {request.consultantEmail || "—"}
+                          </span>
+                          <span
+                            className={`${styles.typeBadge} ${
+                              request.requesterType === "user"
+                                ? styles.typeCustomer
+                                : styles.typeConsultant
+                            }`}
+                          >
+                            {request.requesterType === "user"
+                              ? "Customer"
+                              : "Consultant"}
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        <div className={styles.subjectCell}>
+                          <span>{request.subject}</span>
+                          {request.adminHasUnread ? (
+                            <span className={styles.newBadge}>New</span>
+                          ) : null}
+                        </div>
+                      </td>
+                      <td>
+                        <span
+                          className={`${styles.statusBadge} ${statusBadgeClass(
+                            request.status,
+                          )}`}
+                        >
+                          {STATUS_LABEL[request.status] || request.status}
+                        </span>
+                      </td>
+                      <td className={styles.dateText}>
+                        {request.createdAt
+                          ? new Date(request.createdAt).toLocaleString()
+                          : "—"}
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className={styles.viewButton}
+                          onClick={() => openRequest(request)}
+                        >
+                          View & Reply
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div className={styles.footer}>
+            <span className={styles.footerText}>
+              Showing {pagedRequests.length} of {filteredRequests.length} requests
+            </span>
+            {totalPages > 1 && (
+              <div style={{ display: "flex", gap: 6 }}>
+                <button
+                  type="button"
+                  className={styles.pagerButton}
+                  disabled={currentPage <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  className={styles.pagerButton}
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  ›
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       <Modal
         open={Boolean(selectedRequest)}
@@ -242,15 +341,7 @@ function ConsultantSupportInbox() {
                 <Text as="h3" variant="headingSm">
                   Message
                 </Text>
-                <div
-                  style={{
-                    padding: "12px",
-                    borderRadius: "10px",
-                    background: "#f8fafc",
-                    border: "1px solid #e5e7eb",
-                    whiteSpace: "pre-wrap",
-                  }}
-                >
+                <div className={styles.messageBox}>
                   {selectedRequest.message}
                 </div>
                 <Text as="p" variant="bodySm" tone="subdued">
@@ -268,13 +359,7 @@ function ConsultantSupportInbox() {
                   {selectedRequest.replies.map((reply, index) => (
                     <div
                       key={`${reply.repliedAt}-${index}`}
-                      style={{
-                        padding: "12px",
-                        borderRadius: "10px",
-                        background: "#eff6ff",
-                        border: "1px solid #bfdbfe",
-                        whiteSpace: "pre-wrap",
-                      }}
+                      className={styles.replyBox}
                     >
                       <Text as="p" variant="bodySm" tone="subdued">
                         Admin •{" "}

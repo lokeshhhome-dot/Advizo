@@ -42,7 +42,7 @@ import {
 import { Redirect } from "@shopify/app-bridge/actions";
 import MoneyValue from "../components/Helper/MoneyValue";
 import { openShopifyMenus } from "../utils/shopifyAdmin";
-import { DashboardSkeleton } from "../components/loading/PageSkeletons";
+import { FullPageSpinner } from "../components/loading/PageSkeletons";
 import WelcomeModal from "../components/dashboard/WelcomeModal";
 import styles from "./Dashboard.module.css";
 
@@ -711,7 +711,7 @@ function Dashboard() {
   ];
 
   if (adminIdLocal && !adminDetails_?.shop && adminLoading) {
-    return <DashboardSkeleton />;
+    return <FullPageSpinner label="Loading Advizo" />;
   }
 
   const currency = adminDetails?.currency || "$";

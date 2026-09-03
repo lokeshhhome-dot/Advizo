@@ -11,7 +11,7 @@ import {
   InlineStack,
   Button,
   List,
-  SkeletonBodyText,
+  Spinner,
 } from "@shopify/polaris";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -115,7 +115,15 @@ function TrialUpgrade() {
         <Layout.Section>
           {loading ? (
             <LegacyCard sectioned>
-              <SkeletonBodyText lines={6} />
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  padding: "32px 0",
+                }}
+              >
+                <Spinner accessibilityLabel="Loading billing details" size="large" />
+              </div>
             </LegacyCard>
           ) : (
             <BlockStack gap="400">

@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useAppStatusBilling } from "../ProtectRoute/AppStatusBillingProvider";
 import { useAppBridge } from "../createContext/AppBridgeContext";
 import { Redirect } from "@shopify/app-bridge/actions";
-import { AdminPageSkeleton } from "../loading/PageSkeletons";
+import { FullPageSpinner } from "../loading/PageSkeletons";
 
 export const BillingProtectedRoute = ({ children }) => {
     const billing = useAppStatusBilling();
@@ -25,11 +25,11 @@ export const BillingProtectedRoute = ({ children }) => {
     }, [billing, app, store]);
 
     if (!billing || billing.loading) {
-        return <AdminPageSkeleton />;
+        return <FullPageSpinner label="Loading Advizo" />;
     }
 
     if (!billing.isPaid) {
-        return <AdminPageSkeleton />;
+        return <FullPageSpinner label="Loading Advizo" />;
     }
 
     return children;

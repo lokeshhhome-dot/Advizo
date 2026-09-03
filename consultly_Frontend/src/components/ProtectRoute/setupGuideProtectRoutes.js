@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useSetupGuide } from "./SetupGuideProvider";
 import BlankModalSetupGuide from "../dashboard/BlankModalSetupGuide";
-import { AdminPageSkeleton } from "../loading/PageSkeletons";
+import { FullPageSpinner } from "../loading/PageSkeletons";
 
 const SetupGuideProtectRoutes = ({ children }) => {
   const { showSetupGuide, loading, setShowSetupGuide } = useSetupGuide();
@@ -25,7 +25,12 @@ const SetupGuideProtectRoutes = ({ children }) => {
   }
 
   if (loading) {
-    return <AdminPageSkeleton />;
+    // Nested inside ProtectAdminRoute in the same Admin route tree — same
+    // reasoning as there: this used to show a second, different skeleton
+    // immediately after RouteLoadingFallback's spinner (and after
+    // ProtectAdminRoute's own install check) resolved. Same spinner here
+    // keeps the whole hard-refresh sequence a single continuous loader.
+    return <FullPageSpinner label="Loading Advizo" />;
   }
 
   return children;

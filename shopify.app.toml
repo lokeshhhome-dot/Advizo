@@ -8,24 +8,29 @@ handle = "talk2consultant"
 api_version = "2026-07"
 
 # -------------------------------
-# Orders / Refunds — TEMPORARILY REMOVED
+# Orders / Refunds
 # -------------------------------
-# orders/create, orders/paid, orders/delete, orders/cancelled, refunds/create
-# all require Shopify's "Protected Customer Data" approval before a real app
-# version can be created (`shopify app deploy` hard-fails otherwise — `shopify
-# app dev` does not enforce this, which is why it worked without them).
-# Their handlers still exist in consultly_Backend/Controller/webHookController.js
-# and consultly_Backend/Routes/webHookRoute.js — nothing there was touched.
-# Restore this block once Protected Customer Data access is approved in the
-# Partner Dashboard: https://shopify.dev/docs/apps/launch/protected-customer-data
+# orders/create, orders/delete, orders/cancelled, refunds/create were removed
+# pending Shopify's "Protected Customer Data" approval (`shopify app deploy`
+# hard-fails without it). That approval has since been granted, so the ONE
+# topic the wallet-recharge flow actually needs — orders/paid, the only
+# event that proves payment was captured, not just that an order exists — is
+# restored below. uri points at the existing, already-implemented handler
+# (paymentSucessController in webHookController.js, mounted in
+# webHookRoute.js) — an absolute URL, matching the app/uninstalled and GDPR
+# subscriptions below, since application_url above is a dev tunnel, not the
+# production backend.
 #
+# The other four topics (orders/create, orders/delete, orders/cancelled,
+# refunds/create) are left commented out — nothing in the wallet-credit flow
+# needs them; restore them separately if/when something does.
+[[webhooks.subscriptions]]
+topics = ["orders/paid"]
+uri = "https://consultly-backend.onrender.com/api/webhooks/shop/webhooks"
+
 # [[webhooks.subscriptions]]
 # topics = ["orders/create"]
 # uri = "/api/webhooks/shop/orders-created"
-#
-# [[webhooks.subscriptions]]
-# topics = ["orders/paid"]
-# uri = "/api/webhooks/shop/orders-paid"
 #
 # [[webhooks.subscriptions]]
 # topics = ["orders/delete"]

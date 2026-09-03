@@ -2,82 +2,10 @@ import {
   BlockStack,
   Box,
   Card,
-  Layout,
-  Page,
   SkeletonBodyText,
   SkeletonDisplayText,
-  SkeletonPage,
-  SkeletonTabs,
   Spinner,
 } from "@shopify/polaris";
-
-export function AdminPageSkeleton({ title = true }) {
-  return (
-    <SkeletonPage primaryAction>
-      {title && <SkeletonDisplayText size="large" />}
-      <Layout>
-        <Layout.Section>
-          <Card>
-            <SkeletonBodyText lines={6} />
-          </Card>
-        </Layout.Section>
-      </Layout>
-    </SkeletonPage>
-  );
-}
-
-export function DashboardSkeleton() {
-  return (
-    <SkeletonPage primaryAction>
-      <SkeletonDisplayText size="large" />
-      <Box paddingBlockStart="400">
-        <Layout>
-          <Layout.Section>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                gap: 16,
-              }}
-            >
-              {[1, 2, 3, 4].map((i) => (
-                <Card key={i}>
-                  <Box padding="400">
-                    <SkeletonDisplayText size="small" />
-                    <Box paddingBlockStart="200">
-                      <SkeletonBodyText lines={1} />
-                    </Box>
-                  </Box>
-                </Card>
-              ))}
-            </div>
-          </Layout.Section>
-          <Layout.Section>
-            <Card>
-              <SkeletonBodyText lines={8} />
-            </Card>
-          </Layout.Section>
-        </Layout>
-      </Box>
-    </SkeletonPage>
-  );
-}
-
-export function TablePageSkeleton() {
-  return (
-    <SkeletonPage primaryAction>
-      <SkeletonDisplayText size="large" />
-      <Box paddingBlockStart="400">
-        <Card>
-          <SkeletonTabs count={3} />
-          <Box padding="400">
-            <SkeletonBodyText lines={10} />
-          </Box>
-        </Card>
-      </Box>
-    </SkeletonPage>
-  );
-}
 
 export function StorefrontSkeleton() {
   return (
@@ -103,6 +31,28 @@ export function StorefrontSkeleton() {
           ))}
         </div>
       </BlockStack>
+    </div>
+  );
+}
+
+// Shared centered full-viewport Polaris spinner — the ONE loading visual
+// across every admin surface (RouteLoadingFallback, ProtectAdminRoute,
+// SetupGuideProtectRoutes, BillingProtectedRoute, Dashboard, ConsultantList,
+// ConsultantSupportInbox) so navigating between admin pages, or a hard
+// refresh, always shows the same spinner instead of a skeleton. Not used by
+// any storefront surface — those keep their own existing skeletons/spinners
+// (StorefrontSkeleton, ChatOpeningSpinner) unchanged.
+export function FullPageSpinner({ label = "Loading" }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "100dvh",
+      }}
+    >
+      <Spinner accessibilityLabel={label} size="large" />
     </div>
   );
 }
@@ -155,10 +105,25 @@ export function ConsultantDashboardSkeleton() {
   );
 }
 
+// The ONE global "the whole app is booting" gate — App.js's single root
+// Suspense boundary wraps its entire <Routes> tree (every surface: admin,
+// consultant dashboard, storefront, login, chat, calls) in this fallback,
+// so it's the true full-app/full-page initial load, not a section or
+// route-specific skeleton. A skeleton here previews a page shape that
+// doesn't exist yet (the route hasn't even been matched), so a spinner is
+// the honest signal — "the app is starting," not "here's a preview of the
+// page you're about to see." Storefront/ConsultantDashboard pages keep their
+// own skeletons (StorefrontSkeleton, ConsultantDashboardSkeleton) since those
+// preview a real, known page shape while their own data loads.
+//
+// On an Admin hard refresh, this fallback resolving is NOT the end of the
+// loading sequence — ProtectAdminRoute's install check, SetupGuideProtectRoutes'
+// setup-guide check, and BillingProtectedRoute's billing check all still have
+// to resolve afterward, INSIDE the route tree this Suspense already handed
+// control to. All three, plus every individual admin page's own data fetch
+// (Dashboard, ConsultantList, ConsultantSupportInbox), render FullPageSpinner
+// too, so the whole admin loading sequence — hard refresh or in-app
+// navigation — is one continuous spinner rather than a skeleton flash.
 export function RouteLoadingFallback() {
-  return (
-    <div className="route-loading-shell">
-      <AdminPageSkeleton />
-    </div>
-  );
+  return <FullPageSpinner label="Loading Advizo" />;
 }

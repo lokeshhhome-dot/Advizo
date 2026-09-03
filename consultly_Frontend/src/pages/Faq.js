@@ -1,22 +1,15 @@
-import {
-  Layout,
-  Page,
-  Card,
-  Box,
-  InlineStack,
-  Text,
-  Collapsible,
-  BlockStack,
-} from "@shopify/polaris";
-import { ChevronUpIcon, ChevronDownIcon } from "@shopify/polaris-icons";
-import { useState, useEffect } from "react";
+import { Page, Collapsible, Text, BlockStack } from "@shopify/polaris";
+import { ChevronDownIcon } from "@shopify/polaris-icons";
+import { useState, useEffect, useMemo } from "react";
 import { useSelector } from "react-redux";
 import { fetchAdminDetails } from "../components/Redux/slices/adminSlice";
 import { useDispatch } from "react-redux";
 import { useAppBridge } from "../components/createContext/AppBridgeContext";
+import styles from "./Faq.module.css";
 
 function Faq() {
   const [expanded, setExpanded] = useState(0);
+  const [queryValue, setQueryValue] = useState("");
   const { adminDetails_, loading: adminDetailsLoading } = useSelector(
     (state) => state.admin,
   );
@@ -313,50 +306,73 @@ function Faq() {
     },
   ];
 
+  const filteredItems = useMemo(() => {
+    if (!queryValue.trim()) return ACCORDION_ITEMS;
+    const query = queryValue.toLowerCase();
+    return ACCORDION_ITEMS.filter((item) =>
+      item.title.toLowerCase().includes(query),
+    );
+  }, [queryValue]);
+
   return (
-    <Page title="FAQ">
-      <Layout>
-        <Layout.Section>
-          <Card padding="0">
-            {ACCORDION_ITEMS.map(({ title, id, content }) => {
+    <Page fullWidth>
+      <div className={styles.page}>
+        <div className={styles.header}>
+          <h1 className={styles.title}>Frequently Asked Questions</h1>
+          <p className={styles.subtitle}>
+            Answers to common questions about managing your consultants and
+            storefront.
+          </p>
+        </div>
+
+        <div className={styles.searchWrap}>
+          <span className={styles.searchIcon}>🔍</span>
+          <input
+            className={styles.searchInput}
+            value={queryValue}
+            onChange={(e) => setQueryValue(e.target.value)}
+            placeholder="Search FAQs"
+          />
+        </div>
+
+        <div className={styles.card}>
+          {filteredItems.length === 0 ? (
+            <div className={styles.emptyState}>
+              No FAQs match your search.
+            </div>
+          ) : (
+            filteredItems.map(({ title, id, content }) => {
               const isExpanded = expanded === id;
               return (
-                <Box
-                  borderBlockEndWidth="025"
-                  borderColor="border"
-                  background="bg-surface-secondary"
-                  key={id}
-                >
-                  <Box paddingBlock="300" paddingInline="400">
-                    <div
-                      style={{ cursor: "pointer" }}
-                      onClick={() => {
-                        return setExpanded((prev) => (id === prev ? null : id));
-                      }}
+                <div className={styles.faqItem} key={id}>
+                  <button
+                    type="button"
+                    className={`${styles.faqHeader} ${
+                      isExpanded ? styles.faqHeaderOpen : ""
+                    }`}
+                    onClick={() =>
+                      setExpanded((prev) => (id === prev ? null : id))
+                    }
+                  >
+                    <span className={styles.faqNumber}>{id + 1}</span>
+                    <span className={styles.faqTitle}>{title}</span>
+                    <span
+                      className={`${styles.faqChevron} ${
+                        isExpanded ? styles.faqChevronOpen : ""
+                      }`}
                     >
-                      <InlineStack align="space-between" blockAlign="center">
-                        <Text variant="headingMd" as="p">
-                          {title}
-                        </Text>
-                        {isExpanded ? (
-                          <ChevronUpIcon width="1.5rem" height="1.5rem" />
-                        ) : (
-                          <ChevronDownIcon width="1.5rem" height="1.5rem" />
-                        )}
-                      </InlineStack>
-                    </div>
-                  </Box>
+                      <ChevronDownIcon width="1.25rem" height="1.25rem" />
+                    </span>
+                  </button>
                   <Collapsible open={isExpanded} id={id.toString()}>
-                    <Box padding="400" background="bg-surface">
-                      {content}
-                    </Box>
+                    <div className={styles.faqContent}>{content}</div>
                   </Collapsible>
-                </Box>
+                </div>
               );
-            })}
-          </Card>
-        </Layout.Section>
-      </Layout>
+            })
+          )}
+        </div>
+      </div>
     </Page>
   );
 }

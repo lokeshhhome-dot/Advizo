@@ -8,7 +8,7 @@ import { UserAlert } from "../components/AlertModel/UserAlert";
 import { useAppBridge } from "../components/createContext/AppBridgeContext";
 import { Redirect } from "@shopify/app-bridge/actions";
 import { usePolarisToast } from "../components/AlertModel/PolariesTostContext";
-import { TablePageSkeleton } from "../components/loading/PageSkeletons";
+import { FullPageSpinner } from "../components/loading/PageSkeletons";
 import { getAppBridgeToken } from "../utils/getAppBridgeToken";
 import styles from "./ConsultantList.module.css";
 
@@ -175,7 +175,7 @@ function ConsultantList() {
   };
 
   if (adminIdLocal && consultantLoading && !consultantsData?.length) {
-    return <TablePageSkeleton />;
+    return <FullPageSpinner label="Loading consultants" />;
   }
 
   return (
