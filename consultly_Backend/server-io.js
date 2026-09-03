@@ -19,6 +19,7 @@ const {
   COMMUNICATION_DISABLED_ERROR,
 } = require("./services/subscriptionMinutes");
 const { invalidateConsultantList } = require("./Utils/redis");
+const { startChatAttachmentCleanupJob } = require("./services/chatAttachmentCleanup");
 const { createSocketAuthMiddleware } = require("./Socket-Io-MiddleWare/socketAuth");
 const {
   getAuthUserId,
@@ -80,6 +81,7 @@ const ioServer = (server) => {
   } = callManager;
 
   startOrphanCleanupJob();
+  startChatAttachmentCleanupJob();
   io.use(createSocketAuthMiddleware());
 
   io.on("connection", async (socket) => {
@@ -875,7 +877,7 @@ const ioServer = (server) => {
     });
 
     socket.on("sendMessage", async (data) => {
-      const { receiverId, shop_id, text, timestamp } = data || {};
+      const { receiverId, shop_id, text, timestamp, attachment, tempId } = data || {};
       const senderId = getAuthUserId(socket);
 
       try {
@@ -884,11 +886,27 @@ const ioServer = (server) => {
             receiverId,
             shop_id,
             text,
+            attachment,
             event: "sendMessage",
           }))
         ) {
           return;
         }
+
+        // The client got storageKey from its own upload-attachment response,
+        // but a tampered client could try to attach someone else's uploaded
+        // object — the key is scoped to shop+uploader at upload time, so
+        // verify it matches THIS sender before trusting it (IDOR guard).
+        if (attachment && !String(attachment.storageKey).startsWith(`chat/${shop_id}/${senderId}/`)) {
+          return rejectSocketAction(socket, "sendMessage", "forbidden");
+        }
+
+        // Attachment-only messages have no text — everywhere below that used
+        // `text` for a human-readable preview (inbox row, notification, push)
+        // uses this instead.
+        const previewText = attachment
+          ? (attachment.type === "image" ? "📷 Photo" : "📄 PDF")
+          : text;
 
         // Sender and receiver are independent reads, and between them they cover
         // every field this handler needs — including the ones that used to be
@@ -977,7 +995,7 @@ const ioServer = (server) => {
               senderId,
               receiverId,
               shop_id,
-              lastMessage: text,
+              lastMessage: previewText,
               lastMessageTime: timestamp,
               isRequest: false,
             },
@@ -985,18 +1003,35 @@ const ioServer = (server) => {
         } else {
           await ChatList.updateOne(
             { _id: existingChat._id },
-            { lastMessage: text, lastMessageTime: timestamp },
+            { lastMessage: previewText, lastMessageTime: timestamp },
           );
         }
 
-        const savedChat = await MessageModal.create({
+        const messageDoc = {
           senderId,
           receiverId,
           shop_id,
-          text,
+          text: text || "",
           timestamp,
           isRead: false,
-        });
+          messageType: attachment ? "attachment" : "text",
+        };
+        if (attachment) {
+          const retentionDays = Number(process.env.CHAT_ATTACHMENT_RETENTION_DAYS || 30);
+          messageDoc.attachment = {
+            type: attachment.type,
+            storageKey: attachment.storageKey,
+            originalName: attachment.originalName,
+            mimeType: attachment.mimeType,
+            size: attachment.size,
+            width: attachment.width,
+            height: attachment.height,
+            uploadedAt: new Date(),
+            expiresAt: new Date(Date.now() + retentionDays * 24 * 60 * 60 * 1000),
+          };
+        }
+
+        const savedChat = await MessageModal.create(messageDoc);
 
         // `sender` above already holds fullname/profileImage — this was a second
         // fetch of the exact same document.
@@ -1038,6 +1073,10 @@ const ioServer = (server) => {
           ...savedChat.toObject(),
           senderName: senderInfo?.fullname || "User",
           avatar: senderInfo?.profileImage || null,
+          // In-memory passthrough only (not persisted) — lets the sender's own
+          // UI reconcile its optimistic bubble by id instead of by text
+          // equality, which breaks for empty-text attachment messages.
+          tempId: tempId || null,
         };
         io.to(String(senderId)).emit("receiveMessage", messageWithSender);
         io.to(String(receiverId)).emit("receiveMessage", messageWithSender);
@@ -1048,7 +1087,7 @@ const ioServer = (server) => {
             type: "message",
             userId: senderId,
             shopId: shop_id,
-            preview: text,
+            preview: previewText,
             senderName: senderInfo?.fullname || "User",
           });
         }
@@ -1057,7 +1096,7 @@ const ioServer = (server) => {
           await sendFCM(
             receiver.firebaseToken.token,
             senderInfo.fullname,
-            text,
+            previewText,
             "https://www.svgrepo.com/show/335455/profile-default.svg",
             shop_Domain.shop,
           );

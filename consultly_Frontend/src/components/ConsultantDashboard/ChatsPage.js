@@ -19,6 +19,15 @@ import {
   handleProfileImageError,
 } from "../../utils/getProfileImageUrl";
 import { useConsultantIdentity } from "../../utils/useConsultantIdentity";
+import AttachButton from "../ChatAttachments/AttachButton";
+import AttachmentComposerPreview from "../ChatAttachments/AttachmentComposerPreview";
+import ChatImageMessage from "../ChatAttachments/ChatImageMessage";
+import ChatPdfMessage from "../ChatAttachments/ChatPdfMessage";
+import OptimisticAttachmentMessage from "../ChatAttachments/OptimisticAttachmentMessage";
+import {
+  validateAttachmentFile,
+  uploadChatAttachment,
+} from "../ChatAttachments/chatAttachmentApi";
 
 /* ---------------------------------------------------------------------------
    Pure, stateless presentation helpers — kept outside the component so they
@@ -96,6 +105,8 @@ const ChatsPage = () => {
   const [shopId, setShopId] = useState(null);
   const [chaterIds, setChaterIds] = useState(null);
   const [text, setText] = useState("");
+  const [pendingAttachment, setPendingAttachment] = useState(null);
+  const pendingAbortRef = useRef(null);
   const dispatch = useDispatch();
   const { chatHistory } = useSelector((state) => state.consultants);
   const messages = useSelector((state) => state.socket.messages);
@@ -202,12 +213,14 @@ const ChatsPage = () => {
         if (messageExists) {
           return prev;
         }
-        const tempMessageIndex = prev.findIndex(
-          (msg) =>
-            msg._id?.startsWith("temp-") &&
+        const tempMessageIndex = prev.findIndex((msg) => {
+          if (!msg._id?.startsWith("temp-")) return false;
+          if (msg.tempId && latestMessage.tempId) return msg.tempId === latestMessage.tempId;
+          return (
             msg.text === latestMessage.text &&
-            String(msg.senderId) === String(latestMessage.senderId),
-        );
+            String(msg.senderId) === String(latestMessage.senderId)
+          );
+        });
 
         if (tempMessageIndex !== -1) {
           const newMessages = [...prev];
@@ -329,19 +342,140 @@ const ChatsPage = () => {
     sendMessage();
 
     function sendMessage() {
+      const tempId = `t-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const messageData = {
         senderId: consultantId || consultantId,
         receiverId: chaterIds?.userId,
         shop_id: shopId || chaterIds?.shopId,
         text: text,
         timestamp: new Date().toISOString(),
+        tempId,
       };
       socket.emit("sendMessage", messageData);
       setText("");
       stopTyping();
-      dispatch(addMessage(messageData));
+      dispatch(addMessage({ _id: `temp-${Date.now()}`, ...messageData }));
     }
   };
+
+  const handleFileSelected = (file) => {
+    const validation = validateAttachmentFile(file);
+    if (!validation.valid) {
+      toast.error(validation.reason);
+      return;
+    }
+
+    const previewUrl = validation.type === "image" ? URL.createObjectURL(file) : null;
+    const controller = new AbortController();
+    pendingAbortRef.current = controller;
+    setPendingAttachment({
+      file,
+      previewUrl,
+      type: validation.type,
+      status: "uploading",
+      progress: 0,
+      error: null,
+      uploadedMeta: null,
+    });
+    runAttachmentUpload(file, controller);
+  };
+
+  const runAttachmentUpload = async (file, controller) => {
+    try {
+      const uploadedMeta = await uploadChatAttachment({
+        shopId: shopId || chaterIds?.shopId,
+        userId: chaterIds?.userId,
+        consultantId,
+        file,
+        token,
+        signal: controller.signal,
+        onProgress: (progress) =>
+          setPendingAttachment((prev) => (prev ? { ...prev, progress } : prev)),
+      });
+      setPendingAttachment((prev) =>
+        prev ? { ...prev, status: "ready", progress: 100, uploadedMeta } : prev,
+      );
+    } catch (error) {
+      if (error?.code === "ERR_CANCELED" || error?.name === "CanceledError") return;
+      setPendingAttachment((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: "error",
+              error: error?.response?.data?.message || "Upload failed",
+            }
+          : prev,
+      );
+    }
+  };
+
+  const handleCancelAttachment = () => {
+    pendingAbortRef.current?.abort();
+    if (pendingAttachment?.previewUrl) URL.revokeObjectURL(pendingAttachment.previewUrl);
+    setPendingAttachment(null);
+  };
+
+  const handleRetryAttachment = () => {
+    if (!pendingAttachment) return;
+    const controller = new AbortController();
+    pendingAbortRef.current = controller;
+    setPendingAttachment((prev) =>
+      prev ? { ...prev, status: "uploading", progress: 0, error: null } : prev,
+    );
+    runAttachmentUpload(pendingAttachment.file, controller);
+  };
+
+  const sendAttachmentMessage = () => {
+    if (!pendingAttachment || pendingAttachment.status !== "ready" || !chaterIds) return;
+
+    if (!socket.connected) {
+      console.warn("Socket not connected, attempting to reconnect...");
+      connectAndRegisterSocket();
+      setTimeout(() => {
+        if (socket.connected) sendAttachmentMessage();
+        else console.error("Failed to connect socket");
+      }, 1000);
+      return;
+    }
+
+    const tempId = `t-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const messageData = {
+      senderId: consultantId,
+      receiverId: chaterIds?.userId,
+      shop_id: shopId || chaterIds?.shopId,
+      text: text.trim(),
+      timestamp: new Date().toISOString(),
+      attachment: pendingAttachment.uploadedMeta,
+      tempId,
+    };
+
+    socket.emit("sendMessage", messageData);
+    setText("");
+    stopTyping();
+    dispatch(
+      addMessage({
+        _id: `temp-${Date.now()}`,
+        ...messageData,
+        messageType: "attachment",
+        localPreviewUrl: pendingAttachment.previewUrl,
+      }),
+    );
+    setPendingAttachment(null);
+  };
+
+  const handleComposerSend = () => {
+    if (pendingAttachment) {
+      sendAttachmentMessage();
+    } else {
+      sendChat();
+    }
+  };
+
+  const isAttachmentBusy = pendingAttachment?.status === "uploading";
+  const canSend =
+    Boolean(chaterIds) &&
+    !isAttachmentBusy &&
+    (Boolean(text.trim()) || pendingAttachment?.status === "ready");
 
   useEffect(() => {
     if (messages && messages.length > 0) {
@@ -978,7 +1112,25 @@ const ChatsPage = () => {
                               className={`${styles.bubbleRow} ${isOwn ? styles.bubbleRowOwn : styles.bubbleRowOther}`}
                             >
                               <div className={`${styles.bubble} ${isOwn ? styles.bubbleOwn : styles.bubbleOther}`}>
-                                <p className={styles.bubbleText}>{message.text}</p>
+                                {message.messageType === "attachment" && message.attachment ? (
+                                  <>
+                                    {message._id?.startsWith("temp-") ? (
+                                      <OptimisticAttachmentMessage
+                                        attachment={message.attachment}
+                                        localPreviewUrl={message.localPreviewUrl}
+                                      />
+                                    ) : message.attachment.type === "image" ? (
+                                      <ChatImageMessage message={message} token={token} />
+                                    ) : (
+                                      <ChatPdfMessage message={message} token={token} />
+                                    )}
+                                    {message.text ? (
+                                      <p className={styles.bubbleText}>{message.text}</p>
+                                    ) : null}
+                                  </>
+                                ) : (
+                                  <p className={styles.bubbleText}>{message.text}</p>
+                                )}
                                 <span className={styles.bubbleTime}>{timestamp}</span>
                               </div>
                             </div>
@@ -994,12 +1146,17 @@ const ChatsPage = () => {
               <TypingIndicator label={partnerLabel} visible={isPartnerTyping} />
 
               <div className={styles.composer}>
+                <AttachmentComposerPreview
+                  pending={pendingAttachment}
+                  onCancel={handleCancelAttachment}
+                  onRetry={handleRetryAttachment}
+                />
                 <div className={styles.composerGroup}>
-                  <button type="button" className={styles.composerAttach} title="Attach file" aria-label="Attach file">
-                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
-                      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-                    </svg>
-                  </button>
+                  <AttachButton
+                    onFileSelected={handleFileSelected}
+                    disabled={!chaterIds}
+                    className={styles.composerAttach}
+                  />
                   <input
                     onChange={(e) => {
                       setText(e.target.value);
@@ -1011,18 +1168,18 @@ const ChatsPage = () => {
                     placeholder="Type a message…"
                     aria-label="Message"
                     onKeyPress={(e) => {
-                      if (e.key === "Enter" && text.trim()) {
-                        sendChat();
+                      if (e.key === "Enter" && canSend) {
+                        handleComposerSend();
                       }
                     }}
                   />
                   <button
                     type="button"
-                    onClick={sendChat}
+                    onClick={handleComposerSend}
                     className={styles.composerSend}
                     title="Send"
                     aria-label="Send message"
-                    disabled={!text.trim()}
+                    disabled={!canSend}
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
                       <line x1="22" y1="2" x2="11" y2="13" />

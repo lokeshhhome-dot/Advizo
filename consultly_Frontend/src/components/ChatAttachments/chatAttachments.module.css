@@ -1,0 +1,367 @@
+/* Shared by both UserChat.js and ChatsPage.js. Colors fall back through each
+   host's own brand variable (--u-brand / --ds-brand) so this drops into
+   either chat's existing palette without a hard dependency on one file. */
+
+.attachButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: #6d7175;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.attachButton:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.06);
+    color: #202223;
+}
+
+.attachButton:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* ---------------------------- Composer preview --------------------------- */
+
+.composerPreview {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    margin: 0 12px 8px;
+    border-radius: 12px;
+    border: 1px solid #e3e3e3;
+    background: #fafbfb;
+}
+
+.composerPreviewThumb {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #eef0f1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6d7175;
+}
+
+.composerPreviewImg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.composerPreviewSpinnerOverlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.35);
+}
+
+.spinner {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #fff;
+    animation: ca-spin 0.7s linear infinite;
+}
+
+@keyframes ca-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.composerPreviewInfo {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.composerPreviewName {
+    font-size: 13px;
+    font-weight: 600;
+    color: #202223;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.composerPreviewMeta {
+    font-size: 11.5px;
+    color: #6d7175;
+}
+
+.progressTrack {
+    margin-top: 4px;
+    width: 100%;
+    height: 4px;
+    border-radius: 999px;
+    background: #e3e3e3;
+    overflow: hidden;
+}
+
+.progressFill {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--u-brand, var(--ds-brand, #14563c));
+    transition: width 0.15s ease;
+}
+
+.composerPreviewActions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.composerPreviewRetry {
+    border: 1px solid var(--u-brand, var(--ds-brand, #14563c));
+    color: var(--u-brand, var(--ds-brand, #14563c));
+    background: #fff;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    cursor: pointer;
+}
+
+.composerPreviewCancel {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: #6d7175;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.composerPreviewCancel:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: #202223;
+}
+
+/* ------------------------------ Image bubble ------------------------------ */
+
+.imageBubble {
+    position: relative;
+    max-width: 240px;
+    max-height: 320px;
+    width: 200px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #eef0f1;
+    cursor: pointer;
+}
+
+.imageSkeleton {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, #e9ebec 25%, #f3f4f5 37%, #e9ebec 63%);
+    background-size: 400% 100%;
+    animation: ca-shimmer 1.4s ease infinite;
+}
+
+@keyframes ca-shimmer {
+    0% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0 50%;
+    }
+}
+
+.imageBubbleImg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.imageFallback {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: #f1f1f2;
+    color: #6d7175;
+    font-size: 13px;
+    max-width: 220px;
+}
+
+.imageFallbackSub {
+    font-size: 11.5px;
+    color: #8c9196;
+}
+
+/* -------------------------------- PDF card -------------------------------- */
+
+.pdfCard {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid #e3e3e3;
+    background: #fff;
+    max-width: 260px;
+}
+
+.pdfIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    background: var(--u-brand-soft, var(--ds-brand-soft, #e9f2ec));
+    color: var(--u-brand, var(--ds-brand, #14563c));
+}
+
+.pdfInfo {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.pdfName {
+    font-size: 13px;
+    font-weight: 600;
+    color: #202223;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pdfMeta {
+    font-size: 11.5px;
+    color: #6d7175;
+}
+
+.pdfError {
+    font-size: 11.5px;
+    color: #b1443a;
+}
+
+.pdfActions {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.pdfActionBtn {
+    border: 1px solid var(--u-brand, var(--ds-brand, #14563c));
+    color: var(--u-brand, var(--ds-brand, #14563c));
+    background: #fff;
+    border-radius: 8px;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 3px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.pdfActionBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* -------------------------------- Lightbox -------------------------------- */
+
+.lightboxBackdrop {
+    background: rgba(10, 10, 10, 0.85);
+}
+
+.lightboxDialog {
+    max-width: 92vw;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.lightboxContent {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.lightboxImage {
+    max-width: 92vw;
+    max-height: 82vh;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+.lightboxClose {
+    position: fixed;
+    top: 16px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 1;
+}
+
+.lightboxClose:hover {
+    background: rgba(255, 255, 255, 0.28);
+}
+
+.lightboxDownload {
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 16px;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.lightboxDownload:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+@media (max-width: 600px) {
+    .imageBubble {
+        width: 160px;
+        max-width: 70vw;
+    }
+
+    .pdfCard {
+        max-width: 220px;
+    }
+}

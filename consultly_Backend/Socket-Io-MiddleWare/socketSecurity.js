@@ -84,7 +84,20 @@ const assertCallReceiver = async (socket, { callerId, receiverId, event }) => {
   return true;
 };
 
-const assertChatMessage = async (socket, { receiverId, shop_id, text, event }) => {
+const isValidAttachmentPayload = (attachment) =>
+  attachment &&
+  typeof attachment === "object" &&
+  (attachment.type === "image" || attachment.type === "pdf") &&
+  typeof attachment.storageKey === "string" &&
+  attachment.storageKey.length > 0 &&
+  typeof attachment.mimeType === "string" &&
+  attachment.mimeType.length > 0 &&
+  typeof attachment.originalName === "string" &&
+  attachment.originalName.length > 0 &&
+  Number.isFinite(attachment.size) &&
+  attachment.size > 0;
+
+const assertChatMessage = async (socket, { receiverId, shop_id, text, attachment, event }) => {
   if (!assertAuthenticated(socket, event)) return false;
 
   const senderId = getAuthUserId(socket);
@@ -93,7 +106,10 @@ const assertChatMessage = async (socket, { receiverId, shop_id, text, event }) =
     return rejectSocketAction(socket, event, "invalid_ids");
   }
 
-  if (typeof text !== "string" || !text.trim() || text.length > 5000) {
+  const hasText = typeof text === "string" && text.trim().length > 0 && text.length <= 5000;
+  const hasAttachment = isValidAttachmentPayload(attachment);
+
+  if (!hasText && !hasAttachment) {
     return rejectSocketAction(socket, event, "invalid_payload");
   }
 

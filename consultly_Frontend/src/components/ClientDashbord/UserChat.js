@@ -24,6 +24,15 @@ import {
 } from "../../utils/getProfileImageUrl";
 import { prepareSessionLogin, SESSION_TYPES } from "../../utils/browserSession";
 import RatingModal from "./RatingModal";
+import AttachButton from "../ChatAttachments/AttachButton";
+import AttachmentComposerPreview from "../ChatAttachments/AttachmentComposerPreview";
+import ChatImageMessage from "../ChatAttachments/ChatImageMessage";
+import ChatPdfMessage from "../ChatAttachments/ChatPdfMessage";
+import OptimisticAttachmentMessage from "../ChatAttachments/OptimisticAttachmentMessage";
+import {
+  validateAttachmentFile,
+  uploadChatAttachment,
+} from "../ChatAttachments/chatAttachmentApi";
 
 function formatSessionDuration(totalSeconds) {
   const s = Math.max(0, Math.floor(totalSeconds || 0));
@@ -263,6 +272,8 @@ const UserChat = ({
     consultantOverview?.consultant?.profileImage,
   );
   const [chatMessagesData, setChatMessagesData] = useState([]);
+  const [pendingAttachment, setPendingAttachment] = useState(null);
+  const pendingAbortRef = useRef(null);
   const lastProcessedMessageId = useRef(null);
   const messagesAreaRef = useRef(null);
   const lastNotificationMessageId = useRef(null);
@@ -427,12 +438,11 @@ const UserChat = ({
             return prev;
           }
 
-          const tempMessageIndex = prev.findIndex(
-            (msg) =>
-              msg._id?.startsWith("temp-") &&
-              msg.text === message.text &&
-              String(msg.senderId) === messageSenderId,
-          );
+          const tempMessageIndex = prev.findIndex((msg) => {
+            if (!msg._id?.startsWith("temp-")) return false;
+            if (msg.tempId && message.tempId) return msg.tempId === message.tempId;
+            return msg.text === message.text && String(msg.senderId) === messageSenderId;
+          });
 
           if (tempMessageIndex !== -1) {
             const newMessages = [...prev];
@@ -511,12 +521,14 @@ const UserChat = ({
       (typeof input === "string" && input.trim() ? input : text) ||
       "👋 Hi! I'd like to start a consultation.";
 
+    const tempId = `t-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const messageData = {
       senderId: clientId,
       receiverId: consultantId,
       shop_id: shopId,
       text: messageText,
       timestamp: new Date().toISOString(),
+      tempId,
     };
 
     const optimisticMessage = {
@@ -533,6 +545,134 @@ const UserChat = ({
     setTimeout(() => {
       scrollToBottom(true);
     }, 100);
+  };
+
+  const handleFileSelected = (file) => {
+    const validation = validateAttachmentFile(file);
+    if (!validation.valid) {
+      alert(validation.reason);
+      return;
+    }
+
+    const previewUrl = validation.type === "image" ? URL.createObjectURL(file) : null;
+    const controller = new AbortController();
+    pendingAbortRef.current = controller;
+    setPendingAttachment({
+      file,
+      previewUrl,
+      type: validation.type,
+      status: "uploading",
+      progress: 0,
+      error: null,
+      uploadedMeta: null,
+    });
+    runAttachmentUpload(file, controller);
+  };
+
+  const runAttachmentUpload = async (file, controller) => {
+    try {
+      const liveToken = (localStorage.getItem("token") || authTokenFromUrl || "").trim();
+      const uploadedMeta = await uploadChatAttachment({
+        shopId,
+        userId: clientId,
+        consultantId,
+        file,
+        token: liveToken,
+        signal: controller.signal,
+        onProgress: (progress) =>
+          setPendingAttachment((prev) => (prev ? { ...prev, progress } : prev)),
+      });
+      setPendingAttachment((prev) =>
+        prev ? { ...prev, status: "ready", progress: 100, uploadedMeta } : prev,
+      );
+    } catch (error) {
+      if (error?.code === "ERR_CANCELED" || error?.name === "CanceledError") return;
+      setPendingAttachment((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: "error",
+              error: error?.response?.data?.message || "Upload failed",
+            }
+          : prev,
+      );
+    }
+  };
+
+  const handleCancelAttachment = () => {
+    pendingAbortRef.current?.abort();
+    if (pendingAttachment?.previewUrl) URL.revokeObjectURL(pendingAttachment.previewUrl);
+    setPendingAttachment(null);
+  };
+
+  const handleRetryAttachment = () => {
+    if (!pendingAttachment) return;
+    const controller = new AbortController();
+    pendingAbortRef.current = controller;
+    setPendingAttachment((prev) =>
+      prev ? { ...prev, status: "uploading", progress: 0, error: null } : prev,
+    );
+    runAttachmentUpload(pendingAttachment.file, controller);
+  };
+
+  const sendAttachmentMessage = async () => {
+    if (
+      !pendingAttachment ||
+      pendingAttachment.status !== "ready" ||
+      !clientId ||
+      !consultantId ||
+      !shopId
+    ) {
+      return;
+    }
+
+    try {
+      const liveToken = (localStorage.getItem("token") || authTokenFromUrl || "").trim();
+      await ensureSocketConnected(clientId, null, 8000, liveToken || null);
+    } catch (error) {
+      alert(
+        error?.message ||
+          "Unable to connect chat. Please refresh the page and try again.",
+      );
+      return;
+    }
+
+    const tempId = `t-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const messageData = {
+      senderId: clientId,
+      receiverId: consultantId,
+      shop_id: shopId,
+      text: text?.trim() || "",
+      timestamp: new Date().toISOString(),
+      attachment: pendingAttachment.uploadedMeta,
+      tempId,
+    };
+
+    const optimisticMessage = {
+      _id: `temp-${Date.now()}`,
+      ...messageData,
+      messageType: "attachment",
+      localPreviewUrl: pendingAttachment.previewUrl,
+    };
+    setChatMessagesData((prev) => [...prev, optimisticMessage]);
+
+    socket.emit("sendMessage", messageData);
+    setText("");
+    stopTyping();
+    setPendingAttachment(null);
+
+    shouldAutoScrollRef.current = true;
+    setTimeout(() => {
+      scrollToBottom(true);
+    }, 100);
+  };
+
+  const handleComposerSend = () => {
+    if (pendingAttachment) {
+      sendAttachmentMessage();
+    } else {
+      sendChat();
+    }
   };
 
   useEffect(() => {
@@ -638,12 +778,11 @@ const UserChat = ({
           if (messageExists) return prev;
 
           // Check for temp message
-          const tempMessageIndex = prev.findIndex(
-            (msg) =>
-              msg._id?.startsWith("temp-") &&
-              msg.text === message.text &&
-              String(msg.senderId) === messageSenderId,
-          );
+          const tempMessageIndex = prev.findIndex((msg) => {
+            if (!msg._id?.startsWith("temp-")) return false;
+            if (msg.tempId && message.tempId) return msg.tempId === message.tempId;
+            return msg.text === message.text && String(msg.senderId) === messageSenderId;
+          });
 
           if (tempMessageIndex !== -1) {
             const newMessages = [...prev];
@@ -838,6 +977,11 @@ const UserChat = ({
   // stream — messaging has no business being available while that overlay
   // is up, so the composer follows it exactly rather than a second flag.
   const canMessage = !showChatLock;
+  const isAttachmentBusy = pendingAttachment?.status === "uploading";
+  const canSend =
+    canMessage &&
+    !isAttachmentBusy &&
+    (Boolean(text?.trim()) || pendingAttachment?.status === "ready");
   const endedToastMessage =
     lastSessionSeconds > 0
       ? `Chat ended · ${formatSessionDuration(lastSessionSeconds)} session`
@@ -1020,7 +1164,25 @@ const UserChat = ({
                               {consultantName}
                             </div>
                           )}
-                          <div className={styles.bubbleText}>{message.text}</div>
+                          {message.messageType === "attachment" && message.attachment ? (
+                            <>
+                              {message._id?.startsWith("temp-") ? (
+                                <OptimisticAttachmentMessage
+                                  attachment={message.attachment}
+                                  localPreviewUrl={message.localPreviewUrl}
+                                />
+                              ) : message.attachment.type === "image" ? (
+                                <ChatImageMessage message={message} token={token} />
+                              ) : (
+                                <ChatPdfMessage message={message} token={token} />
+                              )}
+                              {message.text ? (
+                                <div className={styles.bubbleText}>{message.text}</div>
+                              ) : null}
+                            </>
+                          ) : (
+                            <div className={styles.bubbleText}>{message.text}</div>
+                          )}
                           <div className={styles.bubbleTime}>{timestamp}</div>
                         </div>
                       </div>
@@ -1039,7 +1201,13 @@ const UserChat = ({
               request/accept overlay's own condition), so a message can't be
               typed or sent before the chat has actually started. */}
           <div className={styles.composer}>
+            <AttachmentComposerPreview
+              pending={pendingAttachment}
+              onCancel={handleCancelAttachment}
+              onRetry={handleRetryAttachment}
+            />
             <div className={styles.composerInner}>
+              <AttachButton onFileSelected={handleFileSelected} disabled={!canMessage} />
               <input
                 onChange={(e) => {
                   setText(e.target.value);
@@ -1053,15 +1221,15 @@ const UserChat = ({
                 disabled={!canMessage}
                 onFocus={() => scrollToBottom(true)}
                 onKeyPress={(e) => {
-                  if (e.key === "Enter" && text?.trim()) {
-                    sendChat();
+                  if (e.key === "Enter" && canSend) {
+                    handleComposerSend();
                   }
                 }}
               />
               <button
-                onClick={sendChat}
+                onClick={handleComposerSend}
                 className={styles.sendBtn}
-                disabled={!canMessage || !text?.trim()}
+                disabled={!canSend}
                 aria-label="Send message"
               >
                 <svg
