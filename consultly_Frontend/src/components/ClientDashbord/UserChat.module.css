@@ -49,12 +49,19 @@
 
 /* The conversation card — centred, capped width so text stays readable on
    large desktops instead of stretching edge-to-edge. */
+/* Kept numerically identical to .consultly-chat-overlay-panel in
+   extensions/consultly-theme/assets/consultant-card.css — that file sizes
+   the real Shopify-storefront overlay this same UserChat renders inside via
+   iframe, and a CSS custom property can't cross that iframe's document
+   boundary, so matching literal values (base 900x820, >=1440px 960x860) is
+   how the standalone /chats page and the storefront modal end up the same
+   size. Change one, change the other. */
 .chatCard {
     position: relative;
     width: 100%;
-    max-width: 720px;
+    max-width: 900px;
     height: 100%;
-    max-height: 780px;
+    max-height: 820px;
     min-height: 320px;
     margin: 0 auto;
     display: flex;
@@ -67,10 +74,41 @@
     box-shadow: var(--u-shadow-lg);
 }
 
+/* Large desktop: a comfortable professional-workspace size without going
+   full-screen — .chatShell's own padding + width:100%/max-width above
+   already keeps this responsive on laptop/tablet widths in between. */
 @media (min-width: 1440px) {
     .chatCard {
-        max-width: 800px;
+        max-width: 960px;
+        max-height: 860px;
     }
+}
+
+/* Set on .chatShell (see UserChat.js's isEmbeddedIframe) only when this
+   instance is running inside the Shopify Theme Extension's overlay iframe
+   (consultant-card.js's openChatOverlay -> ?embedded=1) — in that case the
+   overlay's own .consultly-chat-overlay-panel is ALREADY the rounded/
+   shadowed card the user sees, sized to these exact same numbers. Without
+   this, .chatShell's centering padding + .chatCard's own border/shadow/
+   radius drew a second, smaller rounded card floating inside the first —
+   the "card inside a card" bug. Embedded mode instead makes .chatCard fill
+   the iframe edge-to-edge so the two surfaces render at identical size with
+   only ONE layer of chrome (the overlay panel's). The standalone /chats
+   page (no iframe) keeps the centered-card treatment below untouched. */
+.embedded {
+    padding: 0;
+}
+
+.embedded .chatCard {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    min-height: 0;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
 }
 
 /* ---------------------------------- Header ---------------------------------- */
@@ -397,18 +435,18 @@
 
 /* --------------------------- Request / accept states ------------------------ */
 
+/* Anchored to .composer (position:relative, see below) rather than covering
+   the full message stream — floats directly above the input, the same
+   pattern chatAttachments.module.css's .composerPreview already uses, so it
+   can never sit centered mid-history or scroll with .stream. */
 .requestOverlay {
     position: absolute;
-    inset: 0;
+    left: 16px;
+    right: 16px;
+    bottom: calc(100% + 8px);
+    z-index: 50;
     display: flex;
-    align-items: center;
     justify-content: center;
-    padding: 16px;
-    box-sizing: border-box;
-    background: rgba(246, 244, 238, 0.92);
-    -webkit-backdrop-filter: blur(2px);
-    backdrop-filter: blur(2px);
-    z-index: 5;
     animation: uFadeIn 0.2s ease both;
 }
 
@@ -526,6 +564,10 @@
 }
 
 .composer {
+    /* Anchors the attachment upload-preview popup (chatAttachments.module.css
+       .composerPreview) so it floats above the composer instead of pushing
+       message-stream height around when a file is staged. */
+    position: relative;
     padding: 12px 16px;
     padding-bottom: max(12px, env(safe-area-inset-bottom));
     border-top: 1px solid var(--u-border);

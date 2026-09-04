@@ -726,6 +726,10 @@
 
 /* =================================== COMPOSER ============================== */
 .composer {
+    /* Anchors the attachment upload-preview popup (chatAttachments.module.css
+       .composerPreview) so it floats above the composer instead of pushing
+       message-stream height around when a file is staged. */
+    position: relative;
     flex-shrink: 0;
     padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px));
     background: var(--ds-surface);

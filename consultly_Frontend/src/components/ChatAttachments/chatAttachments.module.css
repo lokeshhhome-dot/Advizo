@@ -29,15 +29,27 @@
 
 /* ---------------------------- Composer preview --------------------------- */
 
+/* Anchored to the composer (which sets position:relative) rather than sitting
+   in normal flow — it floats above the input like the attachment/emoji
+   popups the spec describes, instead of pushing the message stream's height
+   around every time a file is staged/cleared. Requires nothing from the
+   .chat-messages/.messageStream scroll container, so it can never move with
+   history and is never clipped by the modal's own overflow:hidden (it stays
+   within the modal's box, just above the composer). */
 .composerPreview {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: calc(100% + 8px);
+    z-index: 20;
     display: flex;
     align-items: center;
     gap: 10px;
     padding: 8px 10px;
-    margin: 0 12px 8px;
     border-radius: 12px;
     border: 1px solid #e3e3e3;
     background: #fafbfb;
+    box-shadow: 0 8px 24px rgba(16, 24, 40, 0.12);
 }
 
 .composerPreviewThumb {

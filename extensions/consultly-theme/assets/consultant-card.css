@@ -1181,16 +1181,31 @@
   display: none;
 }
 
+/* THIS is the actual box the live storefront chat renders inside — the
+   iframe below points at /apps/consultly/chats?...&embedded=1, i.e.
+   UserChat.js loaded directly (never ConsultantChatModal). UserChat's own
+   .chatCard has a much larger max-width/max-height, but a child can never
+   exceed its containing block, so a 480px-capped panel here silently
+   overrode any sizing change made inside the React app. 92vw/480px was a
+   phone-sized cap applied uniformly to every viewport ≥768px (no laptop/
+   desktop tier existed) — this is the fix, not the React CSS. */
 .consultly-chat-overlay-panel {
   position: relative;
-  width: min(92vw, 480px);
-  height: min(90vh, 760px);
+  width: min(900px, calc(100vw - 48px));
+  height: min(820px, calc(100dvh - 48px));
   box-sizing: border-box;
   background: #ffffff;
   border-radius: 20px;
   box-shadow: 0 24px 60px rgba(16, 35, 28, 0.3);
   overflow: hidden;
   animation: consultlyProfileScaleIn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (min-width: 1440px) {
+  .consultly-chat-overlay-panel {
+    width: min(960px, calc(100vw - 64px));
+    height: min(860px, calc(100dvh - 64px));
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

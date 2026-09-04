@@ -995,7 +995,9 @@ const UserChat = ({
         insufficientBalance={insufficientBalance}
       />
 
-      <div className={styles.chatShell}>
+      <div
+        className={`${styles.chatShell} ${isEmbeddedIframe ? styles.embedded : ""}`}
+      >
         <div className={styles.chatCard}>
           {/* Header */}
           <div className={styles.header}>
@@ -1060,68 +1062,6 @@ const UserChat = ({
 
           {/* Conversation stream */}
           <div className={styles.stream} ref={messagesAreaRef}>
-            {showChatLock && (
-              <div className={styles.requestOverlay}>
-                <div className={styles.requestCard}>
-                  <div className={styles.requestIconWrap} data-variant={isLock ? "ready" : "waiting"}>
-                    {isLock ? ICON_HANDSHAKE : ICON_WAITING}
-                    {waitingForAccept && (
-                      <span className={styles.requestPulseRing} aria-hidden="true" />
-                    )}
-                  </div>
-                  <div className={styles.requestBody}>
-                    {isLock ? (
-                      <>
-                        <h4 className={styles.requestTitle}>
-                          {consultantName} is ready
-                        </h4>
-                        <p className={styles.requestSubtitle}>
-                          Accept to start your consultation.
-                        </p>
-                      </>
-                    ) : waitingForAccept ? (
-                      <>
-                        <h4 className={styles.requestTitle}>
-                          Waiting for {consultantName}
-                        </h4>
-                        <p className={styles.requestSubtitle}>
-                          They&apos;ve been notified of your request.
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <h4 className={styles.requestTitle}>
-                          Start a conversation
-                        </h4>
-                        <p className={styles.requestSubtitle}>
-                          Send a request to {consultantName} to begin.
-                        </p>
-                      </>
-                    )}
-                  </div>
-                  {isLock ? (
-                    <button
-                      className={`${styles.requestAction} ${styles.requestActionAccept}`}
-                      onClick={() => startCHatHandler()}
-                    >
-                      Accept chat
-                    </button>
-                  ) : (
-                    <button
-                      className={`${styles.requestAction} ${waitingForAccept ? styles.requestActionWaiting : styles.requestActionStart}`}
-                      disabled={waitingForAccept}
-                      onClick={() => {
-                        sendChat("👋 Hi! I'd like to start a consultation.");
-                        setWaitingForAccept(true);
-                      }}
-                    >
-                      {waitingForAccept ? `Waiting ${waitCountdown}s` : "Start chat"}
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
             {chatMessagesData.length === 0 ? (
               <div className={styles.streamEmpty}>
                 <div className={styles.streamEmptyIcon} aria-hidden="true">
@@ -1201,6 +1141,67 @@ const UserChat = ({
               request/accept overlay's own condition), so a message can't be
               typed or sent before the chat has actually started. */}
           <div className={styles.composer}>
+            {showChatLock && (
+              <div className={styles.requestOverlay}>
+                <div className={styles.requestCard}>
+                  <div className={styles.requestIconWrap} data-variant={isLock ? "ready" : "waiting"}>
+                    {isLock ? ICON_HANDSHAKE : ICON_WAITING}
+                    {waitingForAccept && (
+                      <span className={styles.requestPulseRing} aria-hidden="true" />
+                    )}
+                  </div>
+                  <div className={styles.requestBody}>
+                    {isLock ? (
+                      <>
+                        <h4 className={styles.requestTitle}>
+                          {consultantName} is ready
+                        </h4>
+                        <p className={styles.requestSubtitle}>
+                          Accept to start your consultation.
+                        </p>
+                      </>
+                    ) : waitingForAccept ? (
+                      <>
+                        <h4 className={styles.requestTitle}>
+                          Waiting for {consultantName}
+                        </h4>
+                        <p className={styles.requestSubtitle}>
+                          They&apos;ve been notified of your request.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <h4 className={styles.requestTitle}>
+                          Start a conversation
+                        </h4>
+                        <p className={styles.requestSubtitle}>
+                          Send a request to {consultantName} to begin.
+                        </p>
+                      </>
+                    )}
+                  </div>
+                  {isLock ? (
+                    <button
+                      className={`${styles.requestAction} ${styles.requestActionAccept}`}
+                      onClick={() => startCHatHandler()}
+                    >
+                      Accept chat
+                    </button>
+                  ) : (
+                    <button
+                      className={`${styles.requestAction} ${waitingForAccept ? styles.requestActionWaiting : styles.requestActionStart}`}
+                      disabled={waitingForAccept}
+                      onClick={() => {
+                        sendChat("👋 Hi! I'd like to start a consultation.");
+                        setWaitingForAccept(true);
+                      }}
+                    >
+                      {waitingForAccept ? `Waiting ${waitCountdown}s` : "Start chat"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
             <AttachmentComposerPreview
               pending={pendingAttachment}
               onCancel={handleCancelAttachment}

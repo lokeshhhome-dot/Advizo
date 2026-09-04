@@ -31,8 +31,11 @@
   --bs-backdrop-zindex: 999999998;
 }
 
+/* min()/calc() keeps this responsive across laptop/tablet without separate
+   breakpoints (420px was a phone-sized cap left over from an earlier pass —
+   far too small for a "professional chat workspace" on desktop/laptop). */
 .chatModalDialog {
-  max-width: 420px;
+  max-width: min(900px, calc(100vw - 48px));
   width: 100%;
   margin: 24px auto;
 }
@@ -41,8 +44,18 @@
   border: none;
   border-radius: 16px;
   overflow: hidden;
-  height: min(720px, 85vh);
+  height: min(820px, calc(100dvh - 48px));
   box-shadow: 0 12px 32px rgba(16, 24, 40, 0.18);
+}
+
+@media (min-width: 1440px) {
+  .chatModalDialog {
+    max-width: min(960px, calc(100vw - 64px));
+  }
+
+  .chatModalContent {
+    height: min(860px, calc(100dvh - 64px));
+  }
 }
 
 @media (max-width: 480px) {
