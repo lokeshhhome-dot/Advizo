@@ -22,6 +22,16 @@ const isValidCallType = (callType) =>
   callType === "voice" || callType === "video" || callType === "chat";
 
 const rejectSocketAction = (socket, event, reason = "forbidden") => {
+  // TEMPORARY (debugging silent customer-send failures): every rejection
+  // path funnels through here, but nothing was logging server-side, so a
+  // rejected sendMessage looked identical to one that was never received.
+  console.log("[CHAT DEBUG] rejectSocketAction:", {
+    event,
+    reason,
+    userId: socket?.data?.userId,
+    shopId: socket?.data?.shopId,
+    role: socket?.data?.role,
+  });
   socket.emit("socket-error", { event, reason });
   return false;
 };

@@ -879,6 +879,16 @@ const ioServer = (server) => {
     socket.on("sendMessage", async (data) => {
       const { receiverId, shop_id, text, timestamp, attachment, tempId } = data || {};
       const senderId = getAuthUserId(socket);
+      // TEMPORARY (debugging silent customer-send failures) — confirms the
+      // emit actually reached the server at all, and with what identity.
+      console.log("[CHAT DEBUG] sendMessage received:", {
+        senderId,
+        receiverId,
+        shop_id,
+        socketShopId: socket?.data?.shopId,
+        hasText: Boolean(text),
+        hasAttachment: Boolean(attachment),
+      });
 
       try {
         if (
@@ -1078,6 +1088,13 @@ const ioServer = (server) => {
           // equality, which breaks for empty-text attachment messages.
           tempId: tempId || null,
         };
+        // TEMPORARY (debugging silent customer-send failures) — confirms the
+        // message actually persisted and is about to be broadcast back.
+        console.log("[CHAT DEBUG] sendMessage persisted, broadcasting receiveMessage:", {
+          messageId: String(savedChat._id),
+          senderId,
+          receiverId,
+        });
         io.to(String(senderId)).emit("receiveMessage", messageWithSender);
         io.to(String(receiverId)).emit("receiveMessage", messageWithSender);
 

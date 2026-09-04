@@ -51,21 +51,54 @@ const RatingModal = ({ show, consultationId, consultantName, consultantAvatar, c
     onClose(false);
   };
 
+  const submitRatingRequest = async () => {
+    const token = localStorage.getItem("token");
+    return axios.post(
+      `${process.env.REACT_APP_BACKEND_HOST}/ratings`,
+      { consultationId, rating, feedback: feedback.trim() },
+      { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+    );
+  };
+
   const handleSubmit = async () => {
     if (!rating || submitting) return;
     setSubmitting(true);
     setError("");
     try {
-      const token = localStorage.getItem("token");
-      await axios.post(
-        `${process.env.REACT_APP_BACKEND_HOST}/ratings`,
-        { consultationId, rating, feedback: feedback.trim() },
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} },
-      );
+      await submitRatingRequest();
       setSubmitting(false);
       setSubmitted(true);
       setTimeout(() => onClose(true), 900);
     } catch (err) {
+      // The chat's endChat transaction is marked "completed" via a fire-
+      // and-forget Socket.IO emit right before this modal opens — if the
+      // customer rates within that split-second window, the backend's own
+      // status check can still see the old "active" status. Retry once,
+      // transparently (no error flash), rather than surfacing a confusing
+      // "hasn't finished yet" message for a timing gap that resolves itself
+      // almost immediately.
+      if (err?.response?.data?.code === "NOT_COMPLETED") {
+        setTimeout(async () => {
+          try {
+            await submitRatingRequest();
+            setSubmitting(false);
+            setSubmitted(true);
+            setTimeout(() => onClose(true), 900);
+          } catch (retryErr) {
+            setSubmitting(false);
+            if (retryErr?.response?.status === 409) {
+              onClose(true);
+              return;
+            }
+            setError(
+              retryErr?.response?.data?.message ||
+                "Couldn't submit your rating. Please try again.",
+            );
+          }
+        }, 800);
+        return;
+      }
+
       setSubmitting(false);
       // Already-rated (409) is not really an error the user needs to retry —
       // treat it the same as a successful close instead of showing a scary

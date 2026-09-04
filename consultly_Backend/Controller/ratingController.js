@@ -29,8 +29,14 @@ const resolveRatingEligibility = async (authUserId, consultationId, res) => {
   }
 
   if (transaction.status !== "completed") {
+    // endChat's transaction.status="completed" write can still be in flight
+    // (Socket.IO emit -> DB transaction commit) the instant the rating modal
+    // opens right after it. `code` lets the frontend retry this specific
+    // case automatically instead of showing the customer a raw error for a
+    // timing gap that resolves itself within a moment.
     res.status(400).json({
       success: false,
+      code: "NOT_COMPLETED",
       message: "This consultation hasn't finished yet, so it can't be rated.",
     });
     return null;

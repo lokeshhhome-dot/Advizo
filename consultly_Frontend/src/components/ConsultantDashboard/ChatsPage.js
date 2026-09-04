@@ -122,6 +122,10 @@ const ChatsPage = () => {
   const [refreshed, setRefreshed] = useState(false);
   const [userControlMenu, setUserControlMenu] = useState(null);
   const [showChatEndToast, setShowChatEndToast] = useState(false);
+  // TEMPORARY (debugging silent send failures): see the matching UserChat.js
+  // comment — nothing here listened for the backend's "socket-error" either,
+  // so a rejected sendMessage looked identical to Send doing nothing.
+  const [socketErrorMessage, setSocketErrorMessage] = useState(null);
   const [showChatEndPop, setShowChatEndPop] = useState(false);
   const prevIsRunningRef = useRef(null);
   const { userInRequest } = useSelector((state) => state.consultants);
@@ -325,6 +329,7 @@ const ChatsPage = () => {
   }, [messages, userInRequest, shopId, consultantId, chatAccepted, refreshed]);
 
   const sendChat = () => {
+    console.log("[CHAT DEBUG] send clicked:", { text, chaterIds, socketConnected: socket.connected });
     if (text.trim() === "" || !chaterIds) return;
     if (!socket.connected) {
       console.warn("Socket not connected, attempting to reconnect...");
@@ -351,6 +356,7 @@ const ChatsPage = () => {
         timestamp: new Date().toISOString(),
         tempId,
       };
+      console.log("[CHAT DEBUG] emitting sendMessage:", messageData);
       socket.emit("sendMessage", messageData);
       setText("");
       stopTyping();
@@ -660,6 +666,22 @@ const ChatsPage = () => {
       });
     }
   }, [socket]);
+
+  useEffect(() => {
+    const handleSocketError = (payload) => {
+      console.log("[CHAT DEBUG] socket-error received:", payload);
+      if (payload?.event !== "sendMessage") return;
+      const reasonText = {
+        invalid_ids: "Something went wrong identifying this chat. Please refresh and try again.",
+        invalid_payload: "Your message could not be sent. Please try again.",
+        forbidden: "You're not allowed to send a message in this chat. Please refresh and try again.",
+        unauthenticated: "Your session expired. Please refresh and try again.",
+      }[payload?.reason] || "Your message could not be sent. Please try again.";
+      setSocketErrorMessage(reasonText);
+    };
+    socket.on("socket-error", handleSocketError);
+    return () => socket.off("socket-error", handleSocketError);
+  }, []);
 
   useEffect(() => {
     if (!chatTimer.isRunning || !chatTimer.startTime) return;
@@ -1168,6 +1190,9 @@ const ChatsPage = () => {
                     placeholder="Type a message…"
                     aria-label="Message"
                     onKeyPress={(e) => {
+                      if (e.key === "Enter") {
+                        console.log("[CHAT DEBUG] enter pressed:", { text, canSend });
+                      }
                       if (e.key === "Enter" && canSend) {
                         handleComposerSend();
                       }
@@ -1204,6 +1229,11 @@ const ChatsPage = () => {
         show={showChatEndToast}
         message="Chat ended"
         onClose={() => setShowChatEndToast(false)}
+      />
+      <ReactToast
+        show={Boolean(socketErrorMessage)}
+        message={socketErrorMessage}
+        onClose={() => setSocketErrorMessage(null)}
       />
     </Fragment>
   );

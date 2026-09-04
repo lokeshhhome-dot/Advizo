@@ -289,6 +289,7 @@ const UserChat = ({
   const prevIsRunningRef = useRef(null);
   const { userDetails } = useSelector((state) => state.users);
   const { confirmChat } = useSelector((state) => state.socket);
+  const { chatTimer } = useSelector((state) => state.socket);
   const [isLock, seIsLock] = useState(false);
   const { isPartnerTyping, handleInputChange, stopTyping, partnerLabel } =
     useTypingIndicator({
@@ -298,13 +299,27 @@ const UserChat = ({
       partnerName: consultantOverview?.consultant?.fullname || "Consultant",
     });
 
+  // ROOT CAUSE of the silent send failure: startCHatHandler() below fires
+  // "acceptUserChat" (async server write of chatLock=false) and immediately
+  // (same tick, no ack) dispatches fetchUserDetailsByIds — a fire-and-forget
+  // REST poll racing an independent socket round trip, same pattern already
+  // fixed for the rating race. If that REST fetch resolves with the STALE
+  // pre-accept chatLock="true" AFTER the "chatTimer.isRunning" effect below
+  // has already (correctly) unlocked the composer, this effect re-locked it
+  // — composer silently disabled (canMessage/canSend both derive from
+  // showChatLock) for the rest of an actively-running, visibly-ticking chat,
+  // with no error anywhere: Send and Enter share the same disabled gate, so
+  // both looked identically "broken". chatTimer.isRunning is the
+  // authoritative real-time signal for whether a chat is live; a possibly-
+  // stale poll must never be allowed to override it while it says otherwise.
   useEffect(() => {
+    if (chatTimer.isRunning) return;
     if (userDetails?.data?.chatLock === "true") {
       setShowChatLock(true);
     } else {
       setShowChatLock(false);
     }
-  }, [userDetails, showChatLock]);
+  }, [userDetails, showChatLock, chatTimer.isRunning]);
 
   useEffect(() => {
     if (confirmChat) {
@@ -494,6 +509,12 @@ const UserChat = ({
 
   const sendChat = async (input = "") => {
     const finalMessage = typeof input === "string" ? input : text;
+    console.log("[CHAT DEBUG] sendChat called:", {
+      finalMessage,
+      clientId,
+      consultantId,
+      shopId,
+    });
 
     if (!finalMessage?.trim() || !clientId || !consultantId || !shopId) {
       console.log("UserChat - Missing IDs:", {
@@ -507,9 +528,13 @@ const UserChat = ({
     try {
       const liveToken =
         (localStorage.getItem("token") || authTokenFromUrl || "").trim();
+      console.log("[CHAT DEBUG] ensureSocketConnected: connecting...", {
+        hasToken: Boolean(liveToken),
+      });
       await ensureSocketConnected(clientId, null, 8000, liveToken || null);
+      console.log("[CHAT DEBUG] ensureSocketConnected: connected, socket.connected =", socket.connected);
     } catch (error) {
-      console.error("Failed to connect socket:", error?.message || error);
+      console.error("[CHAT DEBUG] ensureSocketConnected failed:", error?.message || error);
       alert(
         error?.message ||
           "Unable to connect chat. Please refresh the page and try again.",
@@ -537,6 +562,7 @@ const UserChat = ({
     };
     setChatMessagesData((prev) => [...prev, optimisticMessage]);
 
+    console.log("[CHAT DEBUG] emitting sendMessage:", messageData);
     socket.emit("sendMessage", messageData);
     setText("");
     stopTyping();
@@ -668,6 +694,7 @@ const UserChat = ({
   };
 
   const handleComposerSend = () => {
+    console.log("[CHAT DEBUG] send clicked:", { text, pendingAttachment, canSend });
     if (pendingAttachment) {
       sendAttachmentMessage();
     } else {
@@ -751,10 +778,34 @@ const UserChat = ({
     };
   }, []);
 
+  // TEMPORARY (debugging silent send failures): the backend rejects a
+  // sendMessage attempt by emitting "socket-error" — which nothing on this
+  // page previously listened for, so a rejection (bad shop/participant IDs,
+  // stale auth, etc.) looked EXACTLY like the Send button doing nothing.
+  // Surfacing it as a toast turns that silent failure into a visible,
+  // diagnosable one.
+  const [socketErrorMessage, setSocketErrorMessage] = useState(null);
+  useEffect(() => {
+    const handleSocketError = (payload) => {
+      console.log("[CHAT DEBUG] socket-error received:", payload);
+      if (payload?.event !== "sendMessage") return;
+      const reasonText = {
+        invalid_ids: "Something went wrong identifying this chat. Please refresh and try again.",
+        invalid_payload: "Your message could not be sent. Please try again.",
+        forbidden: "You're not allowed to send a message in this chat. Please refresh and try again.",
+        unauthenticated: "Your session expired. Please refresh and try again.",
+      }[payload?.reason] || "Your message could not be sent. Please try again.";
+      setSocketErrorMessage(reasonText);
+    };
+    socket.on("socket-error", handleSocketError);
+    return () => socket.off("socket-error", handleSocketError);
+  }, []);
+
   useEffect(() => {
     if (!clientId || !consultantId || !shopId) return;
 
     const handleDirectMessage = (message) => {
+      console.log("[CHAT DEBUG] receiveMessage received:", message);
       const messageShopId = String(message.shop_id || message.shopId || "");
       const currentShopId = String(shopId || "");
       const messageSenderId = String(message.senderId || "");
@@ -850,7 +901,6 @@ const UserChat = ({
     window.top.location.href = `https://${targetShop}/apps/consultly`;
   };
 
-  const { chatTimer } = useSelector((state) => state.socket);
   const { autoChatEnded } = useSelector((state) => state.socket);
   const [seconds, setSeconds] = useState(0);
   // Snapshot of `seconds` taken the instant a chat ends, before it's reset to
@@ -1222,6 +1272,9 @@ const UserChat = ({
                 disabled={!canMessage}
                 onFocus={() => scrollToBottom(true)}
                 onKeyPress={(e) => {
+                  if (e.key === "Enter") {
+                    console.log("[CHAT DEBUG] enter pressed:", { text, canSend });
+                  }
                   if (e.key === "Enter" && canSend) {
                     handleComposerSend();
                   }
@@ -1253,15 +1306,22 @@ const UserChat = ({
         message={endedToastMessage}
         onClose={() => setShowChatEndToast(false)}
       />
+      <ReactToast
+        show={Boolean(socketErrorMessage)}
+        message={socketErrorMessage}
+        onClose={() => setSocketErrorMessage(null)}
+      />
       <RatingModal
         show={Boolean(ratingPromptTxId)}
         consultationId={ratingPromptTxId}
         consultantName={consultantName}
         consultantAvatar={consultantOverview?.consultant?.profileImage}
         consultationType="chat"
+        // Only close the rating popup itself — the chat stays open behind it
+        // (showing the ended state) instead of auto-closing/navigating away
+        // the moment a rating is skipped or submitted.
         onClose={() => {
           setRatingPromptTxId(null);
-          closeOrGoBack();
         }}
       />
     </Fragment>
