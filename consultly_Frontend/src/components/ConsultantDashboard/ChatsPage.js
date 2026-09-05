@@ -478,8 +478,12 @@ const ChatsPage = () => {
   };
 
   const isAttachmentBusy = pendingAttachment?.status === "uploading";
+  // !showChatEndPop: the composer previously stayed fully interactive even
+  // while the "Consultation ended" state card was showing — messages could
+  // still be emitted for an already-completed session.
   const canSend =
     Boolean(chaterIds) &&
+    !showChatEndPop &&
     !isAttachmentBusy &&
     (Boolean(text.trim()) || pendingAttachment?.status === "ready");
 
@@ -722,6 +726,72 @@ const ChatsPage = () => {
     localStorage.removeItem("chatTimer");
     localStorage.removeItem("___U-B");
   };
+
+  // Same reliability pattern as UserChat.js / VideoCallingPage.js's existing
+  // sendBeacon-on-unload for calls: an active chat's billing must stop even
+  // if the consultant refreshes/closes without clicking "End". Reads
+  // chatTimer from localStorage (persisted by the socketSlice reducer) so
+  // it's correct regardless of when this effect closure was created. The
+  // server-side grace-period timeout (services/chatSessionManager.js) is the
+  // unconditional guarantee; this beacon just makes the common case instant.
+  const chatEndBeaconSentRef = useRef(false);
+  useEffect(() => {
+    const readActiveChatTimer = () => {
+      try {
+        const raw = localStorage.getItem("chatTimer");
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed?.isRunning || !parsed?.transactionId) return null;
+        return parsed;
+      } catch (_) {
+        return null;
+      }
+    };
+
+    const sendEndBeacon = (endby) => {
+      if (chatEndBeaconSentRef.current) return;
+      const stored = readActiveChatTimer();
+      if (!stored) return;
+      chatEndBeaconSentRef.current = true;
+      const payload = { transactionId: stored.transactionId, endby };
+      navigator.sendBeacon(
+        `${process.env.REACT_APP_BACKEND_HOST}/chat/end-session`,
+        new Blob([JSON.stringify(payload)], { type: "application/json" }),
+      );
+    };
+
+    const handleBeforeUnload = () => sendEndBeacon("consultant_page_refresh");
+    const handlePageHide = () => sendEndBeacon("consultant_page_hide");
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("pagehide", handlePageHide);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("pagehide", handlePageHide);
+    };
+  }, []);
+
+  const [connectionStatus, setConnectionStatus] = useState("connected");
+  useEffect(() => {
+    const handleOffline = () => setConnectionStatus("offline");
+    const handleOnline = () =>
+      setConnectionStatus((prev) => (prev === "offline" ? "reconnecting" : prev));
+    const handleSocketDisconnect = () =>
+      setConnectionStatus(navigator.onLine ? "reconnecting" : "offline");
+    const handleSocketConnect = () => setConnectionStatus("connected");
+
+    window.addEventListener("offline", handleOffline);
+    window.addEventListener("online", handleOnline);
+    socket.on("disconnect", handleSocketDisconnect);
+    socket.on("connect", handleSocketConnect);
+    return () => {
+      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("online", handleOnline);
+      socket.off("disconnect", handleSocketDisconnect);
+      socket.off("connect", handleSocketConnect);
+    };
+  }, []);
+
   const handlerUserControlMenu = (conversation) => {
     setUserControlMenu((prev) =>
       prev === conversation?.chatListId ? null : conversation?.chatListId,
@@ -1070,6 +1140,14 @@ const ChatsPage = () => {
                 )}
               </header>
 
+              {chatTimer.isRunning &&
+                isActiveChatUser === selectChatUser &&
+                connectionStatus !== "connected" && (
+                  <div className={styles.connectionBanner} data-status={connectionStatus}>
+                    {connectionStatus === "offline" ? "Connection lost" : "Reconnecting…"}
+                  </div>
+                )}
+
               <div className={styles.messageStream} ref={messagesAreaRef}>
                 {showChatEndPop ? (
                   <div className={styles.stateCard}>
@@ -1176,7 +1254,7 @@ const ChatsPage = () => {
                 <div className={styles.composerGroup}>
                   <AttachButton
                     onFileSelected={handleFileSelected}
-                    disabled={!chaterIds}
+                    disabled={!chaterIds || showChatEndPop}
                     className={styles.composerAttach}
                   />
                   <input
@@ -1191,9 +1269,12 @@ const ChatsPage = () => {
                     aria-label="Message"
                     onKeyPress={(e) => {
                       if (e.key === "Enter") {
-                        console.log("[CHAT DEBUG] enter pressed:", { text, canSend });
+                        console.log("[CHAT DEBUG] enter pressed:", { text, canSend, shiftKey: e.shiftKey });
                       }
-                      if (e.key === "Enter" && canSend) {
+                      // Single-line <input>, not a <textarea> — see the
+                      // matching UserChat.js comment. Shift+Enter is still
+                      // made an explicit no-op rather than sending.
+                      if (e.key === "Enter" && !e.shiftKey && canSend) {
                         handleComposerSend();
                       }
                     }}

@@ -7,14 +7,12 @@ const sendFCM = require("./firebase/sendNotification");
 const { TransactionHistroy } = require("./Modal/transactionHistroy");
 const { shopModel } = require("./Modal/shopify");
 const { missCalled } = require("./Modal/miscallasHistroy");
-const { WalletHistory } = require("./Modal/walletHistory");
 const { CallSession } = require("./Modal/callSessions");
-const { formatTime } = require("./Helper/helper");
 const { sendCallFCM } = require("./firebase/callPushNotification");
 const { ConsultantClient } = require("./Modal/consultantClient");
 const { createCallSessionManager, buildCallId, pickValidObjectId } = require("./services/callSessionManager");
+const { createChatSessionManager } = require("./services/chatSessionManager");
 const {
-  consumeMinutes,
   getCommunicationStatus,
   COMMUNICATION_DISABLED_ERROR,
 } = require("./services/subscriptionMinutes");
@@ -45,9 +43,14 @@ const chalk = require("chalk");
 const RING_TIMEOUT_MS = 15000;
 
 let callManagerInstance = null;
+let chatManagerInstance = null;
 
 function getCallManager() {
   return callManagerInstance;
+}
+
+function getChatManager() {
+  return chatManagerInstance;
 }
 
 const ioServer = (server) => {
@@ -80,6 +83,11 @@ const ioServer = (server) => {
     notifyChatsOnMinutesExhausted,
   } = callManager;
 
+  const chatManager = createChatSessionManager(io, notifyChatsOnMinutesExhausted);
+  chatManagerInstance = chatManager;
+  const { registerActiveChat, finalizeChatSession, handleChatUserDisconnect, cancelChatGraceForUser } =
+    chatManager;
+
   startOrphanCleanupJob();
   startChatAttachmentCleanupJob();
   io.use(createSocketAuthMiddleware());
@@ -89,6 +97,7 @@ const ioServer = (server) => {
 
     await registerSocketPresence(io, socket, onlineUsers);
     callManager.cancelGraceForUser(getAuthUserId(socket));
+    cancelChatGraceForUser(getAuthUserId(socket));
 
     socket.on("register", async (payload) => {
       try {
@@ -1191,6 +1200,17 @@ const ioServer = (server) => {
           type: "chat",
         });
 
+        // Tracks this session so a disconnect (refresh/close/network loss —
+        // see the "disconnect" handler below) can auto-finalize billing via
+        // the same idempotent path "endChat" uses, instead of leaving it
+        // billing forever if the client never sends an explicit end.
+        registerActiveChat({
+          transactionId: transaction._id,
+          userId,
+          consultantId,
+          shopId,
+        });
+
         const timerPayload = {
           transactionId: transaction._id,
           startTime: transaction.startTime,
@@ -1289,8 +1309,6 @@ const ioServer = (server) => {
 
     socket.on("endChat", async (data) => {
       const { transactionId, userId, consultantId, shopId } = data || {};
-      const session = await mongoose.startSession();
-      session.startTransaction();
       try {
         if (
           !(await assertTransactionParticipant(socket, {
@@ -1301,123 +1319,19 @@ const ioServer = (server) => {
             event: "endChat",
           }))
         ) {
-          await session.abortTransaction();
           return;
         }
 
-        const transaction =
-          await TransactionHistroy.findById(transactionId).session(session);
-        if (!transaction) throw new Error("Transaction not found");
-        if (transaction.status === "completed") {
-          await session.abortTransaction();
-          return;
-        }
-
-        const consultantCost =
-          await User.findById(consultantId).session(session);
-        if (!consultantCost) throw new Error("Consultant not found");
-
-        const shop = await shopModel.findById(shopId).session(session);
-        if (!shop) throw new Error("Shop not found");
-        const user_ = await User.findById(userId).session(session);
-        if (!user_) throw new Error("User not found");
-        const endTime = new Date();
-        const totalSeconds = Math.floor(
-          (endTime - new Date(transaction.startTime)) / 1000,
-        );
-        const perSecondCost = consultantCost.chatPerMinute / 60;
-        const totalAmount = Number((totalSeconds * perSecondCost).toFixed(2));
-        const adminCommission =
-          (totalAmount * Number(shop.adminPersenTage)) / 100;
-        const consultantShare = totalAmount - adminCommission;
-        const shopShare = adminCommission;
-        transaction.endTime = endTime;
-        transaction.totalSeconds = totalSeconds;
-        transaction.totalAmount = totalAmount;
-        transaction.status = "completed";
-        await transaction.save({ session });
-        await User.findByIdAndUpdate(
-          userId,
-          { $inc: { walletBalance: -totalAmount } },
-          { session },
-        );
-        await User.findByIdAndUpdate(
-          consultantId,
-          { $inc: { walletBalance: consultantShare } },
-          { session },
-        );
-        await shopModel.findByIdAndUpdate(
-          shopId,
-          { $inc: { adminWalletBalance: shopShare } },
-          { session },
-        );
-
-        await TransactionHistroy.findByIdAndUpdate(
-          transactionId,
-          {
-            $inc: {
-              adminAmount: adminCommission,
-              consultantAmount: consultantShare,
-              amount: totalAmount,
-            },
-          },
-          { session },
-        );
-
-        await User.findByIdAndUpdate(
-          userId,
-          { $set: { isChatAccepted: "chatEnd", chatLock: true } },
-          { session },
-        );
-        await WalletHistory.create({
-          userId: userId,
-          shop_id: shopId,
-          amount: totalAmount,
-          transactionType: "usage",
-          referenceType: "chat",
-          direction: "debit",
-          description: `Chat ended for ${formatTime(totalSeconds)} minutes`,
-          status: "success",
-        });
-        await WalletHistory.create({
-          userId: consultantId,
-          shop_id: shopId,
-          amount: consultantShare,
-          transactionType: "usage",
-          referenceType: "chat",
-          direction: "credit",
-          description: `Chat ended for ${formatTime(totalSeconds)} minutes`,
-          status: "success",
-        });
-
-        // Deduct communication minutes from the shop's subscription (billed
-        // per started minute of the chat).
-        await consumeMinutes(shopId, totalSeconds, session);
-
-        await session.commitTransaction();
-
-        io.to(userId).emit("chatEnded", {
-          transactionId,
-          totalSeconds,
-          totalAmount,
+        // Same idempotent finalize path a disconnect-timeout or the
+        // beforeunload/pagehide REST endpoint would also use for this exact
+        // transactionId — whichever gets there first performs the billing
+        // math; the rest see { skipped: true, reason: "already_completed" }.
+        await finalizeChatSession(transactionId, {
           reason: "ended",
+          endedBy: getAuthUserId(socket) === String(userId) ? "user_end_chat" : "consultant_end_chat",
         });
-        io.to(consultantId).emit("chatEnded", {
-          transactionId,
-          totalSeconds,
-          totalAmount,
-          reason: "ended",
-        });
-
-
-        // This chat's consumption may have emptied the shop's minute pool —
-        // end any other chats still running on it (fire-and-forget).
-        notifyChatsOnMinutesExhausted(shopId).catch(() => { });
       } catch (error) {
-        console.log("Transaction error:", error);
-        await session.abortTransaction();
-      } finally {
-        session.endSession();
+        console.log("[socket] endChat error:", error.message);
       }
     });
 
@@ -1454,6 +1368,14 @@ const ioServer = (server) => {
 
       try {
         await unregisterSocketPresence(io, socket, onlineUsers, handleUserDisconnect);
+        // Layer 1+2 of the chat reliability requirement: Socket.IO's own
+        // transport heartbeat (pingInterval/pingTimeout above) already spent
+        // up to ~15s confirming this connection is really gone before this
+        // fires; handleChatUserDisconnect starts a further grace period
+        // (services/chatSessionManager.js) before auto-ending any chat this
+        // user was actively billing, exactly mirroring how calls already
+        // handle a disconnect via callManager.handleUserDisconnect above.
+        handleChatUserDisconnect(getAuthUserId(socket), reason);
       } catch (err) {
         console.error("Error during socket disconnect cleanup:", err);
       }
@@ -1461,4 +1383,4 @@ const ioServer = (server) => {
   });
 };
 
-module.exports = { ioServer, getCallManager };
+module.exports = { ioServer, getCallManager, getChatManager };

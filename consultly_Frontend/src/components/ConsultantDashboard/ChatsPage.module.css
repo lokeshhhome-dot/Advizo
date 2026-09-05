@@ -522,6 +522,26 @@
     background: var(--ds-danger-soft);
 }
 
+/* Small, non-blocking connection indicator — only rendered while a chat is
+   actively billing and the connection isn't healthy (see ChatsPage.js). */
+.connectionBanner {
+    flex-shrink: 0;
+    padding: 6px 20px;
+    font-size: 12px;
+    font-weight: 650;
+    text-align: center;
+}
+
+.connectionBanner[data-status="offline"] {
+    background: var(--ds-danger-soft);
+    color: var(--ds-danger);
+}
+
+.connectionBanner[data-status="reconnecting"] {
+    background: var(--ds-brand-soft);
+    color: var(--ds-brand);
+}
+
 /* ============================== MESSAGE STREAM ============================ */
 .messageStream {
     flex: 1;

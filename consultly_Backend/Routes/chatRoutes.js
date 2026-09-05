@@ -7,6 +7,7 @@ const {
     uploadChatAttachment,
     getAttachmentUrl,
     serveAttachmentFile,
+    endActiveChatSession,
 } = require("../Controller/chatController");
 const { optionalAuthenticateToken } = require("../Auth/signup-signin");
 const chatRoutes = express.Router();
@@ -62,5 +63,13 @@ chatRoutes.get("/attachment-url/:messageId", optionalAuthenticateToken, getAttac
 // No auth middleware — hit directly by <img src>/new-tab links; gated by the
 // signed token inside serveAttachmentFile instead.
 chatRoutes.get("/attachment-file/:messageId", serveAttachmentFile);
+
+// Mirrors /api/call/end-session (videoCallRotes.js) — fired via
+// navigator.sendBeacon on beforeunload/pagehide so an active chat's billing
+// stops reliably even if the tab/browser disappears before a normal socket
+// disconnect would be detected. optionalAuthenticateToken here, same as the
+// call route — endActiveChatSession itself hard-denies via
+// authorizeChatParticipant if no authenticated participant resolves.
+chatRoutes.post("/end-session", optionalAuthenticateToken, endActiveChatSession);
 
 module.exports = chatRoutes;

@@ -296,6 +296,26 @@
     transform: scale(0.96);
 }
 
+/* Small, non-blocking connection indicator — only rendered while a chat is
+   actively billing and the connection isn't healthy (see UserChat.js). */
+.connectionBanner {
+    flex-shrink: 0;
+    padding: 6px 18px;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.connectionBanner[data-status="offline"] {
+    background: var(--u-danger-soft);
+    color: var(--u-danger);
+}
+
+.connectionBanner[data-status="reconnecting"] {
+    background: var(--u-brand-soft);
+    color: var(--u-brand);
+}
+
 /* --------------------------------- Stream ---------------------------------- */
 
 .stream {

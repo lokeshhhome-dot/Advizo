@@ -507,7 +507,20 @@ const UserChat = ({
     }
   }, [socketMessages, clientId, consultantId, shopId, consultantOverview]);
 
-  const sendChat = async (input = "") => {
+  // ROOT CAUSE of "text never sends" (image/PDF unaffected — they go through
+  // sendAttachmentMessage, not this function): this used to be called
+  // directly as the button's onClick, which React invokes with the click
+  // SyntheticEvent as the first arg — an object, not a string, so the
+  // typeof check below correctly fell through to the `text` state.
+  // handleComposerSend() (added for attachments) instead calls sendChat()
+  // with NO arguments, so the "" default parameter satisfies
+  // `typeof input === "string"` and is used as-is — meaning finalMessage was
+  // ALWAYS "" on every normal Send/Enter, unconditionally short-circuiting
+  // below regardless of what the user typed. Defaulting to null instead
+  // fixes both call sites: sendChat() -> null -> falls through to `text`;
+  // sendChat("explicit string") from the pre-chat Start-chat button is
+  // unaffected either way.
+  const sendChat = async (input = null) => {
     const finalMessage = typeof input === "string" ? input : text;
     console.log("[CHAT DEBUG] sendChat called:", {
       finalMessage,
@@ -1019,6 +1032,82 @@ const UserChat = ({
     setRefreshed((prev) => !prev);
   };
 
+  // ---------------------------------------------------------------------
+  // Chat reliability: refresh / tab-close / browser-close must end an
+  // ACTIVE consultation's billing, mirroring VideoCallingPage.js's existing
+  // sendBeacon-on-unload pattern for calls (Controller/videoCallController.js
+  // endActiveCall -> here, Controller/chatController.js endActiveChatSession
+  // -> POST /api/chat/end-session). Reads chatTimer straight from
+  // localStorage (the socketSlice reducer already persists it there on
+  // start/stop) rather than a captured React closure, so it's correct
+  // however long this tab has been open. The primary, unconditional
+  // guarantee is still server-side: services/chatSessionManager.js starts a
+  // grace-period timer the moment this socket disconnects for ANY reason and
+  // auto-finalizes billing if it never reconnects — this beacon is a faster
+  // best-effort path that reduces that window to near-zero when it succeeds.
+  const chatEndBeaconSentRef = useRef(false);
+  useEffect(() => {
+    const readActiveChatTimer = () => {
+      try {
+        const raw = localStorage.getItem("chatTimer");
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed?.isRunning || !parsed?.transactionId) return null;
+        return parsed;
+      } catch (_) {
+        return null;
+      }
+    };
+
+    const sendEndBeacon = (endby) => {
+      if (chatEndBeaconSentRef.current) return; // one logical end request only
+      const stored = readActiveChatTimer();
+      if (!stored) return;
+      chatEndBeaconSentRef.current = true;
+      const payload = { transactionId: stored.transactionId, endby };
+      navigator.sendBeacon(
+        `${process.env.REACT_APP_BACKEND_HOST}/chat/end-session`,
+        new Blob([JSON.stringify(payload)], { type: "application/json" }),
+      );
+    };
+
+    const handleBeforeUnload = () => sendEndBeacon("user_page_refresh");
+    const handlePageHide = () => sendEndBeacon("user_page_hide");
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("pagehide", handlePageHide);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("pagehide", handlePageHide);
+    };
+  }, []);
+
+  // Small, non-blocking connection indicator — only ever shown while a chat
+  // is actively billing (chatTimer.isRunning). Does not itself end the
+  // chat on the first offline blip; the server-side grace-period timeout
+  // above is the authoritative fallback for a connection that never
+  // recovers.
+  const [connectionStatus, setConnectionStatus] = useState("connected");
+  useEffect(() => {
+    const handleOffline = () => setConnectionStatus("offline");
+    const handleOnline = () =>
+      setConnectionStatus((prev) => (prev === "offline" ? "reconnecting" : prev));
+    const handleSocketDisconnect = () =>
+      setConnectionStatus(navigator.onLine ? "reconnecting" : "offline");
+    const handleSocketConnect = () => setConnectionStatus("connected");
+
+    window.addEventListener("offline", handleOffline);
+    window.addEventListener("online", handleOnline);
+    socket.on("disconnect", handleSocketDisconnect);
+    socket.on("connect", handleSocketConnect);
+    return () => {
+      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("online", handleOnline);
+      socket.off("disconnect", handleSocketDisconnect);
+      socket.off("connect", handleSocketConnect);
+    };
+  }, []);
+
   const messageGroups = groupMessagesByDay(chatMessagesData);
   const showDaySeparators = messageGroups.length > 1;
   const isActive = Boolean(consultantOverview?.consultant?.isActive);
@@ -1109,6 +1198,12 @@ const UserChat = ({
               </div>
             )}
           </div>
+
+          {chatTimer.isRunning && connectionStatus !== "connected" && (
+            <div className={styles.connectionBanner} data-status={connectionStatus}>
+              {connectionStatus === "offline" ? "Connection lost" : "Reconnecting…"}
+            </div>
+          )}
 
           {/* Conversation stream */}
           <div className={styles.stream} ref={messagesAreaRef}>
@@ -1273,9 +1368,14 @@ const UserChat = ({
                 onFocus={() => scrollToBottom(true)}
                 onKeyPress={(e) => {
                   if (e.key === "Enter") {
-                    console.log("[CHAT DEBUG] enter pressed:", { text, canSend });
+                    console.log("[CHAT DEBUG] enter pressed:", { text, canSend, shiftKey: e.shiftKey });
                   }
-                  if (e.key === "Enter" && canSend) {
+                  // Note: this is a single-line <input>, not a <textarea> — it
+                  // cannot hold a newline character regardless of this check.
+                  // Shift+Enter is still made an explicit no-op here (rather
+                  // than sending) so it behaves correctly if this is ever
+                  // upgraded to a multi-line composer later.
+                  if (e.key === "Enter" && !e.shiftKey && canSend) {
                     handleComposerSend();
                   }
                 }}

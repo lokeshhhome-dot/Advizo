@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const path = require("path");
 const { MessageModal } = require("../Modal/messageSchema");
 const { ChatList } = require("../Modal/chatListSchema");
+const { TransactionHistroy } = require("../Modal/transactionHistroy");
 const { authorizeChatParticipant, resolveAuthenticatedUserId } = require("../Auth/auth");
 const { validateAttachmentFile } = require("../Utils/attachmentValidation");
 const { signAttachmentToken, verifyAttachmentToken } = require("../Utils/attachmentSignature");
@@ -257,10 +258,79 @@ const serveAttachmentFile = async (request, response) => {
     }
 };
 
+/**
+ * POST /api/chat/end-session
+ * Body: { transactionId }
+ * Mirrors Controller/videoCallController.js's endActiveCall — the same
+ * "reliable session termination on refresh/close/network-loss" pattern
+ * already used for calls (browser fires this via navigator.sendBeacon on
+ * beforeunload/pagehide; see UserChat.js/ChatsPage.js). Never trusts
+ * userId/consultantId/shopId from the client: they're derived from the
+ * transaction record itself, then authorizeChatParticipant resolves the
+ * REQUESTER's identity from their own auth token/session and checks they
+ * are actually a participant — the exact same helper getChatHistory already
+ * uses. Idempotent via chatSessionManager.finalizeChatSession, so this can
+ * safely race with an explicit "endChat" socket emit or a disconnect-
+ * timeout for the same transactionId — only one performs the billing.
+ */
+const endActiveChatSession = async (request, response) => {
+    try {
+        const { transactionId } = request.body || {};
+        if (!mongoose.Types.ObjectId.isValid(transactionId)) {
+            return response.status(400).json({ success: false, message: "Invalid transaction ID" });
+        }
+
+        const transaction = await TransactionHistroy.findById(transactionId).select(
+            "senderId receiverId shop_id status type",
+        );
+        if (!transaction) {
+            return response.status(404).json({ success: false, message: "Consultation not found" });
+        }
+        if (transaction.type !== "chat") {
+            return response.status(400).json({ success: false, message: "Not a chat consultation" });
+        }
+
+        if (
+            !(await authorizeChatParticipant(request, response, {
+                shopId: String(transaction.shop_id),
+                userId: String(transaction.senderId),
+                consultantId: String(transaction.receiverId),
+            }))
+        ) {
+            return; // response already sent
+        }
+
+        if (transaction.status === "completed") {
+            return response.status(200).json({ success: true, skipped: true, reason: "already_completed" });
+        }
+
+        const { getChatManager } = require("../server-io");
+        const chatManager = getChatManager();
+        if (!chatManager) {
+            return response.status(503).json({ success: false, message: "Chat service not ready" });
+        }
+
+        const authUserId = await resolveAuthenticatedUserId(request);
+        const result = await chatManager.finalizeChatSession(transactionId, {
+            reason: "page_unload",
+            endedBy:
+                String(authUserId) === String(transaction.senderId)
+                    ? "user_page_unload"
+                    : "consultant_page_unload",
+        });
+
+        return response.status(200).json({ success: Boolean(result?.success || result?.skipped), ...result });
+    } catch (error) {
+        console.error("endActiveChatSession error:", error);
+        return response.status(500).json({ success: false, message: "Failed to end chat" });
+    }
+};
+
 module.exports = {
     getChatHistory,
     getUserInRecentChat,
     uploadChatAttachment,
     getAttachmentUrl,
     serveAttachmentFile,
+    endActiveChatSession,
 };
