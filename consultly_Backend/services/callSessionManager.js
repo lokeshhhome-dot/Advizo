@@ -444,7 +444,7 @@ const createCallSessionManager = (io) => {
                 referenceType: effectiveCallType,
                 transactionType: "usage",
                 direction: "debit",
-                description: `Call ended (${reason}) for ${formatTime(totalSeconds)}`,
+                description: `Call ended  for ${formatTime(totalSeconds)}`,
                 status: "success",
               },
               {
@@ -454,7 +454,7 @@ const createCallSessionManager = (io) => {
                 referenceType: effectiveCallType,
                 transactionType: "usage",
                 direction: "credit",
-                description: `Call ended (${reason}) for ${formatTime(totalSeconds)}`,
+                description: `Call ended  for ${formatTime(totalSeconds)}`,
                 status: "success",
               },
             ],
