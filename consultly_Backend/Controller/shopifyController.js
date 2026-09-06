@@ -1081,7 +1081,7 @@ const proxyShopifyConsultantPage = async (req, res) => {
               <iframe
                 id="agora-iframe"
                 src="${consultantLoginSrc}"
-                style="border:none;width:100%;min-height:200px;display:block;"
+                style="border:none;width:100%;min-height:500px;display:block;"
               ></iframe>
             </main>
 
@@ -1094,7 +1094,7 @@ const proxyShopifyConsultantPage = async (req, res) => {
                 checkOrigin: false,
                 autoResize: true,
                 heightCalculationMethod: "bodyScroll",
-                minHeight: 200,
+                minHeight: 500,
               }, "#agora-iframe");
 
               (function () {
