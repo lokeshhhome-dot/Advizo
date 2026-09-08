@@ -3,9 +3,9 @@
  *
  * Card visual design: premium "consultant profile" card (soft green header
  * band, overlapping avatar, compact info hierarchy) — colors/spacing kept
- * within the .consultly-consultant-card namespace so nothing here can leak
- * onto the merchant's theme. `.consultly-consultant` (the card root) and
- * `.consultly-consultant__avatar` (the avatar <img>) are LOAD-BEARING class
+ * within the .advizo-consultant-card namespace so nothing here can leak
+ * onto the merchant's theme. `.advizo-consultant` (the card root) and
+ * `.advizo-consultant__avatar` (the avatar <img>) are LOAD-BEARING class
  * names read directly by consultant-card.js's querySelectorAll calls — they
  * are kept on the new markup unchanged so no JS selector had to change.
  * `[data-action]` on each channel button is the other JS-read hook, also
@@ -13,7 +13,7 @@
  * JS queries them by name.
  */
 
-.consultly-consultant-card {
+.advizo-consultant-card {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
     Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -26,7 +26,7 @@
   padding: 40px 0;
 }
 
-.consultly-consultant-card__heading {
+.advizo-consultant-card__heading {
   font-size: 28px;
   font-weight: 700;
   color: #10231c;
@@ -35,14 +35,14 @@
 
 /* ---------- loading / empty / error states ---------- */
 
-.consultly-consultant-card__placeholder {
+.advizo-consultant-card__placeholder {
   color: #5c6b64;
   font-size: 14px;
   padding: 24px 0;
   text-align: center;
 }
 
-.consultly-visually-hidden {
+.advizo-visually-hidden {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -56,27 +56,27 @@
 
 /* ---------- skeleton cards ----------
    Deliberately built from the SAME structural classes as the real card
-   (.consultly-consultant / __header-band / __avatar-wrap / __body /
+   (.advizo-consultant / __header-band / __avatar-wrap / __body /
    __actions below) with only the inner content swapped for neutral
-   .consultly-skeleton blocks — so its width/height/radius/gap can never
+   .advizo-skeleton blocks — so its width/height/radius/gap can never
    drift out of sync with the real card, and swapping one for the other
    causes no layout shift. */
 
-.consultly-consultant--skeleton {
+.advizo-consultant--skeleton {
   cursor: default;
 }
 
-.consultly-skeleton {
+.advizo-skeleton {
   display: block;
   border-radius: 6px;
   background: linear-gradient(90deg, #e7e4da 0%, #f4f2ea 50%, #e7e4da 100%);
   background-size: 200% 100%;
-  animation: consultlySkeletonShimmer 1.5s ease-in-out infinite;
+  animation: advizoSkeletonShimmer 1.5s ease-in-out infinite;
 }
 
 /* Sits on the tinted header band, not the white body — a darker/translucent
    sweep reads correctly there instead of a mismatched pale patch. */
-.consultly-skeleton--category {
+.advizo-skeleton--category {
   width: 72px;
   height: 10px;
   margin-top: 2px;
@@ -90,7 +90,7 @@
   background-size: 200% 100%;
 }
 
-.consultly-skeleton--avatar {
+.advizo-skeleton--avatar {
   width: 66px;
   height: 66px;
   border-radius: 50%;
@@ -98,38 +98,38 @@
   box-sizing: border-box;
 }
 
-.consultly-skeleton--name {
+.advizo-skeleton--name {
   width: 68%;
   height: 14px;
 }
 
-.consultly-skeleton--meta {
+.advizo-skeleton--meta {
   width: 48%;
   height: 11px;
 }
 
-.consultly-skeleton--badge {
+.advizo-skeleton--badge {
   align-self: flex-start;
   width: 46px;
   height: 18px;
   border-radius: 6px;
 }
 
-.consultly-skeleton--availability {
+.advizo-skeleton--availability {
   align-self: flex-start;
   width: 62%;
   height: 22px;
   border-radius: 9px;
 }
 
-.consultly-skeleton--action {
+.advizo-skeleton--action {
   flex: 1;
   min-width: 0;
   min-height: 44px;
   border-radius: 8px;
 }
 
-@keyframes consultlySkeletonShimmer {
+@keyframes advizoSkeletonShimmer {
   0% {
     background-position: 200% 0;
   }
@@ -144,11 +144,11 @@
    excluded so the 3 loading placeholders appear together, immediately,
    with a stable layout instead of staggering in. consultant-card.js sets
    animation-delay per real item for the actual stagger timing. */
-.consultly-consultant-card__item:not(.consultly-consultant-card__item--skeleton) {
-  animation: consultlyCardEnter 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+.advizo-consultant-card__item:not(.advizo-consultant-card__item--skeleton) {
+  animation: advizoCardEnter 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-@keyframes consultlyCardEnter {
+@keyframes advizoCardEnter {
   from {
     opacity: 0;
     transform: translateY(8px);
@@ -160,17 +160,17 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .consultly-skeleton {
+  .advizo-skeleton {
     animation: none;
   }
 
-  .consultly-consultant-card__item:not(.consultly-consultant-card__item--skeleton) {
+  .advizo-consultant-card__item:not(.advizo-consultant-card__item--skeleton) {
     animation: none;
   }
 }
 
-.consultly-consultant-card__empty,
-.consultly-consultant-card__error {
+.advizo-consultant-card__empty,
+.advizo-consultant-card__error {
   max-width: 560px;
   margin: 0 auto;
   background: #ffffff;
@@ -181,15 +181,15 @@
   text-align: center;
 }
 
-.consultly-consultant-card__empty-title {
+.advizo-consultant-card__empty-title {
   font-size: 16px;
   font-weight: 700;
   color: #10231c;
   margin: 0 0 8px;
 }
 
-.consultly-consultant-card__empty-text,
-.consultly-consultant-card__error p {
+.advizo-consultant-card__empty-text,
+.advizo-consultant-card__error p {
   font-size: 14px;
   color: #5c6b64;
   margin: 0;
@@ -198,13 +198,13 @@
 
 /* ---------- grid ---------- */
 
-.consultly-consultant-card__grid {
+.advizo-consultant-card__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(288px, 1fr));
   gap: 1rem;
 }
 
-.consultly-consultant-card__item {
+.advizo-consultant-card__item {
   min-width: 0;
   display: flex;
 }
@@ -221,7 +221,7 @@
    config — see its own comment for how that stays "override only what was
    explicitly set". */
 
-.consultly-consultant {
+.advizo-consultant {
   width: 100%;
   max-width: 288px;
   box-sizing: border-box;
@@ -241,7 +241,7 @@
     border-color 0.25s ease;
 }
 
-.consultly-consultant:hover {
+.advizo-consultant:hover {
   border-color: rgba(20, 86, 60, 0.35);
   box-shadow: 0 2px 6px rgba(16, 35, 28, 0.06),
     0 20px 40px -20px rgba(16, 35, 28, 0.4);
@@ -249,7 +249,7 @@
 
 /* ---------- header band + overlapping avatar ---------- */
 
-.consultly-consultant__header-band {
+.advizo-consultant__header-band {
   position: relative;
   height: 64px;
   background: var(--consultant-card-header-bg, linear-gradient(135deg, #dcece3, #eef5f0));
@@ -260,7 +260,7 @@
   box-sizing: border-box;
 }
 
-.consultly-consultant__category {
+.advizo-consultant__category {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas,
     "Liberation Mono", monospace;
   font-size: 9.5px;
@@ -274,7 +274,7 @@
   max-width: 100%;
 }
 
-.consultly-consultant__avatar-wrap {
+.advizo-consultant__avatar-wrap {
   position: relative;
   flex-shrink: 0;
   margin: -30px 0 0 16px;
@@ -282,7 +282,7 @@
   height: 66px;
 }
 
-.consultly-consultant__avatar {
+.advizo-consultant__avatar {
   display: block;
   width: 66px;
   height: 66px;
@@ -304,7 +304,7 @@
    the avatar's already-shifted lower half — a real collision, not a
    stylistic overlap. .body starts in normal flow, immediately after the
    avatar's shifted bottom edge, so nothing behind the avatar is hidden. */
-.consultly-consultant__body {
+.advizo-consultant__body {
   flex: 1;
   padding: 0 16px 16px;
   display: flex;
@@ -312,7 +312,7 @@
   gap: 11px;
 }
 
-.consultly-consultant__name {
+.advizo-consultant__name {
   font-size: 17px;
   font-weight: 600;
   color: var(--consultant-card-name-color, #10231c);
@@ -324,7 +324,7 @@
   min-width: 0;
 }
 
-.consultly-consultant__meta {
+.advizo-consultant__meta {
   font-size: 12px;
   color: var(--consultant-card-supporting-color, #5c6b64);
   margin: 0;
@@ -339,7 +339,7 @@
 /* Neutral "New" placeholder, not a star rating — there is no real
    rating/session-count data anywhere in the API response, so no number is
    shown here (see ratingMarkup's own comment in consultant-card.js). */
-.consultly-consultant__rating-badge {
+.advizo-consultant__rating-badge {
   align-self: flex-start;
   display: inline-flex;
   align-items: center;
@@ -355,7 +355,7 @@
 
 /* ---------- availability strip ---------- */
 
-.consultly-consultant__availability {
+.advizo-consultant__availability {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -367,35 +367,35 @@
   color: #10231c;
 }
 
-.consultly-consultant__availability--online {
+.advizo-consultant__availability--online {
   background: #f4f8f6;
 }
 
-.consultly-consultant__availability--busy {
+.advizo-consultant__availability--busy {
   background: #fdf4e3;
 }
 
-.consultly-consultant__availability--offline {
+.advizo-consultant__availability--offline {
   background: #f4f5f4;
   color: #5c6b64;
 }
 
-.consultly-consultant__availability-dot {
+.advizo-consultant__availability-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.consultly-consultant__availability--online .consultly-consultant__availability-dot {
+.advizo-consultant__availability--online .advizo-consultant__availability-dot {
   background: var(--consultant-card-online, #2f9e6a);
 }
 
-.consultly-consultant__availability--busy .consultly-consultant__availability-dot {
+.advizo-consultant__availability--busy .advizo-consultant__availability-dot {
   background: var(--consultant-card-busy, #e0a30b);
 }
 
-.consultly-consultant__availability--offline .consultly-consultant__availability-dot {
+.advizo-consultant__availability--offline .advizo-consultant__availability-dot {
   background: var(--consultant-card-offline, #9aa5a0);
 }
 
@@ -405,7 +405,7 @@
    when consultants in the same grid row have different amounts of meta
    text, every card's action buttons still land on the same baseline
    instead of the row height varying with content length. */
-.consultly-consultant__actions {
+.advizo-consultant__actions {
   display: flex;
   gap: 6px;
   margin-top: auto;
@@ -416,7 +416,7 @@
    each button shows its own icon+label row plus its OWN real price
    underneath, matching how the Consultant Profile modal already shows all
    three. min-height (not a fixed height) so the price row doesn't clip. */
-.consultly-consultant-card__action {
+.advizo-consultant-card__action {
   flex: 1;
   min-width: 0;
   min-height: 44px;
@@ -440,17 +440,17 @@
 
 /* Chat, Call, and Video are each independently colorable (admin-facing
    "Chat/Call/Video button bg/text"). */
-.consultly-consultant-card__action--chat {
+.advizo-consultant-card__action--chat {
   background: var(--consultant-card-chat-bg, #ffffff);
   color: var(--consultant-card-chat-text, #10231c);
 }
 
-.consultly-consultant-card__action--voice {
+.advizo-consultant-card__action--voice {
   background: var(--consultant-card-call-bg, #ffffff);
   color: var(--consultant-card-call-text, #10231c);
 }
 
-.consultly-consultant-card__action--video {
+.advizo-consultant-card__action--video {
   background: var(--consultant-card-video-bg, #ffffff);
   color: var(--consultant-card-video-text, #10231c);
 }
@@ -460,30 +460,30 @@
    (which vary per chat/call/video via the rules above) are simply never
    touched, instead of trying to "restore" them with a value that would
    have needed to duplicate whichever of those three applies. */
-.consultly-consultant-card__action:not([aria-disabled="true"]):hover {
+.advizo-consultant-card__action:not([aria-disabled="true"]):hover {
   border-color: var(--consultant-card-button-hover, #14563c);
   color: var(--consultant-card-button-hover, #14563c);
   background: #f4f8f6;
 }
 
-.consultly-consultant-card__action:not([aria-disabled="true"]):active {
+.advizo-consultant-card__action:not([aria-disabled="true"]):active {
   background: #eef5f0;
 }
 
 /* aria-disabled (not the disabled attribute) so the click still fires and
    the handler can explain why via a toast — same reasoning as before. */
-.consultly-consultant-card__action[aria-disabled="true"] {
+.advizo-consultant-card__action[aria-disabled="true"] {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.consultly-consultant-card__action-row {
+.advizo-consultant-card__action-row {
   display: flex;
   align-items: center;
   gap: 5px;
 }
 
-.consultly-consultant-card__action-icon {
+.advizo-consultant-card__action-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -491,12 +491,12 @@
   color: currentColor;
 }
 
-.consultly-consultant-card__action-icon svg {
+.advizo-consultant-card__action-icon svg {
   width: 15px;
   height: 15px;
 }
 
-.consultly-consultant-card__action-label {
+.advizo-consultant-card__action-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -506,14 +506,14 @@
    intentionally its own color (--consultant-card-price-color) rather than
    inheriting the button's own chat/call/video text color, matching the
    dedicated "Price" field in the admin appearance settings. */
-.consultly-consultant-card__action-amount {
+.advizo-consultant-card__action-amount {
   font-size: 11px;
   color: var(--consultant-card-price-color, #7b8a83);
 }
 
 /* ---------- toast (communication-disabled notice) ---------- */
 
-.consultly-consultant-card__toast {
+.advizo-consultant-card__toast {
   position: fixed;
   top: 20px;
   right: 20px;
@@ -531,7 +531,7 @@
   transition: all 0.3s ease;
 }
 
-.consultly-consultant-card__toast.is-visible {
+.advizo-consultant-card__toast.is-visible {
   opacity: 1;
   transform: translateY(0);
 }
@@ -539,25 +539,25 @@
 /* ---------- responsive ---------- */
 
 @media (max-width: 767.98px) {
-  .consultly-consultant-card__heading {
+  .advizo-consultant-card__heading {
     font-size: 22px;
   }
 
-  .consultly-consultant-card__grid {
+  .advizo-consultant-card__grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .consultly-consultant {
+  .advizo-consultant {
     max-width: none;
   }
 }
 
 @media (max-width: 575.98px) {
-  .consultly-consultant-card {
+  .advizo-consultant-card {
     padding: 28px 0;
   }
 
-  .consultly-consultant__name {
+  .advizo-consultant__name {
     font-size: 16px;
   }
 }
@@ -568,10 +568,10 @@
    consultant-profile.js already renders (name/image/experience/languages/
    availability/about/expertise/consultation actions) — see that porting note
    in consultant-card.js. Fully self-contained/scoped under
-   .consultly-profile-modal* so it can't leak onto the merchant's theme.
+   .advizo-profile-modal* so it can't leak onto the merchant's theme.
    ========================================================================== */
 
-.consultly-profile-modal-backdrop {
+.advizo-profile-modal-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(16, 35, 28, 0.5);
@@ -589,34 +589,34 @@
     max(24px, env(safe-area-inset-left));
 }
 
-.consultly-profile-modal-backdrop[hidden] {
+.advizo-profile-modal-backdrop[hidden] {
   display: none;
 }
 
 /* Entrance: backdrop fades, panel settles in with a small scale/translate —
    subtle on purpose (section 15), never on close (closing just re-adds
    [hidden], no exit transition to keep the affordance instant). */
-.consultly-profile-modal-backdrop {
-  animation: consultlyProfileFadeIn 0.18s ease-out;
+.advizo-profile-modal-backdrop {
+  animation: advizoProfileFadeIn 0.18s ease-out;
 }
 
-.consultly-profile-modal {
-  animation: consultlyProfileScaleIn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+.advizo-profile-modal {
+  animation: advizoProfileScaleIn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-@keyframes consultlyProfileFadeIn {
+@keyframes advizoProfileFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
-@keyframes consultlyProfileScaleIn {
+@keyframes advizoProfileScaleIn {
   from { opacity: 0; transform: translateY(10px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .consultly-profile-modal-backdrop,
-  .consultly-profile-modal {
+  .advizo-profile-modal-backdrop,
+  .advizo-profile-modal {
     animation: none;
   }
 }
@@ -628,7 +628,7 @@
    Flex column with exactly one flexing/scrolling child (.body): header and
    footer are flex-shrink:0 siblings, so they're never pushed off-screen and
    the whole panel never scrolls as a unit. */
-.consultly-profile-modal {
+.advizo-profile-modal {
   position: relative;
   width: 100%;
   max-width: 840px;
@@ -645,7 +645,7 @@
   overflow: hidden;
 }
 
-.consultly-profile-modal__close {
+.advizo-profile-modal__close {
   position: absolute;
   top: 16px;
   right: 16px;
@@ -663,24 +663,24 @@
   transition: background 0.15s ease, color 0.15s ease;
 }
 
-.consultly-profile-modal__close:hover {
+.advizo-profile-modal__close:hover {
   background: #f4f8f6;
   color: #14563c;
 }
 
-.consultly-profile-modal__state {
+.advizo-profile-modal__state {
   padding: 48px 16px;
   text-align: center;
   color: #5c6b64;
   font-size: 14px;
 }
 
-.consultly-profile-modal__state p {
+.advizo-profile-modal__state p {
   margin: 0 0 12px;
   line-height: 1.6;
 }
 
-.consultly-profile-modal__retry {
+.advizo-profile-modal__retry {
   background: #14563c;
   color: #ffffff;
   border: none;
@@ -691,13 +691,13 @@
   cursor: pointer;
 }
 
-.consultly-profile-modal__retry:hover {
+.advizo-profile-modal__retry:hover {
   background: #0d3a28;
 }
 
 /* ---- header (fixed — flex-shrink:0, never scrolls) ---- */
 
-.consultly-profile-modal__header {
+.advizo-profile-modal__header {
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -706,11 +706,11 @@
   border-bottom: 1px solid rgba(16, 35, 28, 0.08);
 }
 
-.consultly-profile-modal__header:empty {
+.advizo-profile-modal__header:empty {
   border-bottom: none;
 }
 
-.consultly-profile-modal__avatar {
+.advizo-profile-modal__avatar {
   display: block;
   width: 72px;
   height: 72px;
@@ -722,12 +722,12 @@
   flex-shrink: 0;
 }
 
-.consultly-profile-modal__header-info {
+.advizo-profile-modal__header-info {
   flex: 1;
   min-width: 0;
 }
 
-.consultly-profile-modal__name {
+.advizo-profile-modal__name {
   font-size: 20px;
   font-weight: 600;
   color: #10231c;
@@ -736,13 +736,13 @@
   overflow-wrap: break-word;
 }
 
-.consultly-profile-modal__profession {
+.advizo-profile-modal__profession {
   color: #5c6b64;
   font-size: 13px;
   margin: 0 0 8px;
 }
 
-.consultly-profile-modal__status {
+.advizo-profile-modal__status {
   display: inline-flex;
   align-items: center;
   padding: 4px 10px;
@@ -752,29 +752,29 @@
   white-space: nowrap;
 }
 
-.consultly-profile-modal__status--online {
+.advizo-profile-modal__status--online {
   background: #f4f8f6;
   color: #14563c;
 }
 
-.consultly-profile-modal__status--busy {
+.advizo-profile-modal__status--busy {
   background: #fdf4e3;
   color: #8a5a12;
 }
 
-.consultly-profile-modal__status--offline {
+.advizo-profile-modal__status--offline {
   background: #f4f5f4;
   color: #5c6b64;
 }
 
-.consultly-profile-modal__header-row {
+.advizo-profile-modal__header-row {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
 }
 
-.consultly-profile-modal__rating-inline {
+.advizo-profile-modal__rating-inline {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -784,7 +784,7 @@
   white-space: nowrap;
 }
 
-.consultly-profile-modal__stars {
+.advizo-profile-modal__stars {
   display: inline-flex;
   align-items: center;
   gap: 1px;
@@ -792,13 +792,13 @@
   flex-shrink: 0;
 }
 
-.consultly-profile-modal__stars svg {
+.advizo-profile-modal__stars svg {
   display: block;
 }
 
 /* ---- body (the ONLY scrolling region) ---- */
 
-.consultly-profile-modal__body {
+.advizo-profile-modal__body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -808,11 +808,11 @@
   padding: 20px 24px;
 }
 
-.consultly-profile-modal__body::-webkit-scrollbar {
+.advizo-profile-modal__body::-webkit-scrollbar {
   width: 8px;
 }
 
-.consultly-profile-modal__body::-webkit-scrollbar-thumb {
+.advizo-profile-modal__body::-webkit-scrollbar-thumb {
   background: rgba(16, 35, 28, 0.15);
   border-radius: 999px;
 }
@@ -821,19 +821,19 @@
    Call/Video Call reuse this SAME modal (backdrop/panel/close button/ESC/
    body-scroll-lock) instead of a separate overlay — this modifier only
    changes sizing so the call iframe has real, definite space to fill. The
-   base .consultly-profile-modal is "natural height, capped" (no children
+   base .advizo-profile-modal is "natural height, capped" (no children
    have an intrinsic height); an iframe has no natural height of its own, so
    without an explicit height here it would collapse toward 0. */
-.consultly-profile-modal--call {
+.advizo-profile-modal--call {
   height: min(90vh, 760px);
 }
 
-.consultly-profile-modal--call .consultly-profile-modal__body {
+.advizo-profile-modal--call .advizo-profile-modal__body {
   padding: 0;
   overflow: hidden;
 }
 
-.consultly-profile-modal__call-iframe {
+.advizo-profile-modal__call-iframe {
   display: block;
   width: 100%;
   height: 100%;
@@ -844,26 +844,26 @@
 /* ---- Consultation stats — plain grouped value/label pairs, deliberately
    NOT individual bordered/shadowed cards (section 11: avoid repeated "KPI
    card" layouts). Whitespace does the separating work instead of boxes. */
-.consultly-profile-modal__stat-row {
+.advizo-profile-modal__stat-row {
   display: flex;
   flex-wrap: wrap;
   gap: 28px;
 }
 
-.consultly-profile-modal__stat {
+.advizo-profile-modal__stat {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.consultly-profile-modal__stat-value {
+.advizo-profile-modal__stat-value {
   font-size: 20px;
   font-weight: 700;
   color: #10231c;
   letter-spacing: -0.01em;
 }
 
-.consultly-profile-modal__stat-label {
+.advizo-profile-modal__stat-label {
   font-size: 12px;
   color: #5c6b64;
 }
@@ -871,14 +871,14 @@
 /* ---- Rating & Reviews — compact summary + thin distribution bars, not a
    full review dashboard. Demo data until a real field exists (see
    getProfileExtras in consultant-card.js). ---- */
-.consultly-profile-modal__rating-summary {
+.advizo-profile-modal__rating-summary {
   display: flex;
   align-items: center;
   gap: 14px;
   margin-bottom: 14px;
 }
 
-.consultly-profile-modal__rating-number {
+.advizo-profile-modal__rating-number {
   font-size: 30px;
   font-weight: 700;
   color: #10231c;
@@ -886,32 +886,32 @@
   line-height: 1;
 }
 
-.consultly-profile-modal__rating-count {
+.advizo-profile-modal__rating-count {
   margin: 4px 0 0;
   font-size: 12.5px;
   color: #5c6b64;
 }
 
-.consultly-profile-modal__rating-empty {
+.advizo-profile-modal__rating-empty {
   margin: 0;
   font-size: 13px;
   color: #8a94a0;
 }
 
-.consultly-profile-modal__rating-bars {
+.advizo-profile-modal__rating-bars {
   display: flex;
   flex-direction: column;
   gap: 5px;
   max-width: 260px;
 }
 
-.consultly-profile-modal__rating-bar-row {
+.advizo-profile-modal__rating-bar-row {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.consultly-profile-modal__rating-bar-label {
+.advizo-profile-modal__rating-bar-label {
   width: 10px;
   flex-shrink: 0;
   font-size: 11px;
@@ -919,7 +919,7 @@
   text-align: right;
 }
 
-.consultly-profile-modal__rating-bar-track {
+.advizo-profile-modal__rating-bar-track {
   flex: 1;
   height: 5px;
   border-radius: 999px;
@@ -927,7 +927,7 @@
   overflow: hidden;
 }
 
-.consultly-profile-modal__rating-bar-fill {
+.advizo-profile-modal__rating-bar-fill {
   display: block;
   height: 100%;
   border-radius: inherit;
@@ -935,15 +935,15 @@
 }
 
 /* ---- Connect — social icons, only rendered when a URL exists (see
-   socialLinksMarkup). Circular treatment matches .consultly-profile-modal__close
+   socialLinksMarkup). Circular treatment matches .advizo-profile-modal__close
    above for visual consistency within this same component. ---- */
-.consultly-profile-modal__social-row {
+.advizo-profile-modal__social-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.consultly-profile-modal__social-icon {
+.advizo-profile-modal__social-icon {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -956,18 +956,18 @@
   transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
 
-.consultly-profile-modal__social-icon:hover {
+.advizo-profile-modal__social-icon:hover {
   background: #f4f8f6;
   color: #14563c;
   transform: translateY(-1px);
 }
 
-.consultly-profile-modal__social-icon:focus-visible {
+.advizo-profile-modal__social-icon:focus-visible {
   outline: 2px solid #14563c;
   outline-offset: 2px;
 }
 
-.consultly-profile-modal__chip-row {
+.advizo-profile-modal__chip-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -975,14 +975,14 @@
   margin-top: 10px;
 }
 
-.consultly-profile-modal__chip-row-label {
+.advizo-profile-modal__chip-row-label {
   font-size: 12px;
   font-weight: 600;
   color: #10231c;
   margin-right: 2px;
 }
 
-.consultly-profile-modal__lang-chip {
+.advizo-profile-modal__lang-chip {
   display: inline-block;
   background: #f4f5f4;
   color: #5c6b64;
@@ -993,26 +993,26 @@
 
 /* ---- sections (About / Expertise) ---- */
 
-.consultly-profile-modal__section {
+.advizo-profile-modal__section {
   border-top: 1px solid rgba(16, 35, 28, 0.08);
   margin-top: 20px;
   padding-top: 20px;
 }
 
-.consultly-profile-modal__section--intro {
+.advizo-profile-modal__section--intro {
   border-top: none;
   margin-top: 0;
   padding-top: 0;
 }
 
-.consultly-profile-modal__section-title {
+.advizo-profile-modal__section-title {
   font-size: 14px;
   font-weight: 600;
   color: #10231c;
   margin: 0 0 10px;
 }
 
-.consultly-profile-modal__about {
+.advizo-profile-modal__about {
   font-size: 14px;
   line-height: 1.7;
   color: #5c6b64;
@@ -1021,7 +1021,7 @@
   white-space: pre-line;
 }
 
-.consultly-profile-modal__expertise-tag {
+.advizo-profile-modal__expertise-tag {
   display: inline-block;
   background: #f4f8f6;
   color: #14563c;
@@ -1035,15 +1035,15 @@
    effectively "sticky" since it's a flex sibling after the scrolling body,
    not part of the scroll flow) ---- */
 
-.consultly-profile-modal__footer {
+.advizo-profile-modal__footer {
   flex-shrink: 0;
 }
 
-.consultly-profile-modal__footer:empty {
+.advizo-profile-modal__footer:empty {
   display: none;
 }
 
-.consultly-profile-modal__actions {
+.advizo-profile-modal__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -1051,7 +1051,7 @@
   border-top: 1px solid rgba(16, 35, 28, 0.08);
 }
 
-.consultly-profile-modal__action {
+.advizo-profile-modal__action {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1069,24 +1069,24 @@
   transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
 
-.consultly-profile-modal__action:hover {
+.advizo-profile-modal__action:hover {
   border-color: #14563c;
   color: #14563c;
   background: #f4f8f6;
 }
 
-.consultly-profile-modal__action[aria-disabled="true"] {
+.advizo-profile-modal__action[aria-disabled="true"] {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.consultly-profile-modal__action[aria-disabled="true"]:hover {
+.advizo-profile-modal__action[aria-disabled="true"]:hover {
   border-color: rgba(16, 35, 28, 0.12);
   color: #10231c;
   background: #ffffff;
 }
 
-.consultly-profile-modal__action-icon {
+.advizo-profile-modal__action-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1094,19 +1094,19 @@
   color: currentColor;
 }
 
-.consultly-profile-modal__action-icon svg {
+.advizo-profile-modal__action-icon svg {
   width: 18px;
   height: 18px;
 }
 
-.consultly-profile-modal__action-label {
+.advizo-profile-modal__action-label {
   font-size: 14px;
   font-weight: 600;
   flex: 1;
   text-align: left;
 }
 
-.consultly-profile-modal__action-amount {
+.advizo-profile-modal__action-amount {
   font-size: 12px;
   color: #7b8a83;
   white-space: nowrap;
@@ -1115,53 +1115,53 @@
 /* ---- responsive ---- */
 
 @media (max-width: 767.98px) {
-  .consultly-profile-modal-backdrop {
+  .advizo-profile-modal-backdrop {
     padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
       max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   }
 
-  .consultly-profile-modal {
+  .advizo-profile-modal {
     width: 92vw;
     max-width: none;
     max-height: min(90vh, 760px);
   }
 
-  .consultly-profile-modal__header {
+  .advizo-profile-modal__header {
     padding: 20px 48px 16px 16px;
   }
 
-  .consultly-profile-modal__body {
+  .advizo-profile-modal__body {
     padding: 16px;
   }
 
-  .consultly-profile-modal__actions {
+  .advizo-profile-modal__actions {
     padding: 12px 16px;
   }
 
-  .consultly-profile-modal__action {
+  .advizo-profile-modal__action {
     flex: 1 1 100%;
   }
 
-  .consultly-profile-modal__stat-row {
+  .advizo-profile-modal__stat-row {
     gap: 20px;
   }
 
-  .consultly-profile-modal__rating-number {
+  .advizo-profile-modal__rating-number {
     font-size: 26px;
   }
 }
 
 /* ==========================================================================
    Chat overlay — the "Chat" button on the consultant card opens the
-   existing React chat (UserChat.js, reached via /apps/consultly/chats) in
+   existing React chat (UserChat.js, reached via /apps/advizo/chats) in
    this backdrop/panel shell instead of a bare fixed iframe. Same
-   backdrop/scroll-lock/ESC/focus conventions as .consultly-profile-modal*
+   backdrop/scroll-lock/ESC/focus conventions as .advizo-profile-modal*
    above, kept as its own separate DOM tree (see openChatOverlay's comment)
    since chat needs no header/footer chrome of its own — UserChat.js renders
    that inside the iframe.
    ========================================================================== */
 
-.consultly-chat-overlay-backdrop {
+.advizo-chat-overlay-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(16, 35, 28, 0.55);
@@ -1174,22 +1174,22 @@
     max(24px, env(safe-area-inset-right))
     max(24px, env(safe-area-inset-bottom))
     max(24px, env(safe-area-inset-left));
-  animation: consultlyProfileFadeIn 0.18s ease-out;
+  animation: advizoProfileFadeIn 0.18s ease-out;
 }
 
-.consultly-chat-overlay-backdrop[hidden] {
+.advizo-chat-overlay-backdrop[hidden] {
   display: none;
 }
 
 /* THIS is the actual box the live storefront chat renders inside — the
-   iframe below points at /apps/consultly/chats?...&embedded=1, i.e.
+   iframe below points at /apps/advizo/chats?...&embedded=1, i.e.
    UserChat.js loaded directly (never ConsultantChatModal). UserChat's own
    .chatCard has a much larger max-width/max-height, but a child can never
    exceed its containing block, so a 480px-capped panel here silently
    overrode any sizing change made inside the React app. 92vw/480px was a
    phone-sized cap applied uniformly to every viewport ≥768px (no laptop/
    desktop tier existed) — this is the fix, not the React CSS. */
-.consultly-chat-overlay-panel {
+.advizo-chat-overlay-panel {
   position: relative;
   width: min(900px, calc(100vw - 48px));
   height: min(820px, calc(100dvh - 48px));
@@ -1198,24 +1198,24 @@
   border-radius: 20px;
   box-shadow: 0 24px 60px rgba(16, 35, 28, 0.3);
   overflow: hidden;
-  animation: consultlyProfileScaleIn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: advizoProfileScaleIn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @media (min-width: 1440px) {
-  .consultly-chat-overlay-panel {
+  .advizo-chat-overlay-panel {
     width: min(960px, calc(100vw - 64px));
     height: min(860px, calc(100dvh - 64px));
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .consultly-chat-overlay-backdrop,
-  .consultly-chat-overlay-panel {
+  .advizo-chat-overlay-backdrop,
+  .advizo-chat-overlay-panel {
     animation: none;
   }
 }
 
-.consultly-chat-overlay-iframe {
+.advizo-chat-overlay-iframe {
   display: block;
   width: 100%;
   height: 100%;
@@ -1223,7 +1223,7 @@
   background: #ffffff;
 }
 
-.consultly-chat-overlay-spinner {
+.advizo-chat-overlay-spinner {
   position: absolute;
   inset: 0;
   display: flex;
@@ -1233,27 +1233,27 @@
   z-index: 1;
 }
 
-.consultly-chat-overlay-spinner[hidden] {
+.advizo-chat-overlay-spinner[hidden] {
   display: none;
 }
 
-.consultly-chat-overlay-spinner-ring {
+.advizo-chat-overlay-spinner-ring {
   width: 34px;
   height: 34px;
   border-radius: 50%;
   border: 3px solid rgba(20, 86, 60, 0.15);
   border-top-color: #14563c;
-  animation: consultlyChatSpin 0.8s linear infinite;
+  animation: advizoChatSpin 0.8s linear infinite;
 }
 
-@keyframes consultlyChatSpin {
+@keyframes advizoChatSpin {
   to {
     transform: rotate(360deg);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .consultly-chat-overlay-spinner-ring {
+  .advizo-chat-overlay-spinner-ring {
     animation-duration: 1.6s;
   }
 }
@@ -1262,11 +1262,11 @@
    margin, no rounding, edge-to-edge. UserChat.js's own header/composer
    handle safe-area insets internally. */
 @media (max-width: 767.98px) {
-  .consultly-chat-overlay-backdrop {
+  .advizo-chat-overlay-backdrop {
     padding: 0;
   }
 
-  .consultly-chat-overlay-panel {
+  .advizo-chat-overlay-panel {
     width: 100vw;
     height: 100dvh;
     border-radius: 0;

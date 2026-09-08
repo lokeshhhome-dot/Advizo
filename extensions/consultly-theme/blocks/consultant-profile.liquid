@@ -21,9 +21,9 @@
   itself and renders nothing at all outside the one page this block is for,
   rather than relying on merchants never adding it elsewhere.
 {% endcomment %}
-{%- assign consultly_is_profile_page = false -%}
+{%- assign advizo_is_profile_page = false -%}
 {%- if request.page_type == 'page' and page.handle == 'consultant-profile' -%}
-  {%- assign consultly_is_profile_page = true -%}
+  {%- assign advizo_is_profile_page = true -%}
 {%- endif -%}
 
 {%- comment -%}
@@ -35,26 +35,26 @@
 {%- endcomment -%}
 <!-- Consultly[consultant-profile] page.handle="{{ page.handle }}" request.page_type="{{ request.page_type }}" template="{{ template }}" section.id="{{ section.id }}" block.id="{{ block.id }}" design_mode={{ request.design_mode }} -->
 
-{%- if consultly_is_profile_page -%}
+{%- if advizo_is_profile_page -%}
   <div
-    class="consultly-consultant-profile"
-    id="consultly-consultant-profile-{{ block.id }}"
+    class="advizo-consultant-profile"
+    id="advizo-consultant-profile-{{ block.id }}"
     data-block-id="{{ block.id }}"
     data-shop="{{ shop.permanent_domain }}"
-    data-api-base="/apps/consultly/consultant"
+    data-api-base="/apps/advizo/consultant"
     data-show-about="{{ block.settings.show_about }}"
     data-show-expertise="{{ block.settings.show_expertise }}"
     data-show-consultation="{{ block.settings.show_consultation }}"
     {{ block.shopify_attributes }}
   >
     {%- if block.settings.heading != blank -%}
-      <p class="consultly-consultant-profile__eyebrow">{{ block.settings.heading }}</p>
+      <p class="advizo-consultant-profile__eyebrow">{{ block.settings.heading }}</p>
     {%- endif -%}
 
-    <div class="consultly-consultant-profile__root" aria-live="polite">
-      <div class="consultly-consultant-profile__boot-spinner" role="status">
-        <span class="consultly-consultant-profile__boot-spinner-ring" aria-hidden="true"></span>
-        <span class="consultly-visually-hidden">{{ 'consultant_profile.loading' | t }}</span>
+    <div class="advizo-consultant-profile__root" aria-live="polite">
+      <div class="advizo-consultant-profile__boot-spinner" role="status">
+        <span class="advizo-consultant-profile__boot-spinner-ring" aria-hidden="true"></span>
+        <span class="advizo-visually-hidden">{{ 'consultant_profile.loading' | t }}</span>
       </div>
     </div>
   </div>

@@ -1,0 +1,769 @@
+/* ==========================================================================
+   Advizo customer consultation workspace
+   Self-contained design tokens: this component is reachable as a standalone
+   routed page (/chats) and inside ConsultantChatModal — neither wraps it in
+   the Consultant Dashboard shell, so it cannot rely on that shell's --ds-*
+   variables being loaded. Tokens below are scoped to .chatShell instead.
+   ========================================================================== */
+
+.chatShell {
+    --u-ink: #14213d;
+    --u-ink-soft: #3d4a68;
+    --u-amber: #c8871f;
+    --u-brand: #14563c;
+    --u-brand-soft: #e9f2ec;
+    --u-bg: #f6f4ee;
+    --u-surface: #ffffff;
+    --u-surface-2: #f1efe6;
+    --u-border: #e6e1d3;
+    --u-text: #16241d;
+    --u-text-muted: #5c6b62;
+    --u-text-subtle: #8b9991;
+    --u-danger: #b1443a;
+    --u-danger-soft: #f8ebe9;
+    --u-success: #1f9d5c;
+    --u-radius-sm: 10px;
+    --u-radius-md: 14px;
+    --u-radius-lg: 20px;
+    --u-shadow-md: 0 3px 10px rgba(22, 36, 29, 0.06);
+    --u-shadow-lg: 0 18px 48px rgba(20, 33, 61, 0.14);
+
+    display: flex;
+    width: 100%;
+    /* --chat-vh is kept in sync with window.visualViewport by UserChat.js, so
+       when the mobile keyboard opens the whole workspace shrinks to the
+       visible area (Instagram-style) instead of the keyboard covering the
+       composer. */
+    height: 100vh;
+    height: 100dvh;
+    height: var(--chat-vh, 100dvh);
+    overflow: hidden;
+    background: var(--u-bg);
+    justify-content: center;
+    align-items: center;
+    padding: clamp(0px, 2.5vh, 28px) clamp(0px, 2.5vw, 28px);
+    box-sizing: border-box;
+    font-family: inherit;
+    color: var(--u-text);
+}
+
+/* The conversation card — centred, capped width so text stays readable on
+   large desktops instead of stretching edge-to-edge. */
+/* Kept numerically identical to .advizo-chat-overlay-panel in
+   extensions/advizo-theme/assets/consultant-card.css — that file sizes
+   the real Shopify-storefront overlay this same UserChat renders inside via
+   iframe, and a CSS custom property can't cross that iframe's document
+   boundary, so matching literal values (base 900x820, >=1440px 960x860) is
+   how the standalone /chats page and the storefront modal end up the same
+   size. Change one, change the other. */
+.chatCard {
+    position: relative;
+    width: 100%;
+    max-width: 900px;
+    height: 100%;
+    max-height: 820px;
+    min-height: 320px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-radius: var(--u-radius-lg);
+    overflow: hidden;
+    background: var(--u-surface);
+    border: 1px solid var(--u-border);
+    box-shadow: var(--u-shadow-lg);
+}
+
+/* Large desktop: a comfortable professional-workspace size without going
+   full-screen — .chatShell's own padding + width:100%/max-width above
+   already keeps this responsive on laptop/tablet widths in between. */
+@media (min-width: 1440px) {
+    .chatCard {
+        max-width: 960px;
+        max-height: 860px;
+    }
+}
+
+/* Set on .chatShell (see UserChat.js's isEmbeddedIframe) only when this
+   instance is running inside the Shopify Theme Extension's overlay iframe
+   (consultant-card.js's openChatOverlay -> ?embedded=1) — in that case the
+   overlay's own .advizo-chat-overlay-panel is ALREADY the rounded/
+   shadowed card the user sees, sized to these exact same numbers. Without
+   this, .chatShell's centering padding + .chatCard's own border/shadow/
+   radius drew a second, smaller rounded card floating inside the first —
+   the "card inside a card" bug. Embedded mode instead makes .chatCard fill
+   the iframe edge-to-edge so the two surfaces render at identical size with
+   only ONE layer of chrome (the overlay panel's). The standalone /chats
+   page (no iframe) keeps the centered-card treatment below untouched. */
+.embedded {
+    padding: 0;
+}
+
+.embedded .chatCard {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    min-height: 0;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+/* ---------------------------------- Header ---------------------------------- */
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--u-border);
+    background: var(--u-surface);
+    flex-shrink: 0;
+}
+
+.headerIdentity {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+}
+
+.backBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    min-width: 44px;
+    min-height: 44px;
+    background: none;
+    border: none;
+    border-radius: 999px;
+    color: var(--u-text-muted);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.backBtn:hover {
+    background: var(--u-surface-2);
+    color: var(--u-ink);
+}
+
+.backBtn:focus-visible,
+.sendBtn:focus-visible,
+.endBtn:focus-visible,
+.requestAction:focus-visible,
+.composerInput:focus-visible {
+    outline: 2px solid var(--u-brand);
+    outline-offset: 2px;
+}
+
+.avatarWrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.avatarCircle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--u-ink) 0%, var(--u-ink-soft) 100%);
+    flex-shrink: 0;
+}
+
+.avatarImg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.onlineDot {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--u-success);
+    border: 2px solid var(--u-surface);
+}
+
+.identityText {
+    min-width: 0;
+}
+
+.name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--u-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+    line-height: 1.25;
+}
+
+.status {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12.5px;
+    color: var(--u-text-muted);
+}
+
+.statusDot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--u-text-subtle);
+}
+
+.status[data-active="true"] {
+    color: var(--u-success);
+}
+
+.status[data-active="true"] .statusDot {
+    background: var(--u-success);
+}
+
+.sessionPill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.timerBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 11px;
+    border-radius: 999px;
+    background: var(--u-brand-soft);
+    color: var(--u-brand);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.timerValue {
+    font-variant-numeric: tabular-nums;
+}
+
+.timerDot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--u-success);
+    animation: uPulseDot 1.6s ease-in-out infinite;
+}
+
+@keyframes uPulseDot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+}
+
+.endBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 0 14px;
+    background: var(--u-danger-soft);
+    color: var(--u-danger);
+    border: 1px solid transparent;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background 0.15s ease, transform 0.12s ease;
+}
+
+.endBtn:hover {
+    background: var(--u-danger);
+    color: #fff;
+}
+
+.endBtn:active {
+    transform: scale(0.96);
+}
+
+/* Small, non-blocking connection indicator — only rendered while a chat is
+   actively billing and the connection isn't healthy (see UserChat.js). */
+.connectionBanner {
+    flex-shrink: 0;
+    padding: 6px 18px;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.connectionBanner[data-status="offline"] {
+    background: var(--u-danger-soft);
+    color: var(--u-danger);
+}
+
+.connectionBanner[data-status="reconnecting"] {
+    background: var(--u-brand-soft);
+    color: var(--u-brand);
+}
+
+/* --------------------------------- Stream ---------------------------------- */
+
+.stream {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: var(--u-surface-2);
+    scroll-behavior: auto;
+    overscroll-behavior: contain;
+}
+
+.stream::-webkit-scrollbar {
+    width: 6px;
+}
+
+.stream::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.stream::-webkit-scrollbar-thumb {
+    background: var(--u-border);
+    border-radius: 3px;
+}
+
+.daySeparator {
+    display: flex;
+    justify-content: center;
+    margin: 14px 0 10px;
+}
+
+.daySeparatorLabel {
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--u-text-subtle);
+    background: var(--u-surface);
+    border: 1px solid var(--u-border);
+    padding: 4px 12px;
+    border-radius: 999px;
+}
+
+.bubbleRow {
+    display: flex;
+    margin: 3px 0;
+    animation: uBubbleIn 0.22s ease both;
+}
+
+@keyframes uBubbleIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.bubbleRowOther {
+    justify-content: flex-start;
+}
+
+.bubbleRowOwn {
+    justify-content: flex-end;
+}
+
+.bubble {
+    max-width: min(74%, 480px);
+    padding: 10px 13px;
+    border-radius: var(--u-radius-md);
+    word-wrap: break-word;
+}
+
+/* Incoming: flat/borderless, sits directly on the stream background. */
+.bubbleOther {
+    background: var(--u-surface);
+    border: 1px solid var(--u-border);
+    color: var(--u-text);
+    border-bottom-left-radius: 4px;
+}
+
+/* Outgoing: filled brand accent. */
+.bubbleOwn {
+    background: var(--u-brand);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+}
+
+.bubbleSender {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--u-ink-soft);
+    margin-bottom: 3px;
+}
+
+.bubbleText {
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 4px;
+    white-space: pre-wrap;
+}
+
+.bubbleTime {
+    font-size: 10.5px;
+    opacity: 0.7;
+    text-align: right;
+}
+
+.bubbleOther .bubbleTime {
+    text-align: left;
+}
+
+/* Empty stream state */
+.streamEmpty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    text-align: center;
+    padding: 24px;
+    color: var(--u-text-subtle);
+}
+
+.streamEmptyIcon {
+    display: flex;
+    color: var(--u-text-subtle);
+}
+
+.streamEmptyText {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--u-text-muted);
+    max-width: 240px;
+}
+
+/* --------------------------- Request / accept states ------------------------ */
+
+/* Anchored to .composer (position:relative, see below) rather than covering
+   the full message stream — floats directly above the input, the same
+   pattern chatAttachments.module.css's .composerPreview already uses, so it
+   can never sit centered mid-history or scroll with .stream. */
+.requestOverlay {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: calc(100% + 8px);
+    z-index: 50;
+    display: flex;
+    justify-content: center;
+    animation: uFadeIn 0.2s ease both;
+}
+
+@keyframes uFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.requestCard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+    background: var(--u-surface);
+    border: 1px solid var(--u-border);
+    border-radius: var(--u-radius-lg);
+    padding: 28px 26px;
+    max-width: 340px;
+    width: 100%;
+    box-shadow: var(--u-shadow-md);
+    box-sizing: border-box;
+}
+
+.requestIconWrap {
+    position: relative;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--u-brand-soft);
+    color: var(--u-brand);
+}
+
+.requestIconWrap[data-variant="ready"] {
+    background: var(--u-brand-soft);
+    color: var(--u-success);
+}
+
+.requestPulseRing {
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 2px solid var(--u-brand);
+    opacity: 0.5;
+    animation: uPulseRing 1.8s ease-out infinite;
+}
+
+@keyframes uPulseRing {
+    0% { transform: scale(0.9); opacity: 0.6; }
+    100% { transform: scale(1.35); opacity: 0; }
+}
+
+.requestBody {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.requestTitle {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--u-ink);
+}
+
+.requestSubtitle {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--u-text-muted);
+    line-height: 1.5;
+}
+
+.requestAction {
+    min-width: 140px;
+    min-height: 44px;
+    padding: 0 20px;
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: filter 0.15s ease, transform 0.12s ease;
+}
+
+.requestAction:active {
+    transform: scale(0.97);
+}
+
+.requestActionStart,
+.requestActionAccept {
+    background: var(--u-brand);
+    color: #fff;
+}
+
+.requestActionStart:hover,
+.requestActionAccept:hover {
+    filter: brightness(1.08);
+}
+
+.requestActionWaiting {
+    background: var(--u-surface-2);
+    color: var(--u-text-subtle);
+    cursor: not-allowed;
+}
+
+/* ---------------------------------- Composer --------------------------------- */
+
+.typingSlot {
+    flex-shrink: 0;
+    padding: 0 18px;
+    min-height: 0;
+}
+
+.composer {
+    /* Anchors the attachment upload-preview popup (chatAttachments.module.css
+       .composerPreview) so it floats above the composer instead of pushing
+       message-stream height around when a file is staged. */
+    position: relative;
+    padding: 12px 16px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    border-top: 1px solid var(--u-border);
+    background: var(--u-surface);
+    flex-shrink: 0;
+}
+
+.composerInner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--u-surface-2);
+    border: 1px solid var(--u-border);
+    border-radius: 999px;
+    padding: 6px 6px 6px 16px;
+}
+
+.composerInput {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 14px;
+    color: var(--u-text);
+    padding: 8px 0;
+    min-width: 0;
+}
+
+.composerInput::placeholder {
+    color: var(--u-text-subtle);
+}
+
+.composerInput:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.sendBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    min-width: 44px;
+    min-height: 44px;
+    background: var(--u-brand);
+    border: none;
+    border-radius: 50%;
+    color: #fff;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: filter 0.15s ease, transform 0.12s ease;
+}
+
+.sendBtn:hover:not(:disabled) {
+    filter: brightness(1.08);
+}
+
+.sendBtn:active:not(:disabled) {
+    transform: scale(0.94);
+}
+
+.sendBtn:disabled {
+    background: var(--u-border);
+    color: var(--u-text-subtle);
+    cursor: not-allowed;
+}
+
+.sendIcon {
+    width: 17px;
+    height: 17px;
+}
+
+/* ================================ Responsive ================================ */
+
+/* Phones and small tablets: the workspace fills the whole screen, exactly
+   like the call page — a floating card wastes space this size and the
+   on-screen keyboard needs every pixel (--chat-vh already tracks the visual
+   viewport). */
+@media (max-width: 768px) {
+    .chatShell {
+        padding: 0;
+    }
+
+    .chatCard {
+        max-width: 100%;
+        max-height: 100%;
+        min-height: 0;
+        border-radius: 0;
+        border: none;
+        box-shadow: none;
+    }
+
+    .header {
+        padding: max(10px, env(safe-area-inset-top)) 14px 10px;
+    }
+}
+
+/* Short viewports (landscape phones, small laptops): drop the vertical inset
+   so the card keeps its full usable height instead of being squeezed. */
+@media (max-height: 600px) {
+    .chatShell {
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+
+    .chatCard {
+        max-height: 100%;
+        min-height: 0;
+        border-radius: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .header {
+        gap: 8px;
+    }
+
+    .headerIdentity {
+        gap: 8px;
+    }
+
+    .avatarCircle {
+        width: 36px;
+        height: 36px;
+    }
+
+    .name {
+        font-size: 14.5px;
+        max-width: 130px;
+    }
+
+    .status {
+        font-size: 12px;
+    }
+
+    .timerBadge {
+        padding: 5px 9px;
+        font-size: 12px;
+    }
+
+    .endBtn {
+        padding: 0 11px;
+        font-size: 12px;
+    }
+
+    .stream {
+        padding: 14px 12px;
+    }
+
+    .bubble {
+        max-width: 84%;
+    }
+
+    .requestCard {
+        padding: 22px 20px;
+    }
+
+    .composer {
+        padding: 10px 12px;
+        padding-bottom: max(10px, env(safe-area-inset-bottom));
+    }
+
+    .composerInner {
+        padding: 4px 4px 4px 14px;
+    }
+}
+
+/* ============================= Reduced motion ============================== */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .timerDot,
+    .requestPulseRing,
+    .bubbleRow,
+    .requestOverlay {
+        animation: none !important;
+    }
+}

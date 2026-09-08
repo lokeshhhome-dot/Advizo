@@ -1,0 +1,503 @@
+/* ============================================================
+   Video / Voice Calling Page — premium centered call card.
+   The card owns its (dark) background, so text colors are always
+   correct regardless of the store theme. The store's accent color
+   (posted in from the parent page) drives highlights only.
+   ============================================================ */
+
+.videoCallContainer {
+    /* --call-accent / --call-accent-rgb are injected inline from JS
+       (the detected store theme color). These are the fallbacks. */
+    --call-accent: #5c6ac4;
+    --call-accent-rgb: 92, 106, 196;
+    /* Dark call surface → light text, always readable. */
+    --card-bg: #0e1116;
+    --card-bg-soft: #161b23;
+    --call-text: #f4f6f8;
+    --call-muted: rgba(244, 246, 248, 0.64);
+    --surface: rgba(255, 255, 255, 0.08);
+    --surface-strong: rgba(255, 255, 255, 0.16);
+
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(8px, 2.5vh, 28px) clamp(8px, 2.5vw, 28px);
+    box-sizing: border-box;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", sans-serif;
+    /* Soft accent wash on a light page base — blends with any theme. */
+    background:
+        radial-gradient(120% 90% at 50% 0%,
+            rgba(var(--call-accent-rgb), 0.14) 0%,
+            rgba(var(--call-accent-rgb), 0.05) 34%,
+            transparent 62%),
+        #f4f6f8;
+}
+
+/* Mounted directly inside a modal (Consultant Dashboard's native call
+   modal) instead of a standalone tab/iframe. .videoCallContainer is a PAGE
+   wrapper — full-viewport light background + padding to center .callCard
+   on an otherwise empty landing page. That's correct for a standalone page,
+   but the modal (VideoCallModal.module.css's .modal) is already the "page"
+   here: its own dark background + rounded corners + fixed box. Without this
+   override, .videoCallContainer's light background/padding shows as a
+   visible white surface around the dark .callCard, floating inside the
+   modal instead of filling it. Height comes from the modal box, not the
+   real viewport; padding/background are removed entirely so .callCard fills
+   the modal edge-to-edge; .callCard's own radius is zeroed so the modal's
+   own overflow:hidden + border-radius is the only rounding, with no
+   mismatched double-rounded corner. */
+.videoCallContainer.embedded {
+    height: 100%;
+    padding: 0;
+    background: transparent;
+}
+
+.videoCallContainer.embedded .callCard {
+    border-radius: 0;
+}
+
+/* ---------- The centered call card ---------- */
+.callCard {
+    position: relative;
+    width: 100%;
+    max-width: 980px;
+    height: 100%;
+    max-height: 760px;
+    min-height: 380px;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(180deg, var(--card-bg-soft), var(--card-bg));
+    color: var(--call-text);
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow:
+        0 2px 8px rgba(10, 14, 20, 0.18),
+        0 24px 60px rgba(10, 14, 20, 0.35);
+    animation: cardIn 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes cardIn {
+    from { opacity: 0; transform: translateY(10px) scale(0.985); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ---------- Close button (top-right, floats over the card) ----------
+   Matches the customer-side call widget's own .advizo-call-widget-close —
+   a dedicated close affordance distinct from the in-flow end-call control
+   below, both wired to the same handleEndCall since there's no
+   "minimize/hide" concept for an active call on either side. */
+.closeButton {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 2;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--call-text);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.closeButton:hover { background: var(--surface-strong); }
+
+/* ---------- Header — two rows: name/call-type, then status/timer ----------
+   Same structure as the customer-side call widget's header (ui.js/ui.css):
+   row 1 is name + call-type pill, row 2 is a persistent status dot+label on
+   the left and the live timer on the right. Replaces what used to be a
+   single row (back-button + avatar + name) with status only ever shown as
+   scattered inline-colored text inside the video placeholder. */
+.callHeader {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 18px 56px 14px 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    flex-shrink: 0;
+}
+
+.callHeaderRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.callName {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--call-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.callTypeLabel {
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--call-muted);
+    background: var(--surface);
+    padding: 3px 8px;
+    border-radius: 999px;
+}
+
+.callStatusLine {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    color: var(--call-muted);
+}
+
+.statusDot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgba(244, 246, 248, 0.4);
+    flex-shrink: 0;
+}
+
+.statusDotPending {
+    background: #f5a623;
+    animation: statusDotPulse 1.4s ease-in-out infinite;
+}
+
+.statusDotLive { background: #4ade80; }
+
+@keyframes statusDotPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .statusDotPending { animation: none; }
+}
+
+.callTimer {
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    color: var(--call-muted);
+}
+
+.closeButton:focus-visible,
+.controlButton:focus-visible,
+.selfExpandButton:focus-visible {
+    outline: 2px solid rgba(var(--call-accent-rgb), 0.9);
+    outline-offset: 2px;
+}
+
+/* ---------- Stage ---------- */
+.videoArea {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.remoteVideo {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    inset: 0;
+}
+
+.videoElement {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background: #000;
+}
+
+/* Centered voice-call / waiting layout */
+.videoPlaceholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    color: var(--call-text);
+    text-align: center;
+    padding: 24px;
+    animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.avatarLarge {
+    width: clamp(96px, 16vh, 140px);
+    height: clamp(96px, 16vh, 140px);
+    border-radius: 50%;
+    object-fit: cover;
+    background: rgba(var(--call-accent-rgb), 0.9);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: clamp(34px, 6vh, 48px);
+    border: 3px solid rgba(255, 255, 255, 0.85);
+    box-shadow:
+        0 0 0 6px rgba(var(--call-accent-rgb), 0.35),
+        0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+/* Gentle ringing pulse (CSS only, GPU-friendly) */
+.avatarPulse { animation: avatarPulse 1.6s ease-in-out infinite; }
+@keyframes avatarPulse {
+    0%, 100% { box-shadow: 0 0 0 6px rgba(var(--call-accent-rgb), 0.35), 0 12px 32px rgba(0, 0, 0, 0.45); }
+    50%      { box-shadow: 0 0 0 14px rgba(var(--call-accent-rgb), 0.16), 0 12px 32px rgba(0, 0, 0, 0.45); }
+}
+
+.videoPlaceholderText {
+    font-size: 19px;
+    font-weight: 600;
+    color: var(--call-text);
+    margin: 0;
+}
+
+.videoPlaceholderTextSmall {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--call-muted);
+    margin: 4px 0 0 0;
+    text-align: center;
+}
+
+/* ---------- Local (self) preview — floating corner tile ---------- */
+.localVideo {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    width: 150px;
+    height: 200px;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    background: #1c1f26;
+    z-index: 5;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+    transition: width 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+        height 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+        border-color 0.2s ease;
+}
+
+.localVideo:hover { border-color: rgba(var(--call-accent-rgb), 0.9); }
+
+/* Expanded self view — bigger tile, still never covers the whole remote */
+.localVideoExpanded {
+    width: min(46%, 320px);
+    height: min(62%, 426px);
+}
+
+.localVideo .videoElement {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Expand / collapse toggle on the self preview */
+.selfExpandButton {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 6;
+    transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.selfExpandButton:hover {
+    background: rgba(var(--call-accent-rgb), 0.95);
+    transform: scale(1.08);
+}
+
+.videoPlaceholderSmall {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #1c1f26;
+}
+
+.avatarSmall {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: rgba(var(--call-accent-rgb), 0.9);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 15px;
+}
+
+/* ---------- Controls (in-flow bar at the card bottom) ---------- */
+.callControls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 18px;
+    padding: 16px 20px calc(18px + env(safe-area-inset-bottom, 0px));
+    background: rgba(255, 255, 255, 0.03);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    flex-shrink: 0;
+}
+
+.controlButton {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: var(--surface);
+    color: var(--call-text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.controlButton:hover {
+    background: var(--surface-strong);
+    transform: scale(1.08);
+}
+
+.controlButton:active { transform: scale(0.94); }
+
+.controlButtonActive {
+    background: rgba(239, 68, 68, 0.9) !important;
+    color: #fff !important;
+    border-color: transparent !important;
+}
+
+.controlButtonActive:hover { background: rgba(239, 68, 68, 1) !important; }
+
+/* Camera switch in progress: the icon spins and the button stops responding
+   until the swap resolves, so repeated taps cannot stack up. */
+.controlButtonBusy {
+    opacity: 0.75;
+    cursor: progress;
+    pointer-events: none;
+}
+
+.controlButtonBusy svg {
+    animation: cameraSwitchSpin 0.8s linear infinite;
+}
+
+@keyframes cameraSwitchSpin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .controlButtonBusy svg { animation: none; }
+}
+
+/* Transient "Unable to switch camera." notice over the video area. */
+.cameraToast {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9;
+    max-width: calc(100% - 32px);
+    padding: 9px 16px;
+    border-radius: 999px;
+    background: rgba(17, 17, 17, 0.88);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+    animation: cameraToastIn 0.18s ease-out;
+}
+
+@keyframes cameraToastIn {
+    from { opacity: 0; transform: translate(-50%, 8px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.endCallButton {
+    background: #ef4444;
+    color: #fff;
+    border-color: transparent;
+    width: 62px;
+    height: 62px;
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.45);
+}
+
+.endCallButton:hover { background: #dc2626; transform: scale(1.08); }
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+@media (max-width: 768px) {
+    .videoCallContainer { padding: 0; }
+    /* Phone: the card becomes the full surface — edge to edge. */
+    .callCard { max-width: 100%; max-height: 100%; border-radius: 0; }
+    .callHeader { padding: 16px 48px 12px 14px; }
+    .closeButton { width: 30px; height: 30px; top: 12px; right: 12px; }
+    .callName { font-size: 15px; }
+    .videoPlaceholderText { font-size: 17px; }
+    .localVideo { width: 108px; height: 148px; bottom: 12px; right: 12px; }
+    .localVideoExpanded { width: min(58%, 240px); height: min(52%, 320px); }
+    .avatarSmall { width: 44px; height: 44px; }
+    .callControls { gap: 14px; padding: 12px 14px calc(14px + env(safe-area-inset-bottom, 0px)); }
+    .controlButton { width: 50px; height: 50px; }
+    .controlButton svg { width: 22px; height: 22px; }
+    .endCallButton { width: 58px; height: 58px; }
+}
+
+/* Landscape phones: keep everything visible in the short viewport. */
+@media (max-height: 480px) {
+    .videoCallContainer { padding: 0; }
+    .callCard { max-height: 100%; min-height: 0; border-radius: 0; }
+    .avatarLarge { width: 72px; height: 72px; font-size: 26px; }
+    .videoPlaceholder { gap: 8px; padding: 10px; }
+    .videoPlaceholderText { font-size: 15px; }
+    .callControls { padding: 8px 14px calc(10px + env(safe-area-inset-bottom, 0px)); }
+    .controlButton { width: 44px; height: 44px; }
+    .endCallButton { width: 50px; height: 50px; }
+    .localVideo { width: 92px; height: 120px; }
+}
+
+@media (min-width: 1440px) {
+    .callCard { max-width: 1080px; }
+    .localVideo { width: 176px; height: 234px; }
+    .localVideoExpanded { width: min(42%, 380px); height: min(64%, 500px); }
+    .controlButton { width: 58px; height: 58px; }
+    .endCallButton { width: 66px; height: 66px; }
+}

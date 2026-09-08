@@ -5,10 +5,10 @@
   the JS bundle via data attributes. Unlike consultant-profile.liquid, there
   is no id to read from the URL — the customer's identity comes entirely
   from Shopify's own App Proxy signal (logged_in_customer_id), resolved
-  server-side by /apps/consultly/customer/me. Nothing customer-identifying
+  server-side by /apps/advizo/customer/me. Nothing customer-identifying
   is ever read from this page's URL or query string.
 
-  Replaces the old /apps/consultly/profile iframe (proxyProfileSection,
+  Replaces the old /apps/advizo/profile iframe (proxyProfileSection,
   removed from shopifyController.js) — this renders natively on the
   storefront, no iframe.
 
@@ -25,9 +25,9 @@
   rather than relying on merchants never adding it elsewhere. Same
   convention as consultant-profile.liquid's page.handle guard.
 {% endcomment %}
-{%- assign consultly_is_my_profile_page = false -%}
+{%- assign advizo_is_my_profile_page = false -%}
 {%- if request.page_type == 'page' and page.handle == 'my-profile' -%}
-  {%- assign consultly_is_my_profile_page = true -%}
+  {%- assign advizo_is_my_profile_page = true -%}
 {%- endif -%}
 
 {%- comment -%}
@@ -41,25 +41,25 @@
 {%- endcomment -%}
 <!-- Consultly[my-profile] page.handle="{{ page.handle }}" request.page_type="{{ request.page_type }}" template="{{ template }}" section.id="{{ section.id }}" block.id="{{ block.id }}" design_mode={{ request.design_mode }} -->
 
-{%- if consultly_is_my_profile_page -%}
+{%- if advizo_is_my_profile_page -%}
   <div
-    class="consultly-my-profile"
-    id="consultly-my-profile-{{ block.id }}"
+    class="advizo-my-profile"
+    id="advizo-my-profile-{{ block.id }}"
     data-block-id="{{ block.id }}"
     data-shop="{{ shop.permanent_domain }}"
-    data-api-base="/apps/consultly/customer/me"
+    data-api-base="/apps/advizo/customer/me"
     data-show-wallet-history="{{ block.settings.show_wallet_history }}"
     data-show-consultation-history="{{ block.settings.show_consultation_history }}"
     {{ block.shopify_attributes }}
   >
     {%- if block.settings.heading != blank -%}
-      <p class="consultly-my-profile__eyebrow">{{ block.settings.heading }}</p>
+      <p class="advizo-my-profile__eyebrow">{{ block.settings.heading }}</p>
     {%- endif -%}
 
-    <div class="consultly-my-profile__root" aria-live="polite">
-      <div class="consultly-my-profile__boot-spinner" role="status">
-        <span class="consultly-my-profile__boot-spinner-ring" aria-hidden="true"></span>
-        <span class="consultly-visually-hidden">{{ 'my_profile.loading' | t }}</span>
+    <div class="advizo-my-profile__root" aria-live="polite">
+      <div class="advizo-my-profile__boot-spinner" role="status">
+        <span class="advizo-my-profile__boot-spinner-ring" aria-hidden="true"></span>
+        <span class="advizo-visually-hidden">{{ 'my_profile.loading' | t }}</span>
       </div>
     </div>
   </div>

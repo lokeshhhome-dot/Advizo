@@ -7,13 +7,13 @@
  *
  * Data sources, all App Proxy JSON endpoints resolved server-side from
  * Shopify's own signed customer identity (never a client-supplied id):
- *   GET  /apps/consultly/customer/me            — identity, balance,
+ *   GET  /apps/advizo/customer/me            — identity, balance,
  *                                                  wallet + consultation history
- *   GET  /apps/consultly/wallet/topup            — recharge catalog (lazy)
- *   POST /apps/consultly/wallet/recharge         — start a recharge
- *   GET  /apps/consultly/support/requests        — support requests (lazy)
- *   POST /apps/consultly/support/requests        — submit a new request
- *   PUT  /apps/consultly/support/requests/:id/read
+ *   GET  /apps/advizo/wallet/topup            — recharge catalog (lazy)
+ *   POST /apps/advizo/wallet/recharge         — start a recharge
+ *   GET  /apps/advizo/support/requests        — support requests (lazy)
+ *   POST /apps/advizo/support/requests        — submit a new request
+ *   PUT  /apps/advizo/support/requests/:id/read
  *
  * This file never reads a customer id from the URL, query string, or
  * localStorage, and never sends one to the backend.
@@ -76,7 +76,7 @@
     );
   }
 
-  // Kept in sync by hand with consultly_Frontend/src/components/Helper/Helper.js
+  // Kept in sync by hand with advizo_Frontend/src/components/Helper/Helper.js
   // formatAmountHelper — see consultant-profile.js for the same note.
   function formatAmount(num) {
     if (num === null || num === undefined) return "0";
@@ -161,9 +161,9 @@
         var rows = group.items.map(rowFn).join("");
         return (
           (groups.length > 1
-            ? '<p class="consultly-my-profile__day-label">' + escapeHtml(formatDayLabel(group.date)) + "</p>"
+            ? '<p class="advizo-my-profile__day-label">' + escapeHtml(formatDayLabel(group.date)) + "</p>"
             : "") +
-          '<ul class="consultly-my-profile__row-list">' + rows + "</ul>"
+          '<ul class="advizo-my-profile__row-list">' + rows + "</ul>"
         );
       })
       .join("");
@@ -171,28 +171,28 @@
 
   function emptyStateMarkup(title, text) {
     return (
-      '<div class="consultly-my-profile__empty-block">' +
-      '<p class="consultly-my-profile__empty-title">' + escapeHtml(title) + "</p>" +
-      '<p class="consultly-my-profile__empty-text">' + escapeHtml(text) + "</p>" +
+      '<div class="advizo-my-profile__empty-block">' +
+      '<p class="advizo-my-profile__empty-title">' + escapeHtml(title) + "</p>" +
+      '<p class="advizo-my-profile__empty-text">' + escapeHtml(text) + "</p>" +
       "</div>"
     );
   }
 
   function errorStateMarkup(text, retryAction) {
     return (
-      '<div class="consultly-my-profile__empty-block">' +
-      '<p class="consultly-my-profile__empty-title">Something went wrong</p>' +
-      '<p class="consultly-my-profile__empty-text">' + escapeHtml(text) + "</p>" +
-      '<button type="button" class="consultly-my-profile__retry" data-action="' + retryAction + '">Try again</button>' +
+      '<div class="advizo-my-profile__empty-block">' +
+      '<p class="advizo-my-profile__empty-title">Something went wrong</p>' +
+      '<p class="advizo-my-profile__empty-text">' + escapeHtml(text) + "</p>" +
+      '<button type="button" class="advizo-my-profile__retry" data-action="' + retryAction + '">Try again</button>' +
       "</div>"
     );
   }
 
   function skeletonRowsMarkup(count) {
     var row =
-      '<div class="consultly-my-profile__skeleton-row">' +
-      '<span class="consultly-my-profile__skeleton-circle"></span>' +
-      '<span class="consultly-my-profile__skeleton-line"></span>' +
+      '<div class="advizo-my-profile__skeleton-row">' +
+      '<span class="advizo-my-profile__skeleton-circle"></span>' +
+      '<span class="advizo-my-profile__skeleton-line"></span>' +
       "</div>";
     return new Array(count || 3).fill(row).join("");
   }
@@ -214,14 +214,14 @@
     var tail;
     if (sectionState.loading) {
       tail =
-        '<div class="consultly-my-profile__inline-loader" role="status" aria-live="polite">' +
-        '<span class="consultly-my-profile__inline-loader-dot" aria-hidden="true"></span>Loading…' +
+        '<div class="advizo-my-profile__inline-loader" role="status" aria-live="polite">' +
+        '<span class="advizo-my-profile__inline-loader-dot" aria-hidden="true"></span>Loading…' +
         "</div>";
     } else if (sectionState.error) {
       tail =
-        '<div class="consultly-my-profile__inline-error-row">' +
+        '<div class="advizo-my-profile__inline-error-row">' +
         "<span>" + escapeHtml(sectionState.error) + "</span>" +
-        '<button type="button" class="consultly-my-profile__retry" data-action="retry-' +
+        '<button type="button" class="advizo-my-profile__retry" data-action="retry-' +
         sectionKey + '-page">Try again</button>' +
         "</div>";
     } else {
@@ -242,7 +242,7 @@
         : emptyStateMarkup(emptyTitle, emptyText);
     }
     return (
-      '<div class="consultly-my-profile__scroll-list" data-scroll="' + sectionKey + '" tabindex="0">' +
+      '<div class="advizo-my-profile__scroll-list" data-scroll="' + sectionKey + '" tabindex="0">' +
       scrollListInnerMarkup(sectionState, rowFn, sectionKey) +
       "</div>"
     );
@@ -258,23 +258,23 @@
     var memberYear = memberSinceYear(customer.memberSince);
 
     return (
-      '<div class="consultly-my-profile__header">' +
-      '<div class="consultly-my-profile__identity">' +
-      '<img class="consultly-my-profile__avatar" src="' + escapeHtml(imgSrc) + '" alt="' + escapeHtml(name) + '" />' +
-      '<div class="consultly-my-profile__identity-text">' +
-      '<h1 class="consultly-my-profile__name">' + escapeHtml(name) + "</h1>" +
-      (email ? '<p class="consultly-my-profile__email">' + escapeHtml(email) + "</p>" : "") +
+      '<div class="advizo-my-profile__header">' +
+      '<div class="advizo-my-profile__identity">' +
+      '<img class="advizo-my-profile__avatar" src="' + escapeHtml(imgSrc) + '" alt="' + escapeHtml(name) + '" />' +
+      '<div class="advizo-my-profile__identity-text">' +
+      '<h1 class="advizo-my-profile__name">' + escapeHtml(name) + "</h1>" +
+      (email ? '<p class="advizo-my-profile__email">' + escapeHtml(email) + "</p>" : "") +
       (memberYear
-        ? '<p class="consultly-my-profile__member-since">Member since ' + memberYear + "</p>"
+        ? '<p class="advizo-my-profile__member-since">Member since ' + memberYear + "</p>"
         : "") +
       "</div>" +
       "</div>" +
-      '<div class="consultly-my-profile__header-divider" aria-hidden="true"></div>' +
-      '<div class="consultly-my-profile__balance">' +
-      '<span class="consultly-my-profile__balance-label">Available balance</span>' +
-      '<span class="consultly-my-profile__balance-amount">' +
+      '<div class="advizo-my-profile__header-divider" aria-hidden="true"></div>' +
+      '<div class="advizo-my-profile__balance">' +
+      '<span class="advizo-my-profile__balance-label">Available balance</span>' +
+      '<span class="advizo-my-profile__balance-amount">' +
       escapeHtml(customer.walletCurrency || "") + escapeHtml(formatAmount(balance)) + "</span>" +
-      '<button type="button" class="consultly-my-profile__add-money-link" data-action="goto-tab" data-tab="wallet" data-wallet-view="topup">Add money</button>' +
+      '<button type="button" class="advizo-my-profile__add-money-link" data-action="goto-tab" data-tab="wallet" data-wallet-view="topup">Add money</button>' +
       "</div>" +
       "</div>"
     );
@@ -292,11 +292,11 @@
 
   function renderTabs(activeTab, options) {
     return (
-      '<nav class="consultly-my-profile__tabs" aria-label="Account sections">' +
+      '<nav class="advizo-my-profile__tabs" aria-label="Account sections">' +
       visibleTabs(options).map(function (t) {
         return (
-          '<button type="button" class="consultly-my-profile__tab' +
-          (t.key === activeTab ? " consultly-my-profile__tab--active" : "") +
+          '<button type="button" class="advizo-my-profile__tab' +
+          (t.key === activeTab ? " advizo-my-profile__tab--active" : "") +
           '" data-action="goto-tab" data-tab="' + t.key + '">' +
           escapeHtml(t.label) +
           "</button>"
@@ -317,27 +317,27 @@
         : "Transaction");
     var tags = "";
     if (entry.referenceType) {
-      tags += '<span class="consultly-my-profile__tag">' + escapeHtml(entry.referenceType) + "</span>";
+      tags += '<span class="advizo-my-profile__tag">' + escapeHtml(entry.referenceType) + "</span>";
     }
     if (entry.status && entry.status !== "success") {
-      tags += '<span class="consultly-my-profile__tag">' + escapeHtml(entry.status) + "</span>";
+      tags += '<span class="advizo-my-profile__tag">' + escapeHtml(entry.status) + "</span>";
     }
     return (
-      '<li class="consultly-my-profile__row">' +
-      '<span class="consultly-my-profile__row-icon" data-tone="' + tone + '">' +
+      '<li class="advizo-my-profile__row">' +
+      '<span class="advizo-my-profile__row-icon" data-tone="' + tone + '">' +
       (isCredit ? CREDIT_ICON : DEBIT_ICON) +
       "</span>" +
-      '<div class="consultly-my-profile__row-main">' +
-      '<span class="consultly-my-profile__row-title">' + escapeHtml(title) + "</span>" +
-      (tags ? '<span class="consultly-my-profile__row-meta">' + tags + "</span>" : "") +
+      '<div class="advizo-my-profile__row-main">' +
+      '<span class="advizo-my-profile__row-title">' + escapeHtml(title) + "</span>" +
+      (tags ? '<span class="advizo-my-profile__row-meta">' + tags + "</span>" : "") +
       "</div>" +
-      '<div class="consultly-my-profile__row-side">' +
-      '<span class="consultly-my-profile__row-amount" data-tone="' + tone + '">' +
+      '<div class="advizo-my-profile__row-side">' +
+      '<span class="advizo-my-profile__row-amount" data-tone="' + tone + '">' +
       (isCredit ? "+" : "−") +
       escapeHtml(entry.currency || "") +
       escapeHtml(formatAmount(entry.amount)) +
       "</span>" +
-      '<span class="consultly-my-profile__row-time">' + escapeHtml(formatClockTime(entry.createdAt)) + "</span>" +
+      '<span class="advizo-my-profile__row-time">' + escapeHtml(formatClockTime(entry.createdAt)) + "</span>" +
       "</div>" +
       "</li>"
     );
@@ -357,13 +357,13 @@
     var total = Number(option.totalCoin || 0) + Number(option.extraCoin || 0);
     var hasBonus = Number(option.extraCoin) > 0;
     return (
-      '<button type="button" class="consultly-my-profile__topup-card" data-action="recharge" data-amount="' +
+      '<button type="button" class="advizo-my-profile__topup-card" data-action="recharge" data-amount="' +
       escapeHtml(option.totalCoin) + '">' +
-      '<span class="consultly-my-profile__topup-amount">' + escapeHtml(currency || "") + escapeHtml(formatAmount(option.totalCoin)) + "</span>" +
+      '<span class="advizo-my-profile__topup-amount">' + escapeHtml(currency || "") + escapeHtml(formatAmount(option.totalCoin)) + "</span>" +
       (hasBonus
-        ? '<span class="consultly-my-profile__topup-bonus">+' + escapeHtml(currency || "") + escapeHtml(formatAmount(option.extraCoin)) + " bonus</span>"
+        ? '<span class="advizo-my-profile__topup-bonus">+' + escapeHtml(currency || "") + escapeHtml(formatAmount(option.extraCoin)) + " bonus</span>"
         : "") +
-      '<span class="consultly-my-profile__topup-total">Get ' + escapeHtml(currency || "") + escapeHtml(formatAmount(total)) + " total</span>" +
+      '<span class="advizo-my-profile__topup-total">Get ' + escapeHtml(currency || "") + escapeHtml(formatAmount(total)) + " total</span>" +
       "</button>"
     );
   }
@@ -373,10 +373,10 @@
       return errorStateMarkup(state.topupError, "retry-topup");
     }
     if (state.topupLoading || !state.topupCatalog) {
-      return '<div class="consultly-my-profile__topup-grid">' +
-        '<span class="consultly-my-profile__topup-skeleton"></span>' +
-        '<span class="consultly-my-profile__topup-skeleton"></span>' +
-        '<span class="consultly-my-profile__topup-skeleton"></span>' +
+      return '<div class="advizo-my-profile__topup-grid">' +
+        '<span class="advizo-my-profile__topup-skeleton"></span>' +
+        '<span class="advizo-my-profile__topup-skeleton"></span>' +
+        '<span class="advizo-my-profile__topup-skeleton"></span>' +
         "</div>";
     }
     var options = state.topupCatalog.voucherCode || [];
@@ -389,12 +389,12 @@
     var currency = state.topupCatalog.shopCurrency;
     return (
       (state.rechargeError
-        ? '<p class="consultly-my-profile__inline-error">' + escapeHtml(state.rechargeError) + "</p>"
+        ? '<p class="advizo-my-profile__inline-error">' + escapeHtml(state.rechargeError) + "</p>"
         : "") +
       (state.recharging
-        ? '<p class="consultly-my-profile__inline-status">Opening checkout…</p>'
+        ? '<p class="advizo-my-profile__inline-status">Opening checkout…</p>'
         : "") +
-      '<div class="consultly-my-profile__topup-grid">' +
+      '<div class="advizo-my-profile__topup-grid">' +
       options.map(function (o) { return renderTopupOption(o, currency); }).join("") +
       "</div>"
     );
@@ -403,18 +403,18 @@
   function renderWalletTab(state) {
     var showActivity = state.options.showWalletHistory;
     var subNav = showActivity
-      ? '<div class="consultly-my-profile__sub-nav">' +
-        '<button type="button" class="consultly-my-profile__sub-tab' +
-        (state.walletView === "topup" ? " consultly-my-profile__sub-tab--active" : "") +
+      ? '<div class="advizo-my-profile__sub-nav">' +
+        '<button type="button" class="advizo-my-profile__sub-tab' +
+        (state.walletView === "topup" ? " advizo-my-profile__sub-tab--active" : "") +
         '" data-action="wallet-view" data-wallet-view="topup">Add money</button>' +
-        '<button type="button" class="consultly-my-profile__sub-tab' +
-        (state.walletView === "activity" ? " consultly-my-profile__sub-tab--active" : "") +
+        '<button type="button" class="advizo-my-profile__sub-tab' +
+        (state.walletView === "activity" ? " advizo-my-profile__sub-tab--active" : "") +
         '" data-action="wallet-view" data-wallet-view="activity">Wallet activity</button>' +
         "</div>"
       : "";
     var effectiveView = showActivity ? state.walletView : "topup";
     return (
-      '<section class="consultly-my-profile__section">' +
+      '<section class="advizo-my-profile__section">' +
       subNav +
       (effectiveView === "topup"
         ? renderWalletTopup(state)
@@ -430,17 +430,17 @@
     var typeLabel = COMM_TYPE_LABELS[entry.type] || entry.type || "Consultation";
     var duration = formatDuration(entry.duration);
     return (
-      '<li class="consultly-my-profile__row">' +
-      '<span class="consultly-my-profile__row-icon">' + icon + "</span>" +
-      '<div class="consultly-my-profile__row-main">' +
-      '<span class="consultly-my-profile__row-title">' + escapeHtml(entry.consultantName) + "</span>" +
-      '<span class="consultly-my-profile__row-meta">' + escapeHtml(typeLabel) + " · " + escapeHtml(duration) + "</span>" +
+      '<li class="advizo-my-profile__row">' +
+      '<span class="advizo-my-profile__row-icon">' + icon + "</span>" +
+      '<div class="advizo-my-profile__row-main">' +
+      '<span class="advizo-my-profile__row-title">' + escapeHtml(entry.consultantName) + "</span>" +
+      '<span class="advizo-my-profile__row-meta">' + escapeHtml(typeLabel) + " · " + escapeHtml(duration) + "</span>" +
       "</div>" +
-      '<div class="consultly-my-profile__row-side">' +
-      '<span class="consultly-my-profile__row-amount" data-tone="debit">' +
+      '<div class="advizo-my-profile__row-side">' +
+      '<span class="advizo-my-profile__row-amount" data-tone="debit">' +
       "−" + escapeHtml(formatAmount(entry.amount)) +
       "</span>" +
-      '<span class="consultly-my-profile__row-time">' + escapeHtml(formatClockTime(entry.createdAt)) + "</span>" +
+      '<span class="advizo-my-profile__row-time">' + escapeHtml(formatClockTime(entry.createdAt)) + "</span>" +
       "</div>" +
       "</li>"
     );
@@ -451,9 +451,9 @@
   // REQUIREMENT: filters removed).
   function renderCommTab(state) {
     return (
-      '<section class="consultly-my-profile__section">' +
-      '<div class="consultly-my-profile__section-head">' +
-      '<h2 class="consultly-my-profile__section-title">Communications</h2>' +
+      '<section class="advizo-my-profile__section">' +
+      '<div class="advizo-my-profile__section-head">' +
+      '<h2 class="advizo-my-profile__section-title">Communications</h2>' +
       "</div>" +
       scrollListMarkup(
         state.comm,
@@ -469,42 +469,42 @@
   // ----------------------------------------------------------------- support
 
   function statusBadgeMarkup(status) {
-    var cls = "consultly-my-profile__badge--attention";
-    if (status === "replied") cls = "consultly-my-profile__badge--success";
-    if (status === "closed") cls = "consultly-my-profile__badge--muted";
-    return '<span class="consultly-my-profile__badge ' + cls + '">' + escapeHtml(status) + "</span>";
+    var cls = "advizo-my-profile__badge--attention";
+    if (status === "replied") cls = "advizo-my-profile__badge--success";
+    if (status === "closed") cls = "advizo-my-profile__badge--muted";
+    return '<span class="advizo-my-profile__badge ' + cls + '">' + escapeHtml(status) + "</span>";
   }
 
   function supportRequestMarkup(request, isOpen) {
     var replies = request.replies || [];
     return (
-      '<div class="consultly-my-profile__support-item">' +
-      '<button type="button" class="consultly-my-profile__support-summary" data-action="toggle-request" data-request-id="' +
+      '<div class="advizo-my-profile__support-item">' +
+      '<button type="button" class="advizo-my-profile__support-summary" data-action="toggle-request" data-request-id="' +
       escapeHtml(request._id) + '">' +
-      '<span class="consultly-my-profile__support-subject">' + escapeHtml(request.subject) + "</span>" +
-      '<span class="consultly-my-profile__support-badges">' +
+      '<span class="advizo-my-profile__support-subject">' + escapeHtml(request.subject) + "</span>" +
+      '<span class="advizo-my-profile__support-badges">' +
       (request.consultantHasUnreadReply
-        ? '<span class="consultly-my-profile__badge consultly-my-profile__badge--attention">New reply</span>'
+        ? '<span class="advizo-my-profile__badge advizo-my-profile__badge--attention">New reply</span>'
         : "") +
       statusBadgeMarkup(request.status) +
       "</span>" +
       "</button>" +
-      '<p class="consultly-my-profile__support-date">' + escapeHtml(formatFullDate(request.createdAt)) + "</p>" +
+      '<p class="advizo-my-profile__support-date">' + escapeHtml(formatFullDate(request.createdAt)) + "</p>" +
       (isOpen
-        ? '<div class="consultly-my-profile__support-detail">' +
-          '<p class="consultly-my-profile__support-detail-label">Your message</p>' +
-          '<div class="consultly-my-profile__message-bubble">' + escapeHtml(request.message) + "</div>" +
+        ? '<div class="advizo-my-profile__support-detail">' +
+          '<p class="advizo-my-profile__support-detail-label">Your message</p>' +
+          '<div class="advizo-my-profile__message-bubble">' + escapeHtml(request.message) + "</div>" +
           (replies.length
-            ? '<p class="consultly-my-profile__support-detail-label">Store replies</p>' +
+            ? '<p class="advizo-my-profile__support-detail-label">Store replies</p>' +
               replies.map(function (r) {
                 return (
-                  '<div class="consultly-my-profile__reply-bubble">' +
-                  '<span class="consultly-my-profile__reply-meta">Store · ' + escapeHtml(formatFullDate(r.repliedAt)) + "</span>" +
-                  '<p class="consultly-my-profile__reply-text">' + escapeHtml(r.message) + "</p>" +
+                  '<div class="advizo-my-profile__reply-bubble">' +
+                  '<span class="advizo-my-profile__reply-meta">Store · ' + escapeHtml(formatFullDate(r.repliedAt)) + "</span>" +
+                  '<p class="advizo-my-profile__reply-text">' + escapeHtml(r.message) + "</p>" +
                   "</div>"
                 );
               }).join("")
-            : '<p class="consultly-my-profile__empty-text">Waiting for the store to reply.</p>') +
+            : '<p class="advizo-my-profile__empty-text">Waiting for the store to reply.</p>') +
           "</div>"
         : "") +
       "</div>"
@@ -514,18 +514,18 @@
   function renderSupportForm(state) {
     if (!state.showSupportForm) return "";
     return (
-      '<form class="consultly-my-profile__support-form" data-action="submit-support">' +
+      '<form class="advizo-my-profile__support-form" data-action="submit-support">' +
       (state.supportFormError
-        ? '<div class="consultly-my-profile__alert-error">' + escapeHtml(state.supportFormError) + "</div>"
+        ? '<div class="advizo-my-profile__alert-error">' + escapeHtml(state.supportFormError) + "</div>"
         : "") +
       (state.supportFormSuccess
-        ? '<div class="consultly-my-profile__alert-success">' + escapeHtml(state.supportFormSuccess) + "</div>"
+        ? '<div class="advizo-my-profile__alert-success">' + escapeHtml(state.supportFormSuccess) + "</div>"
         : "") +
-      '<label class="consultly-my-profile__field-label" for="consultly-my-profile-subject">Subject</label>' +
-      '<input id="consultly-my-profile-subject" class="consultly-my-profile__field-input" type="text" name="subject" maxlength="200" placeholder="What is your query about?" />' +
-      '<label class="consultly-my-profile__field-label" for="consultly-my-profile-message">Message</label>' +
-      '<textarea id="consultly-my-profile-message" class="consultly-my-profile__field-input" name="message" rows="4" maxlength="5000" placeholder="Describe what you need help with..."></textarea>' +
-      '<button type="submit" class="consultly-my-profile__login-button" ' +
+      '<label class="advizo-my-profile__field-label" for="advizo-my-profile-subject">Subject</label>' +
+      '<input id="advizo-my-profile-subject" class="advizo-my-profile__field-input" type="text" name="subject" maxlength="200" placeholder="What is your query about?" />' +
+      '<label class="advizo-my-profile__field-label" for="advizo-my-profile-message">Message</label>' +
+      '<textarea id="advizo-my-profile-message" class="advizo-my-profile__field-input" name="message" rows="4" maxlength="5000" placeholder="Describe what you need help with..."></textarea>' +
+      '<button type="submit" class="advizo-my-profile__login-button" ' +
       (state.supportSubmitting ? "disabled" : "") + ">" +
       (state.supportSubmitting ? "Sending…" : "Send to store") +
       "</button>" +
@@ -543,7 +543,7 @@
       body = emptyStateMarkup("No support requests yet", 'Use "New request" to contact the store.');
     } else {
       body =
-        '<div class="consultly-my-profile__support-list">' +
+        '<div class="advizo-my-profile__support-list">' +
         state.supportRequests
           .map(function (r) { return supportRequestMarkup(r, state.openRequestId === r._id); })
           .join("") +
@@ -551,10 +551,10 @@
     }
 
     return (
-      '<section class="consultly-my-profile__section">' +
-      '<div class="consultly-my-profile__section-head">' +
-      '<h2 class="consultly-my-profile__section-title">Support</h2>' +
-      '<button type="button" class="consultly-my-profile__filter-pill" data-action="toggle-support-form">' +
+      '<section class="advizo-my-profile__section">' +
+      '<div class="advizo-my-profile__section-head">' +
+      '<h2 class="advizo-my-profile__section-title">Support</h2>' +
+      '<button type="button" class="advizo-my-profile__filter-pill" data-action="toggle-support-form">' +
       (state.showSupportForm ? "Close" : "New request") +
       "</button>" +
       "</div>" +
@@ -581,7 +581,7 @@
 
     root.innerHTML = renderHeader(customer) + renderTabs(state.activeTab, state.options) + body;
 
-    var avatarEl = root.querySelector(".consultly-my-profile__avatar");
+    var avatarEl = root.querySelector(".advizo-my-profile__avatar");
     if (avatarEl) {
       avatarEl.addEventListener(
         "error",
@@ -633,7 +633,7 @@
     }
 
     function scrollContainerEl(key) {
-      return root.querySelector('.consultly-my-profile__scroll-list[data-scroll="' + key + '"]');
+      return root.querySelector('.advizo-my-profile__scroll-list[data-scroll="' + key + '"]');
     }
 
     function detachScrollListener(key) {
@@ -973,9 +973,9 @@
 
   function renderLoginRequired(root, shop) {
     root.innerHTML =
-      '<div class="consultly-my-profile__state">' +
+      '<div class="advizo-my-profile__state">' +
       "<p>Sign in to view your profile, balance, and consultation history.</p>" +
-      '<a class="consultly-my-profile__login-button" href="' +
+      '<a class="advizo-my-profile__login-button" href="' +
       escapeHtml(buildLoginUrl(shop)) +
       '">Sign in</a>' +
       "</div>";
@@ -983,25 +983,25 @@
 
   function renderError(root, onRetry) {
     root.innerHTML =
-      '<div class="consultly-my-profile__state">' +
+      '<div class="advizo-my-profile__state">' +
       "<p>We couldn’t load your profile. Please try again shortly.</p>" +
-      '<button type="button" class="consultly-my-profile__retry">Try again</button>' +
+      '<button type="button" class="advizo-my-profile__retry">Try again</button>' +
       "</div>";
-    var btn = root.querySelector(".consultly-my-profile__retry");
+    var btn = root.querySelector(".advizo-my-profile__retry");
     if (btn) btn.addEventListener("click", onRetry);
   }
 
   function initMyProfile(container) {
     log("current page detected:", window.location.pathname);
-    if (container.getAttribute("data-consultly-initialized") === "1") {
+    if (container.getAttribute("data-advizo-initialized") === "1") {
       log("skip: this block was already initialized");
       return;
     }
-    container.setAttribute("data-consultly-initialized", "1");
+    container.setAttribute("data-advizo-initialized", "1");
 
-    var root = container.querySelector(".consultly-my-profile__root");
+    var root = container.querySelector(".advizo-my-profile__root");
     if (!root) {
-      logErr("Block root (.consultly-my-profile__root) not found — cannot render");
+      logErr("Block root (.advizo-my-profile__root) not found — cannot render");
       return;
     }
 
@@ -1020,9 +1020,9 @@
 
     function initMyProfileLoad() {
       root.innerHTML =
-        '<div class="consultly-my-profile__boot-spinner" role="status">' +
-        '<span class="consultly-my-profile__boot-spinner-ring" aria-hidden="true"></span>' +
-        '<span class="consultly-visually-hidden">Loading your profile…</span>' +
+        '<div class="advizo-my-profile__boot-spinner" role="status">' +
+        '<span class="advizo-my-profile__boot-spinner-ring" aria-hidden="true"></span>' +
+        '<span class="advizo-visually-hidden">Loading your profile…</span>' +
         "</div>";
       log("API request starting:", apiBase);
 
@@ -1075,7 +1075,7 @@
   }
 
   function initAll() {
-    var blocks = document.querySelectorAll(".consultly-my-profile");
+    var blocks = document.querySelectorAll(".advizo-my-profile");
     log("initAll fired — found", blocks.length, "My Profile block(s) on page");
     blocks.forEach(initMyProfile);
   }

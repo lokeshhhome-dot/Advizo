@@ -4,18 +4,18 @@
   Intentionally thin: this shell only hands Shopify/merchant context to the
   storefront JS bundle (added in Step 4) via data attributes. No consultant
   data-fetching or card rendering happens here — that stays in JS, calling
-  the App Proxy JSON endpoint added in Step 2 (/apps/consultly/consultants).
+  the App Proxy JSON endpoint added in Step 2 (/apps/advizo/consultants).
   This path is storefront-relative on purpose: the browser resolves it
   against whatever domain the merchant's store is on, so the same block
   works unmodified across every shop that installs the app — never hardcode
   a backend host here.
 {% endcomment %}
 <div
-  class="consultly-consultant-card"
-  id="consultly-consultant-card-{{ block.id }}"
+  class="advizo-consultant-card"
+  id="advizo-consultant-card-{{ block.id }}"
   data-block-id="{{ block.id }}"
   data-shop="{{ shop.permanent_domain }}"
-  data-api-url="/apps/consultly/consultants"
+  data-api-url="/apps/advizo/consultants"
   data-limit="{{ block.settings.consultant_limit }}"
   {%- comment -%}
     TEMP (Theme Extension customer-ID debug test): `customer` is a standard
@@ -29,7 +29,7 @@
   {{ block.shopify_attributes }}
 >
   {%- if block.settings.heading != blank -%}
-    <h2 class="consultly-consultant-card__heading">{{ block.settings.heading }}</h2>
+    <h2 class="advizo-consultant-card__heading">{{ block.settings.heading }}</h2>
   {%- endif -%}
 
   {%- comment -%}
@@ -37,8 +37,8 @@
     merchant sees when previewing the block in Theme Editor — enough to
     confirm placement without any real data-fetching yet.
   {%- endcomment -%}
-  <div class="consultly-consultant-card__root" aria-live="polite">
-    <p class="consultly-consultant-card__placeholder">{{ 'consultant_card.loading' | t }}</p>
+  <div class="advizo-consultant-card__root" aria-live="polite">
+    <p class="advizo-consultant-card__placeholder">{{ 'consultant_card.loading' | t }}</p>
   </div>
 </div>
 

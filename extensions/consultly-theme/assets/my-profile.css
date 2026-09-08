@@ -1,13 +1,13 @@
 /*
  * Consultly — My Profile (Customer Profile) storefront styles.
  *
- * Self-scoped tokens under .consultly-my-profile (same brand palette as the
+ * Self-scoped tokens under .advizo-my-profile (same brand palette as the
  * consultant card/profile-modal/chat-overlay elsewhere in this extension —
  * forest-green accent), so this file has no dependency on any other
  * stylesheet loading first.
  */
 
-.consultly-my-profile {
+.advizo-my-profile {
   --myp-ink: #10231c;
   --myp-brand: #14563c;
   --myp-brand-soft: #e9f2ec;
@@ -36,7 +36,7 @@
   padding: 24px 16px 48px;
 }
 
-.consultly-my-profile__eyebrow {
+.advizo-my-profile__eyebrow {
   font-size: 12px;
   font-weight: 700;
   color: var(--myp-text-subtle);
@@ -45,7 +45,7 @@
   margin: 0 0 12px;
 }
 
-.consultly-visually-hidden {
+.advizo-visually-hidden {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -60,33 +60,33 @@
 /* Boot spinner — the very first thing shown, both in the static Liquid
    markup (before this file's JS even runs) and while it fetches profile
    data. A spinner reads as "working on it"; the text it replaced didn't. */
-.consultly-my-profile__boot-spinner {
+.advizo-my-profile__boot-spinner {
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 48px 0;
 }
 
-.consultly-my-profile__boot-spinner-ring {
+.advizo-my-profile__boot-spinner-ring {
   width: 34px;
   height: 34px;
   border-radius: 50%;
   border: 3px solid var(--myp-brand-soft);
   border-top-color: var(--myp-brand);
-  animation: consultlyMypSpin 0.8s linear infinite;
+  animation: advizoMypSpin 0.8s linear infinite;
 }
 
-@keyframes consultlyMypSpin {
+@keyframes advizoMypSpin {
   to { transform: rotate(360deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .consultly-my-profile__boot-spinner-ring {
+  .advizo-my-profile__boot-spinner-ring {
     animation-duration: 1.6s;
   }
 }
 
-.consultly-my-profile__state {
+.advizo-my-profile__state {
   max-width: 440px;
   margin: 24px auto;
   background: var(--myp-bg);
@@ -96,15 +96,15 @@
   text-align: center;
 }
 
-.consultly-my-profile__state p {
+.advizo-my-profile__state p {
   font-size: 14px;
   color: var(--myp-text-muted);
   margin: 0 0 16px;
   line-height: 1.6;
 }
 
-.consultly-my-profile__login-button,
-.consultly-my-profile__retry {
+.advizo-my-profile__login-button,
+.advizo-my-profile__retry {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -122,14 +122,14 @@
   transition: filter 0.15s ease;
 }
 
-.consultly-my-profile__login-button:hover,
-.consultly-my-profile__retry:hover {
+.advizo-my-profile__login-button:hover,
+.advizo-my-profile__retry:hover {
   filter: brightness(1.08);
 }
 
 /* ---------- header: identity + balance, one flat composition ---------- */
 
-.consultly-my-profile__header {
+.advizo-my-profile__header {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -141,7 +141,7 @@
   margin-bottom: 20px;
 }
 
-.consultly-my-profile__identity {
+.advizo-my-profile__identity {
   display: flex;
   align-items: center;
   gap: 14px;
@@ -149,7 +149,7 @@
   min-width: 0;
 }
 
-.consultly-my-profile__avatar {
+.advizo-my-profile__avatar {
   display: block;
   width: 56px;
   height: 56px;
@@ -160,11 +160,11 @@
   flex-shrink: 0;
 }
 
-.consultly-my-profile__identity-text {
+.advizo-my-profile__identity-text {
   min-width: 0;
 }
 
-.consultly-my-profile__name {
+.advizo-my-profile__name {
   font-size: 17px;
   font-weight: 700;
   color: var(--myp-ink);
@@ -175,7 +175,7 @@
   text-overflow: ellipsis;
 }
 
-.consultly-my-profile__email {
+.advizo-my-profile__email {
   color: var(--myp-text-muted);
   font-size: 13px;
   margin: 2px 0 0;
@@ -184,26 +184,26 @@
   text-overflow: ellipsis;
 }
 
-.consultly-my-profile__member-since {
+.advizo-my-profile__member-since {
   color: var(--myp-text-subtle);
   font-size: 11.5px;
   margin: 2px 0 0;
 }
 
-.consultly-my-profile__header-divider {
+.advizo-my-profile__header-divider {
   width: 1px;
   align-self: stretch;
   background: var(--myp-border);
 }
 
-.consultly-my-profile__balance {
+.advizo-my-profile__balance {
   display: flex;
   flex-direction: column;
   gap: 2px;
   flex: 1 1 160px;
 }
 
-.consultly-my-profile__balance-label {
+.advizo-my-profile__balance-label {
   font-size: 11.5px;
   font-weight: 600;
   color: var(--myp-text-subtle);
@@ -211,14 +211,14 @@
   letter-spacing: 0.04em;
 }
 
-.consultly-my-profile__balance-amount {
+.advizo-my-profile__balance-amount {
   font-size: 24px;
   font-weight: 700;
   color: var(--myp-ink);
   letter-spacing: -0.01em;
 }
 
-.consultly-my-profile__add-money-link {
+.advizo-my-profile__add-money-link {
   align-self: flex-start;
   margin-top: 4px;
   padding: 0;
@@ -231,13 +231,13 @@
   font-family: inherit;
 }
 
-.consultly-my-profile__add-money-link:hover {
+.advizo-my-profile__add-money-link:hover {
   text-decoration: underline;
 }
 
 /* ---------- primary tabs (Wallet / Communications / Support) ---------- */
 
-.consultly-my-profile__tabs {
+.advizo-my-profile__tabs {
   display: flex;
   gap: 4px;
   padding: 4px;
@@ -248,7 +248,7 @@
   -webkit-overflow-scrolling: touch;
 }
 
-.consultly-my-profile__tab {
+.advizo-my-profile__tab {
   padding: 9px 16px;
   min-height: 36px;
   border: none;
@@ -263,12 +263,12 @@
   transition: background 0.15s ease, color 0.15s ease;
 }
 
-.consultly-my-profile__tab:hover {
+.advizo-my-profile__tab:hover {
   color: var(--myp-ink);
 }
 
-.consultly-my-profile__tab--active,
-.consultly-my-profile__tab--active:hover {
+.advizo-my-profile__tab--active,
+.advizo-my-profile__tab--active:hover {
   background: var(--myp-bg);
   color: var(--myp-ink);
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
@@ -276,7 +276,7 @@
 
 /* ---------- secondary sub-nav (Add money / Wallet activity) ---------- */
 
-.consultly-my-profile__sub-nav {
+.advizo-my-profile__sub-nav {
   display: inline-flex;
   gap: 4px;
   padding: 3px;
@@ -285,7 +285,7 @@
   margin-bottom: 14px;
 }
 
-.consultly-my-profile__sub-tab {
+.advizo-my-profile__sub-tab {
   padding: 7px 14px;
   border: none;
   border-radius: 999px;
@@ -297,12 +297,12 @@
   cursor: pointer;
 }
 
-.consultly-my-profile__sub-tab:hover {
+.advizo-my-profile__sub-tab:hover {
   color: var(--myp-ink);
 }
 
-.consultly-my-profile__sub-tab--active,
-.consultly-my-profile__sub-tab--active:hover {
+.advizo-my-profile__sub-tab--active,
+.advizo-my-profile__sub-tab--active:hover {
   background: var(--myp-bg);
   color: var(--myp-ink);
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
@@ -310,7 +310,7 @@
 
 /* ---------- sections (Wallet activity / Communications) ---------- */
 
-.consultly-my-profile__section {
+.advizo-my-profile__section {
   background: var(--myp-bg);
   border: 1px solid var(--myp-border);
   border-radius: var(--myp-radius-lg);
@@ -318,7 +318,7 @@
   margin-bottom: 16px;
 }
 
-.consultly-my-profile__section-head {
+.advizo-my-profile__section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -327,21 +327,21 @@
   margin-bottom: 4px;
 }
 
-.consultly-my-profile__section-title {
+.advizo-my-profile__section-title {
   font-size: 15px;
   font-weight: 700;
   color: var(--myp-ink);
   margin: 0 0 6px;
 }
 
-.consultly-my-profile__section-head .consultly-my-profile__section-title {
+.advizo-my-profile__section-head .advizo-my-profile__section-title {
   margin-bottom: 0;
 }
 
 /* .filter-pill is the plain (non-active) pill style — reused as-is by the
    Support section's "New request" toggle. Communication has no filters
    (removed), so its --active state and the row wrapper are gone with it. */
-.consultly-my-profile__filter-pill {
+.advizo-my-profile__filter-pill {
   padding: 6px 13px;
   min-height: 30px;
   border-radius: 999px;
@@ -355,30 +355,30 @@
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-.consultly-my-profile__filter-pill:hover {
+.advizo-my-profile__filter-pill:hover {
   border-color: var(--myp-brand);
   color: var(--myp-brand);
 }
 
-.consultly-my-profile__empty-block {
+.advizo-my-profile__empty-block {
   padding: 28px 12px;
   text-align: center;
 }
 
-.consultly-my-profile__empty-title {
+.advizo-my-profile__empty-title {
   font-size: 14px;
   font-weight: 600;
   color: var(--myp-ink);
   margin: 0 0 4px;
 }
 
-.consultly-my-profile__empty-text {
+.advizo-my-profile__empty-text {
   font-size: 13px;
   color: var(--myp-text-muted);
   margin: 0;
 }
 
-.consultly-my-profile__day-label {
+.advizo-my-profile__day-label {
   font-size: 11.5px;
   font-weight: 700;
   text-transform: uppercase;
@@ -387,17 +387,17 @@
   margin: 16px 0 6px;
 }
 
-.consultly-my-profile__row-list:first-child .consultly-my-profile__day-label {
+.advizo-my-profile__row-list:first-child .advizo-my-profile__day-label {
   margin-top: 8px;
 }
 
-.consultly-my-profile__row-list {
+.advizo-my-profile__row-list {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.consultly-my-profile__row {
+.advizo-my-profile__row {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -405,12 +405,12 @@
   border-bottom: 1px solid var(--myp-border);
 }
 
-.consultly-my-profile__row:last-child {
+.advizo-my-profile__row:last-child {
   border-bottom: none;
   padding-bottom: 0;
 }
 
-.consultly-my-profile__row-icon {
+.advizo-my-profile__row-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -423,17 +423,17 @@
   flex-shrink: 0;
 }
 
-.consultly-my-profile__row-icon[data-tone="credit"] {
+.advizo-my-profile__row-icon[data-tone="credit"] {
   background-color: var(--myp-success-soft);
   color: var(--myp-success);
 }
 
-.consultly-my-profile__row-icon[data-tone="debit"] {
+.advizo-my-profile__row-icon[data-tone="debit"] {
   background-color: var(--myp-danger-soft);
   color: var(--myp-danger);
 }
 
-.consultly-my-profile__row-main {
+.advizo-my-profile__row-main {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -441,7 +441,7 @@
   gap: 3px;
 }
 
-.consultly-my-profile__row-title {
+.advizo-my-profile__row-title {
   font-size: 13.5px;
   font-weight: 600;
   color: var(--myp-ink);
@@ -450,7 +450,7 @@
   text-overflow: ellipsis;
 }
 
-.consultly-my-profile__row-meta {
+.advizo-my-profile__row-meta {
   font-size: 12px;
   color: var(--myp-text-muted);
   display: flex;
@@ -459,7 +459,7 @@
   flex-wrap: wrap;
 }
 
-.consultly-my-profile__tag {
+.advizo-my-profile__tag {
   display: inline-flex;
   align-items: center;
   padding: 1px 8px;
@@ -471,7 +471,7 @@
   text-transform: capitalize;
 }
 
-.consultly-my-profile__row-side {
+.advizo-my-profile__row-side {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -479,22 +479,22 @@
   flex-shrink: 0;
 }
 
-.consultly-my-profile__row-amount {
+.advizo-my-profile__row-amount {
   font-size: 13.5px;
   font-weight: 700;
   white-space: nowrap;
   color: var(--myp-ink);
 }
 
-.consultly-my-profile__row-amount[data-tone="credit"] {
+.advizo-my-profile__row-amount[data-tone="credit"] {
   color: var(--myp-success);
 }
 
-.consultly-my-profile__row-amount[data-tone="debit"] {
+.advizo-my-profile__row-amount[data-tone="debit"] {
   color: var(--myp-danger);
 }
 
-.consultly-my-profile__row-time {
+.advizo-my-profile__row-time {
   font-size: 11px;
   color: var(--myp-text-subtle);
 }
@@ -504,7 +504,7 @@
    no scrollbar at all — a scrollbar only ever appears once content actually
    exceeds max-height. Scrolling happens inside this element, never on the
    page itself. */
-.consultly-my-profile__scroll-list {
+.advizo-my-profile__scroll-list {
   max-height: 340px;
   overflow-y: auto;
   overflow-x: hidden;
@@ -512,21 +512,21 @@
   overscroll-behavior: contain;
 }
 
-.consultly-my-profile__scroll-list:focus-visible {
+.advizo-my-profile__scroll-list:focus-visible {
   outline: 2px solid var(--myp-brand);
   outline-offset: -2px;
 }
 
-.consultly-my-profile__scroll-list::-webkit-scrollbar {
+.advizo-my-profile__scroll-list::-webkit-scrollbar {
   width: 6px;
 }
 
-.consultly-my-profile__scroll-list::-webkit-scrollbar-thumb {
+.advizo-my-profile__scroll-list::-webkit-scrollbar-thumb {
   background: var(--myp-border);
   border-radius: 3px;
 }
 
-.consultly-my-profile__inline-loader {
+.advizo-my-profile__inline-loader {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -537,20 +537,20 @@
   color: var(--myp-text-muted);
 }
 
-.consultly-my-profile__inline-loader-dot {
+.advizo-my-profile__inline-loader-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: var(--myp-brand);
-  animation: consultlyMypPulse 1.2s ease-in-out infinite;
+  animation: advizoMypPulse 1.2s ease-in-out infinite;
 }
 
-@keyframes consultlyMypPulse {
+@keyframes advizoMypPulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }
 }
 
-.consultly-my-profile__inline-error-row {
+.advizo-my-profile__inline-error-row {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -562,62 +562,62 @@
   text-align: center;
 }
 
-.consultly-my-profile__inline-error-row .consultly-my-profile__retry {
+.advizo-my-profile__inline-error-row .advizo-my-profile__retry {
   min-height: 32px;
   padding: 0 14px;
   font-size: 12.5px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .consultly-my-profile__inline-loader-dot {
+  .advizo-my-profile__inline-loader-dot {
     animation: none;
   }
 }
 
 /* ---------- skeleton rows (loading state) ---------- */
 
-.consultly-my-profile__skeleton-row {
+.advizo-my-profile__skeleton-row {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 11px 0;
 }
 
-.consultly-my-profile__skeleton-circle,
-.consultly-my-profile__skeleton-line {
+.advizo-my-profile__skeleton-circle,
+.advizo-my-profile__skeleton-line {
   background: linear-gradient(90deg, var(--myp-surface-2) 25%, var(--myp-border) 37%, var(--myp-surface-2) 63%);
   background-size: 400% 100%;
-  animation: consultlyMypShimmer 1.4s ease infinite;
+  animation: advizoMypShimmer 1.4s ease infinite;
   border-radius: 8px;
 }
 
-.consultly-my-profile__skeleton-circle {
+.advizo-my-profile__skeleton-circle {
   width: 36px;
   height: 36px;
   min-width: 36px;
   border-radius: 50%;
 }
 
-.consultly-my-profile__skeleton-line {
+.advizo-my-profile__skeleton-line {
   height: 12px;
   flex: 1;
   max-width: 220px;
 }
 
-@keyframes consultlyMypShimmer {
+@keyframes advizoMypShimmer {
   0% { background-position: 100% 50%; }
   100% { background-position: 0 50%; }
 }
 
 /* ---------- Add money / top-up ---------- */
 
-.consultly-my-profile__topup-grid {
+.advizo-my-profile__topup-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 12px;
 }
 
-.consultly-my-profile__topup-card {
+.advizo-my-profile__topup-card {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -632,18 +632,18 @@
   transition: border-color 0.15s ease, transform 0.12s ease;
 }
 
-.consultly-my-profile__topup-card:hover {
+.advizo-my-profile__topup-card:hover {
   border-color: var(--myp-brand);
   transform: translateY(-1px);
 }
 
-.consultly-my-profile__topup-amount {
+.advizo-my-profile__topup-amount {
   font-size: 18px;
   font-weight: 700;
   color: var(--myp-ink);
 }
 
-.consultly-my-profile__topup-bonus {
+.advizo-my-profile__topup-bonus {
   display: inline-flex;
   padding: 2px 8px;
   border-radius: 999px;
@@ -653,28 +653,28 @@
   font-weight: 700;
 }
 
-.consultly-my-profile__topup-total {
+.advizo-my-profile__topup-total {
   font-size: 11.5px;
   color: var(--myp-text-muted);
   margin-top: 2px;
 }
 
-.consultly-my-profile__topup-skeleton {
+.advizo-my-profile__topup-skeleton {
   height: 96px;
   border-radius: var(--myp-radius-md);
   background: linear-gradient(90deg, var(--myp-surface-2) 25%, var(--myp-border) 37%, var(--myp-surface-2) 63%);
   background-size: 400% 100%;
-  animation: consultlyMypShimmer 1.4s ease infinite;
+  animation: advizoMypShimmer 1.4s ease infinite;
 }
 
-.consultly-my-profile__inline-status {
+.advizo-my-profile__inline-status {
   font-size: 12.5px;
   font-weight: 600;
   color: var(--myp-brand);
   margin: 0 0 10px;
 }
 
-.consultly-my-profile__inline-error {
+.advizo-my-profile__inline-error {
   font-size: 12.5px;
   font-weight: 600;
   color: var(--myp-danger);
@@ -682,16 +682,16 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .consultly-my-profile__skeleton-circle,
-  .consultly-my-profile__skeleton-line,
-  .consultly-my-profile__topup-skeleton {
+  .advizo-my-profile__skeleton-circle,
+  .advizo-my-profile__skeleton-line,
+  .advizo-my-profile__topup-skeleton {
     animation: none;
   }
 }
 
 /* ---------- Support ---------- */
 
-.consultly-my-profile__support-form {
+.advizo-my-profile__support-form {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -701,13 +701,13 @@
   border-radius: var(--myp-radius-md);
 }
 
-.consultly-my-profile__field-label {
+.advizo-my-profile__field-label {
   font-size: 12px;
   font-weight: 600;
   color: var(--myp-ink);
 }
 
-.consultly-my-profile__field-input {
+.advizo-my-profile__field-input {
   width: 100%;
   padding: 10px 12px;
   border-radius: var(--myp-radius-sm);
@@ -720,12 +720,12 @@
   resize: vertical;
 }
 
-.consultly-my-profile__field-input:focus {
+.advizo-my-profile__field-input:focus {
   outline: 2px solid var(--myp-brand);
   outline-offset: 1px;
 }
 
-.consultly-my-profile__alert-error {
+.advizo-my-profile__alert-error {
   padding: 10px 12px;
   border-radius: var(--myp-radius-sm);
   background: var(--myp-danger-soft);
@@ -733,7 +733,7 @@
   font-size: 13px;
 }
 
-.consultly-my-profile__alert-success {
+.advizo-my-profile__alert-success {
   padding: 10px 12px;
   border-radius: var(--myp-radius-sm);
   background: var(--myp-success-soft);
@@ -741,21 +741,21 @@
   font-size: 13px;
 }
 
-.consultly-my-profile__support-list {
+.advizo-my-profile__support-list {
   display: flex;
   flex-direction: column;
 }
 
-.consultly-my-profile__support-item {
+.advizo-my-profile__support-item {
   border-bottom: 1px solid var(--myp-border);
   padding: 12px 0;
 }
 
-.consultly-my-profile__support-item:last-child {
+.advizo-my-profile__support-item:last-child {
   border-bottom: none;
 }
 
-.consultly-my-profile__support-summary {
+.advizo-my-profile__support-summary {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -771,7 +771,7 @@
   box-sizing: border-box;
 }
 
-.consultly-my-profile__support-subject {
+.advizo-my-profile__support-subject {
   flex: 1 1 auto;
   min-width: 0;
   font-size: 13.5px;
@@ -782,14 +782,14 @@
   text-overflow: ellipsis;
 }
 
-.consultly-my-profile__support-badges {
+.advizo-my-profile__support-badges {
   display: flex;
   gap: 6px;
   align-items: center;
   flex-shrink: 0;
 }
 
-.consultly-my-profile__badge {
+.advizo-my-profile__badge {
   display: inline-block;
   padding: 2px 9px;
   border-radius: 999px;
@@ -798,34 +798,34 @@
   text-transform: capitalize;
 }
 
-.consultly-my-profile__badge--attention {
+.advizo-my-profile__badge--attention {
   background: var(--myp-warning-soft);
   color: var(--myp-warning);
 }
 
-.consultly-my-profile__badge--success {
+.advizo-my-profile__badge--success {
   background: var(--myp-success-soft);
   color: var(--myp-success);
 }
 
-.consultly-my-profile__badge--muted {
+.advizo-my-profile__badge--muted {
   background: var(--myp-surface-2);
   color: var(--myp-text-muted);
 }
 
-.consultly-my-profile__support-date {
+.advizo-my-profile__support-date {
   font-size: 11px;
   color: var(--myp-text-subtle);
   margin: 4px 0 0;
 }
 
-.consultly-my-profile__support-detail {
+.advizo-my-profile__support-detail {
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px dashed var(--myp-border);
 }
 
-.consultly-my-profile__support-detail-label {
+.advizo-my-profile__support-detail-label {
   font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
@@ -834,7 +834,7 @@
   margin: 10px 0 6px;
 }
 
-.consultly-my-profile__message-bubble {
+.advizo-my-profile__message-bubble {
   padding: 10px 12px;
   border-radius: var(--myp-radius-sm);
   background: var(--myp-surface-2);
@@ -843,7 +843,7 @@
   white-space: pre-wrap;
 }
 
-.consultly-my-profile__reply-bubble {
+.advizo-my-profile__reply-bubble {
   padding: 10px 12px;
   border-radius: var(--myp-radius-sm);
   background: var(--myp-brand-soft);
@@ -851,12 +851,12 @@
   white-space: pre-wrap;
 }
 
-.consultly-my-profile__reply-meta {
+.advizo-my-profile__reply-meta {
   font-size: 11px;
   color: var(--myp-text-muted);
 }
 
-.consultly-my-profile__reply-text {
+.advizo-my-profile__reply-text {
   margin: 4px 0 0;
   font-size: 13.5px;
   color: var(--myp-ink);
@@ -865,36 +865,36 @@
 /* ---------- responsive ---------- */
 
 @media (max-width: 767.98px) {
-  .consultly-my-profile {
+  .advizo-my-profile {
     padding: 16px 12px 32px;
   }
 
-  .consultly-my-profile__header {
+  .advizo-my-profile__header {
     flex-direction: column;
     align-items: stretch;
     padding: 18px;
     gap: 14px;
   }
 
-  .consultly-my-profile__header-divider {
+  .advizo-my-profile__header-divider {
     width: 100%;
     height: 1px;
   }
 
-  .consultly-my-profile__section {
+  .advizo-my-profile__section {
     padding: 16px;
   }
 
-  .consultly-my-profile__topup-grid {
+  .advizo-my-profile__topup-grid {
     grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
     gap: 10px;
   }
 
-  .consultly-my-profile__topup-card {
+  .advizo-my-profile__topup-card {
     padding: 12px 10px;
   }
 
-  .consultly-my-profile__support-summary {
+  .advizo-my-profile__support-summary {
     flex-direction: column;
     align-items: flex-start;
     gap: 6px;
@@ -903,7 +903,7 @@
   /* A tall internal list on a small phone still leaves the user re-scrolling
      inside a cramped window — a shorter box here keeps both the section and
      the page itself comfortably scrollable. */
-  .consultly-my-profile__scroll-list {
+  .advizo-my-profile__scroll-list {
     max-height: 280px;
   }
 }

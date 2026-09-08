@@ -9,7 +9,7 @@
  * nothing to import from.
  *
  * Data source: the App Proxy JSON endpoint
- * (/apps/consultly/consultant/<id>) added alongside this block. The
+ * (/apps/advizo/consultant/<id>) added alongside this block. The
  * consultant id itself comes from this page's own URL (?id=...), read
  * client-side — this file never talks to a backend host directly.
  */
@@ -32,7 +32,7 @@
   (function renderUnconditionalLoadMarker() {
     try {
       var marker = document.createElement("div");
-      marker.id = "consultly-profile-js-loaded-marker";
+      marker.id = "advizo-profile-js-loaded-marker";
       marker.setAttribute(
         "style",
         "position:fixed;bottom:0;left:0;z-index:2147483647;" +
@@ -70,9 +70,9 @@
   // or QA tester checking the storefront won't have DevTools open.
   function showDebugBanner(detail) {
     if (!DEBUG) return;
-    if (document.getElementById("consultly-profile-debug-banner")) return;
+    if (document.getElementById("advizo-profile-debug-banner")) return;
     var banner = document.createElement("div");
-    banner.id = "consultly-profile-debug-banner";
+    banner.id = "advizo-profile-debug-banner";
     banner.setAttribute(
       "style",
       "position:fixed;top:0;left:0;right:0;z-index:2147483647;" +
@@ -110,7 +110,7 @@
     "Communication unavailable. The store has exhausted its communication minutes.";
   var NOT_FOUND_MESSAGE = "Consultant not found.";
 
-  // Kept in sync by hand with consultly_Frontend/src/components/Helper/Helper.js
+  // Kept in sync by hand with advizo_Frontend/src/components/Helper/Helper.js
   // formatAmountHelper — see consultant-card.js for the same note.
   function formatAmount(num) {
     if (num === null || num === undefined) return "0";
@@ -151,7 +151,7 @@
 
   function buildLoginUrl(shop) {
     return (
-      "https://" + shop + "/account/login?return_to=" + encodeURIComponent("/apps/consultly")
+      "https://" + shop + "/account/login?return_to=" + encodeURIComponent("/apps/advizo")
     );
   }
 
@@ -166,36 +166,36 @@
     return (
       "https://" +
       shop +
-      "/apps/consultly/view-profile?consultantId=" +
+      "/apps/advizo/view-profile?consultantId=" +
       encodeURIComponent(consultantId)
     );
   }
 
   function priceMarkup(currencySymbol, amount) {
     return (
-      '<span class="consultly-consultant-profile__action-price">' +
-      '<span class="consultly-consultant-profile__currency">' +
+      '<span class="advizo-consultant-profile__action-price">' +
+      '<span class="advizo-consultant-profile__currency">' +
       escapeHtml(currencySymbol) +
       "</span>" +
       escapeHtml(formatAmount(amount)) +
-      '<span class="consultly-consultant-profile__action-unit">/min</span>' +
+      '<span class="advizo-consultant-profile__action-unit">/min</span>' +
       "</span>"
     );
   }
 
   function actionButtonMarkup(kind, label, icon, amount, currencySymbol, disabled) {
     return (
-      '<button type="button" class="consultly-consultant-profile__action" data-action="' +
+      '<button type="button" class="advizo-consultant-profile__action" data-action="' +
       kind +
       '"' +
       (disabled
         ? ' aria-disabled="true" title="' + escapeHtml(COMM_DISABLED_MESSAGE) + '"'
         : "") +
       ">" +
-      '<span class="consultly-consultant-profile__action-icon">' +
+      '<span class="advizo-consultant-profile__action-icon">' +
       icon +
       "</span>" +
-      '<span class="consultly-consultant-profile__action-label">' +
+      '<span class="advizo-consultant-profile__action-label">' +
       escapeHtml(label) +
       "</span>" +
       priceMarkup(currencySymbol, amount) +
@@ -205,7 +205,7 @@
 
   function renderNotFound(root) {
     root.innerHTML =
-      '<div class="consultly-consultant-profile__state">' +
+      '<div class="advizo-consultant-profile__state">' +
       "<p>" +
       NOT_FOUND_MESSAGE +
       "</p>" +
@@ -214,11 +214,11 @@
 
   function renderError(root, onRetry) {
     root.innerHTML =
-      '<div class="consultly-consultant-profile__state">' +
+      '<div class="advizo-consultant-profile__state">' +
       "<p>We couldn’t load this consultant’s profile. Please try again shortly.</p>" +
-      '<button type="button" class="consultly-consultant-profile__retry">Try again</button>' +
+      '<button type="button" class="advizo-consultant-profile__retry">Try again</button>' +
       "</div>";
-    var btn = root.querySelector(".consultly-consultant-profile__retry");
+    var btn = root.querySelector(".advizo-consultant-profile__retry");
     if (btn) btn.addEventListener("click", onRetry);
   }
 
@@ -232,17 +232,17 @@
     var currencySymbol = data.shopCurrency || "$";
 
     var statusBadge = c.isBusy
-      ? '<span class="consultly-consultant-profile__status consultly-consultant-profile__status--busy">Busy · ~5 min</span>'
+      ? '<span class="advizo-consultant-profile__status advizo-consultant-profile__status--busy">Busy · ~5 min</span>'
       : c.isActive
-        ? '<span class="consultly-consultant-profile__status consultly-consultant-profile__status--active">Available now</span>'
+        ? '<span class="advizo-consultant-profile__status advizo-consultant-profile__status--active">Available now</span>'
         : "";
 
     var aboutHtml = "";
     if (options.showAbout && c.bio) {
       aboutHtml =
-        '<section class="consultly-consultant-profile__section">' +
-        '<h2 class="consultly-consultant-profile__section-title">About</h2>' +
-        '<p class="consultly-consultant-profile__about">' +
+        '<section class="advizo-consultant-profile__section">' +
+        '<h2 class="advizo-consultant-profile__section-title">About</h2>' +
+        '<p class="advizo-consultant-profile__about">' +
         escapeHtml(c.bio) +
         "</p>" +
         "</section>";
@@ -251,9 +251,9 @@
     var expertiseHtml = "";
     if (options.showExpertise && c.specialization) {
       expertiseHtml =
-        '<section class="consultly-consultant-profile__section">' +
-        '<h2 class="consultly-consultant-profile__section-title">Expertise</h2>' +
-        '<span class="consultly-consultant-profile__expertise-tag">' +
+        '<section class="advizo-consultant-profile__section">' +
+        '<h2 class="advizo-consultant-profile__section-title">Expertise</h2>' +
+        '<span class="advizo-consultant-profile__expertise-tag">' +
         escapeHtml(c.specialization) +
         "</span>" +
         "</section>";
@@ -279,9 +279,9 @@
       }
       if (buttons) {
         consultationHtml =
-          '<section class="consultly-consultant-profile__section">' +
-          '<h2 class="consultly-consultant-profile__section-title">Consultation Options</h2>' +
-          '<div class="consultly-consultant-profile__actions">' +
+          '<section class="advizo-consultant-profile__section">' +
+          '<h2 class="advizo-consultant-profile__section-title">Consultation Options</h2>' +
+          '<div class="advizo-consultant-profile__actions">' +
           buttons +
           "</div>" +
           "</section>";
@@ -289,26 +289,26 @@
     }
 
     root.innerHTML =
-      '<div class="consultly-consultant-profile__header">' +
-      '<img class="consultly-consultant-profile__avatar" src="' +
+      '<div class="advizo-consultant-profile__header">' +
+      '<img class="advizo-consultant-profile__avatar" src="' +
       escapeHtml(imgSrc) +
       '" alt="' +
       escapeHtml(name) +
       '" />' +
-      '<div class="consultly-consultant-profile__header-info">' +
-      '<h1 class="consultly-consultant-profile__name">' +
+      '<div class="advizo-consultant-profile__header-info">' +
+      '<h1 class="advizo-consultant-profile__name">' +
       escapeHtml(name) +
       "</h1>" +
-      '<p class="consultly-consultant-profile__profession">' +
+      '<p class="advizo-consultant-profile__profession">' +
       escapeHtml(profession) +
       "</p>" +
-      '<div class="consultly-consultant-profile__meta">' +
-      '<span class="consultly-consultant-profile__badge">' +
+      '<div class="advizo-consultant-profile__meta">' +
+      '<span class="advizo-consultant-profile__badge">' +
       experience +
       "+ Years of Experience</span>" +
       statusBadge +
       "</div>" +
-      '<p class="consultly-consultant-profile__languages"><strong>Speaks:</strong> ' +
+      '<p class="advizo-consultant-profile__languages"><strong>Speaks:</strong> ' +
       escapeHtml(languages.join(", ")) +
       "</p>" +
       "</div>" +
@@ -317,7 +317,7 @@
       expertiseHtml +
       consultationHtml;
 
-    var avatarEl = root.querySelector(".consultly-consultant-profile__avatar");
+    var avatarEl = root.querySelector(".advizo-consultant-profile__avatar");
     if (avatarEl) {
       avatarEl.addEventListener(
         "error",
@@ -342,21 +342,21 @@
 
   function initConsultantProfile(container) {
     log("initConsultantProfile started");
-    if (container.getAttribute("data-consultly-initialized") === "1") {
+    if (container.getAttribute("data-advizo-initialized") === "1") {
       log("skip: this block was already initialized");
       return;
     }
-    container.setAttribute("data-consultly-initialized", "1");
+    container.setAttribute("data-advizo-initialized", "1");
 
     log("Current URL:", window.location.href);
 
-    var root = container.querySelector(".consultly-consultant-profile__root");
+    var root = container.querySelector(".advizo-consultant-profile__root");
     // UNCONDITIONAL — proves the block's own markup rendered and this
     // function found it, independent of the DEBUG flag.
     console.log("[CONSULTANT PROFILE] block root found?", Boolean(root), root);
     if (!root) {
-      logErr("Block root (.consultly-consultant-profile__root) not found — cannot render");
-      showDebugBanner("block root element (.consultly-consultant-profile__root) missing");
+      logErr("Block root (.advizo-consultant-profile__root) not found — cannot render");
+      showDebugBanner("block root element (.advizo-consultant-profile__root) missing");
       return;
     }
 
@@ -392,9 +392,9 @@
 
     function initConsultantProfileLoad() {
       root.innerHTML =
-        '<div class="consultly-consultant-profile__boot-spinner" role="status">' +
-        '<span class="consultly-consultant-profile__boot-spinner-ring" aria-hidden="true"></span>' +
-        '<span class="consultly-visually-hidden">Loading consultant profile…</span>' +
+        '<div class="advizo-consultant-profile__boot-spinner" role="status">' +
+        '<span class="advizo-consultant-profile__boot-spinner-ring" aria-hidden="true"></span>' +
+        '<span class="advizo-visually-hidden">Loading consultant profile…</span>' +
         "</div>";
 
       log("About to build API URL (base =", apiBase + ")");
@@ -469,7 +469,7 @@
   }
 
   function initAll() {
-    var blocks = document.querySelectorAll(".consultly-consultant-profile");
+    var blocks = document.querySelectorAll(".advizo-consultant-profile");
     // UNCONDITIONAL — does the Liquid block's own markup exist in this
     // page's DOM at all? If this logs 0 on the live storefront while the
     // Theme Editor preview shows the block, the live page is rendering an
@@ -480,9 +480,9 @@
     console.log("[CONSULTANT PROFILE] blocks found in DOM:", blocks.length);
     log("initAll fired — found", blocks.length, "profile block(s) on page");
     if (!blocks.length) {
-      logErr("No .consultly-consultant-profile block found in the DOM on this page load");
+      logErr("No .advizo-consultant-profile block found in the DOM on this page load");
       showDebugBanner(
-        "no .consultly-consultant-profile block in the DOM — likely an undeployed/unreleased extension version, not a Theme Editor setup issue",
+        "no .advizo-consultant-profile block in the DOM — likely an undeployed/unreleased extension version, not a Theme Editor setup issue",
       );
     }
     blocks.forEach(initConsultantProfile);

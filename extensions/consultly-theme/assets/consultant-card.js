@@ -2,13 +2,13 @@
  * Consultly — Consultant Listing storefront bundle.
  *
  * Vanilla JS, no build step, no framework. Ported from
- * consultly_Frontend/src/components/ConsultantCards/ConsultantCards.js —
+ * advizo_Frontend/src/components/ConsultantCards/ConsultantCards.js —
  * same fields, same card layout, same formatAmountHelper/MoneyValue logic —
  * without React/Redux/Bootstrap/react-router, none of which this file
  * imports or depends on.
  *
  * Data source: the App Proxy JSON endpoint added in Step 2
- * (/apps/consultly/consultants). That path is storefront-relative and is
+ * (/apps/advizo/consultants). That path is storefront-relative and is
  * intercepted by Shopify itself, which appends/verifies shop + signature —
  * this file never talks to a backend host directly.
  */
@@ -153,7 +153,7 @@
     }
   }
 
-  // Same rules as consultly_Frontend/src/components/Helper/Helper.js
+  // Same rules as advizo_Frontend/src/components/Helper/Helper.js
   // formatAmountHelper — kept in sync by hand since this bundle can't import
   // from the CRA app.
   function formatAmount(num) {
@@ -207,7 +207,7 @@
 
   function showToast(container, message) {
     var toast = document.createElement("div");
-    toast.className = "consultly-consultant-card__toast";
+    toast.className = "advizo-consultant-card__toast";
     toast.textContent = message;
     container.appendChild(toast);
     window.requestAnimationFrame(function () {
@@ -223,14 +223,14 @@
 
   function buildLoginUrl(shop) {
     return (
-      "https://" + shop + "/account/login?return_to=" + encodeURIComponent("/apps/consultly")
+      "https://" + shop + "/account/login?return_to=" + encodeURIComponent("/apps/advizo")
     );
   }
 
   // TEMP (Chat modal UI test): App-Proxy-relative on purpose — Shopify's own
   // edge intercepts this and forwards it to our backend WITH
   // logged_in_customer_id + a verified signature attached, and the browser
-  // also carries the session cookie the /apps/consultly/consultants fetch
+  // also carries the session cookie the /apps/advizo/consultants fetch
   // already set (same shop origin). That's how the identity sync in
   // Step 1/2 actually reaches the chat overlay — see
   // proxyShopifyStorefrontChat in shopifyController.js. A direct cross-origin
@@ -239,7 +239,7 @@
     return (
       "https://" +
       shop +
-      "/apps/consultly/chats?consultantId=" +
+      "/apps/advizo/chats?consultantId=" +
       encodeURIComponent(consultantId) +
       "&embedded=1"
     );
@@ -255,7 +255,7 @@
     return (
       "https://" +
       shop +
-      "/apps/consultly/view-profile?consultantId=" +
+      "/apps/advizo/view-profile?consultantId=" +
       encodeURIComponent(consultantId) +
       "&autoStartCall=" +
       encodeURIComponent(callType)
@@ -290,7 +290,7 @@
 
   function openCallOverlay(consultantId, shop, callType) {
     if (!shop) {
-      console.error("[consultly] shop missing — cannot open call overlay");
+      console.error("[advizo] shop missing — cannot open call overlay");
       return;
     }
     console.log("[CALL FLOW] Existing profile modal pattern detected");
@@ -301,11 +301,11 @@
     var els = ensureProfileModal();
 
     clearProfileModalChrome(els);
-    els.panel.classList.add("consultly-profile-modal--call");
+    els.panel.classList.add("advizo-profile-modal--call");
     els.body.innerHTML = "";
     var iframe = document.createElement("iframe");
     iframe.src = buildCallOverlayUrl(shop, consultantId, callType);
-    iframe.className = "consultly-profile-modal__call-iframe";
+    iframe.className = "advizo-profile-modal__call-iframe";
     iframe.setAttribute("allow", "microphone; camera; autoplay");
     els.body.appendChild(iframe);
 
@@ -318,7 +318,7 @@
 
   // ---------- Native call modal (no iframe) ----------
   //
-  // Loads consultly-call-widget.js (built from consultly_CallWidget/, a
+  // Loads advizo-call-widget.js (built from advizo_CallWidget/, a
   // separate small bundle that reuses the React app's own callSlice.js/
   // SokectConfig.js/ringingTune.js verbatim — same Agora client, same
   // Socket.IO connection, not a second calling implementation) and asks it
@@ -333,7 +333,7 @@
       // Redirects to the widget's real (React app) origin — see
       // proxyShopifyCallWidgetScript's comment. Never hardcode that origin
       // here directly.
-      script.src = "https://" + shop + "/apps/consultly/call-widget.js";
+      script.src = "https://" + shop + "/apps/advizo/call-widget.js";
       script.async = true;
       script.onload = function () {
         resolve();
@@ -405,7 +405,7 @@
   // a shared/derived number. Same rates the Consultant Profile modal shows.
   function actionButtonMarkup(kind, icon, amount, currencySymbol, disabled) {
     return (
-      '<button type="button" class="consultly-consultant-card__action consultly-consultant-card__action--' +
+      '<button type="button" class="advizo-consultant-card__action advizo-consultant-card__action--' +
       kind +
       '" data-action="' +
       kind +
@@ -414,15 +414,15 @@
         ? ' aria-disabled="true" title="' + escapeHtml(COMM_DISABLED_MESSAGE) + '"'
         : "") +
       ">" +
-      '<span class="consultly-consultant-card__action-row">' +
-      '<span class="consultly-consultant-card__action-icon">' +
+      '<span class="advizo-consultant-card__action-row">' +
+      '<span class="advizo-consultant-card__action-icon">' +
       icon +
       "</span>" +
-      '<span class="consultly-consultant-card__action-label">' +
+      '<span class="advizo-consultant-card__action-label">' +
       ACTION_LABELS[kind] +
       "</span>" +
       "</span>" +
-      '<span class="consultly-consultant-card__action-amount">' +
+      '<span class="advizo-consultant-card__action-amount">' +
       escapeHtml(currencySymbol) +
       escapeHtml(formatAmount(amount)) +
       "/min</span>" +
@@ -447,10 +447,10 @@
           ? "Available now · replies in ~1 min"
           : "Offline";
     return (
-      '<div class="consultly-consultant__availability consultly-consultant__availability--' +
+      '<div class="advizo-consultant__availability advizo-consultant__availability--' +
       state +
       '">' +
-      '<span class="consultly-consultant__availability-dot"></span>' +
+      '<span class="advizo-consultant__availability-dot"></span>' +
       "<span>" +
       label +
       "</span>" +
@@ -466,7 +466,7 @@
   // rating/session-count field is ever added to the API response, this is
   // the one place to switch on it.
   function ratingMarkup() {
-    return '<span class="consultly-consultant__rating-badge">New</span>';
+    return '<span class="advizo-consultant__rating-badge">New</span>';
   }
 
   function cardMarkup(consultant, currencySymbol, communicationDisabled) {
@@ -483,34 +483,34 @@
     var metaText = escapeHtml(metaParts.join(" · "));
 
     return (
-      '<div class="consultly-consultant-card__item">' +
-      '<div class="consultly-consultant" data-consultant-id="' +
+      '<div class="advizo-consultant-card__item">' +
+      '<div class="advizo-consultant" data-consultant-id="' +
       escapeHtml(consultant.id) +
       '" role="button" tabindex="0">' +
-      '<div class="consultly-consultant__header-band">' +
-      '<span class="consultly-consultant__category">' +
+      '<div class="advizo-consultant__header-band">' +
+      '<span class="advizo-consultant__category">' +
       escapeHtml(consultant.profession) +
       "</span>" +
       // No favourite/secondary action exists anywhere in this app today —
       // left empty rather than adding a fake button (per design brief).
       "</div>" +
-      '<div class="consultly-consultant__avatar-wrap">' +
-      '<img class="consultly-consultant__avatar" src="' +
+      '<div class="advizo-consultant__avatar-wrap">' +
+      '<img class="advizo-consultant__avatar" src="' +
       escapeHtml(imgSrc) +
       '" alt="' +
       escapeHtml(consultant.name) +
       '" loading="lazy" />' +
       "</div>" +
-      '<div class="consultly-consultant__body">' +
-      '<h3 class="consultly-consultant__name">' +
+      '<div class="advizo-consultant__body">' +
+      '<h3 class="advizo-consultant__name">' +
       escapeHtml(consultant.name) +
       "</h3>" +
       (metaText
-        ? '<p class="consultly-consultant__meta">' + metaText + "</p>"
+        ? '<p class="advizo-consultant__meta">' + metaText + "</p>"
         : "") +
       ratingMarkup() +
       availabilityMarkup(consultant) +
-      '<div class="consultly-consultant__actions">' +
+      '<div class="advizo-consultant__actions">' +
       actionButtonMarkup(
         "chat",
         ICONS.chat,
@@ -540,31 +540,31 @@
   }
 
   // Skeleton reuses the REAL card's own structural classes
-  // (.consultly-consultant / __header-band / __avatar-wrap / __body /
+  // (.advizo-consultant / __header-band / __avatar-wrap / __body /
   // __actions) and only swaps the inner content for neutral
-  // .consultly-skeleton blocks — so its width/height/radius/gap is
+  // .advizo-skeleton blocks — so its width/height/radius/gap is
   // guaranteed identical to the real card (same CSS controls both), instead
   // of maintaining a second, independent set of measurements that could
   // drift out of sync and cause layout shift when real cards replace it.
   function skeletonCardMarkup() {
     return (
-      '<div class="consultly-consultant-card__item consultly-consultant-card__item--skeleton" aria-hidden="true">' +
-      '<div class="consultly-consultant consultly-consultant--skeleton">' +
-      '<div class="consultly-consultant__header-band">' +
-      '<span class="consultly-skeleton consultly-skeleton--category"></span>' +
+      '<div class="advizo-consultant-card__item advizo-consultant-card__item--skeleton" aria-hidden="true">' +
+      '<div class="advizo-consultant advizo-consultant--skeleton">' +
+      '<div class="advizo-consultant__header-band">' +
+      '<span class="advizo-skeleton advizo-skeleton--category"></span>' +
       "</div>" +
-      '<div class="consultly-consultant__avatar-wrap">' +
-      '<span class="consultly-skeleton consultly-skeleton--avatar"></span>' +
+      '<div class="advizo-consultant__avatar-wrap">' +
+      '<span class="advizo-skeleton advizo-skeleton--avatar"></span>' +
       "</div>" +
-      '<div class="consultly-consultant__body">' +
-      '<span class="consultly-skeleton consultly-skeleton--name"></span>' +
-      '<span class="consultly-skeleton consultly-skeleton--meta"></span>' +
-      '<span class="consultly-skeleton consultly-skeleton--badge"></span>' +
-      '<span class="consultly-skeleton consultly-skeleton--availability"></span>' +
-      '<div class="consultly-consultant__actions">' +
-      '<span class="consultly-skeleton consultly-skeleton--action"></span>' +
-      '<span class="consultly-skeleton consultly-skeleton--action"></span>' +
-      '<span class="consultly-skeleton consultly-skeleton--action"></span>' +
+      '<div class="advizo-consultant__body">' +
+      '<span class="advizo-skeleton advizo-skeleton--name"></span>' +
+      '<span class="advizo-skeleton advizo-skeleton--meta"></span>' +
+      '<span class="advizo-skeleton advizo-skeleton--badge"></span>' +
+      '<span class="advizo-skeleton advizo-skeleton--availability"></span>' +
+      '<div class="advizo-consultant__actions">' +
+      '<span class="advizo-skeleton advizo-skeleton--action"></span>' +
+      '<span class="advizo-skeleton advizo-skeleton--action"></span>' +
+      '<span class="advizo-skeleton advizo-skeleton--action"></span>' +
       "</div>" +
       "</div>" +
       "</div>" +
@@ -578,8 +578,8 @@
   // having run — no separate timer, no fake progress.
   function renderSkeleton(root) {
     var html =
-      '<span class="consultly-visually-hidden">Loading consultants…</span>' +
-      '<div class="consultly-consultant-card__grid">';
+      '<span class="advizo-visually-hidden">Loading consultants…</span>' +
+      '<div class="advizo-consultant-card__grid">';
     for (var i = 0; i < 3; i++) {
       html += skeletonCardMarkup();
     }
@@ -589,15 +589,15 @@
 
   function renderEmpty(root) {
     root.innerHTML =
-      '<div class="consultly-consultant-card__empty">' +
-      '<p class="consultly-consultant-card__empty-title">No consultants available yet</p>' +
-      '<p class="consultly-consultant-card__empty-text">Our experts will appear here as soon as they are available. Please check back soon.</p>' +
+      '<div class="advizo-consultant-card__empty">' +
+      '<p class="advizo-consultant-card__empty-title">No consultants available yet</p>' +
+      '<p class="advizo-consultant-card__empty-text">Our experts will appear here as soon as they are available. Please check back soon.</p>' +
       "</div>";
   }
 
   function renderError(root) {
     root.innerHTML =
-      '<div class="consultly-consultant-card__error">' +
+      '<div class="advizo-consultant-card__error">' +
       "<p>We couldn’t load our consultants right now. Please refresh the page or try again shortly.</p>" +
       "</div>";
   }
@@ -629,24 +629,24 @@
     if (chatOverlayEls) return chatOverlayEls;
 
     var backdrop = document.createElement("div");
-    backdrop.className = "consultly-chat-overlay-backdrop";
+    backdrop.className = "advizo-chat-overlay-backdrop";
     backdrop.setAttribute("hidden", "hidden");
 
     var panel = document.createElement("div");
-    panel.className = "consultly-chat-overlay-panel";
+    panel.className = "advizo-chat-overlay-panel";
     panel.setAttribute("role", "dialog");
     panel.setAttribute("aria-modal", "true");
     panel.setAttribute("aria-label", "Chat");
     panel.setAttribute("tabindex", "-1");
 
     var spinner = document.createElement("div");
-    spinner.className = "consultly-chat-overlay-spinner";
+    spinner.className = "advizo-chat-overlay-spinner";
     spinner.setAttribute("role", "status");
     spinner.setAttribute("aria-label", "Loading chat");
-    spinner.innerHTML = '<span class="consultly-chat-overlay-spinner-ring"></span>';
+    spinner.innerHTML = '<span class="advizo-chat-overlay-spinner-ring"></span>';
 
     var iframe = document.createElement("iframe");
-    iframe.className = "consultly-chat-overlay-iframe";
+    iframe.className = "advizo-chat-overlay-iframe";
     iframe.setAttribute("title", "Chat");
 
     panel.appendChild(spinner);
@@ -697,7 +697,7 @@
 
   function openChatOverlay(consultantId, shop) {
     if (!shop) {
-      console.error("[consultly] shop missing — cannot open chat overlay");
+      console.error("[advizo] shop missing — cannot open chat overlay");
       return;
     }
     ensureChatOverlayMessageListener();
@@ -758,7 +758,7 @@
   // Ported/adapted from consultant-profile.js's renderProfile: same fields
   // (name, image, profession, experience, languages, availability, bio,
   // specialization, chat/voice/video actions), same API endpoint
-  // (/apps/consultly/consultant/<id> — zero backend change), same
+  // (/apps/advizo/consultant/<id> — zero backend change), same
   // action-button behavior (chat -> the existing overlay iframe above;
   // voice/video -> the same legacy call-bridge redirect the real profile
   // page's own buttons already use). Rendered into a modal on THIS page
@@ -766,7 +766,7 @@
   // and its Liquid block are untouched and still work standalone — nothing
   // here removes them; this only changes where the card/action clicks below
   // send the shopper.
-  var PROFILE_API_BASE = "/apps/consultly/consultant";
+  var PROFILE_API_BASE = "/apps/advizo/consultant";
   var profileModalEls = null; // { backdrop, panel, body, closeBtn }
   var profileModalPreviouslyFocused = null;
   var profileModalKeydownBound = false;
@@ -776,11 +776,11 @@
     if (profileModalEls) return profileModalEls;
 
     var backdrop = document.createElement("div");
-    backdrop.className = "consultly-profile-modal-backdrop";
+    backdrop.className = "advizo-profile-modal-backdrop";
     backdrop.setAttribute("hidden", "hidden");
 
     var panel = document.createElement("div");
-    panel.className = "consultly-profile-modal";
+    panel.className = "advizo-profile-modal";
     panel.setAttribute("role", "dialog");
     panel.setAttribute("aria-modal", "true");
     panel.setAttribute("aria-label", "Consultant profile");
@@ -788,7 +788,7 @@
 
     var closeBtn = document.createElement("button");
     closeBtn.type = "button";
-    closeBtn.className = "consultly-profile-modal__close";
+    closeBtn.className = "advizo-profile-modal__close";
     closeBtn.setAttribute("aria-label", "Close");
     closeBtn.innerHTML =
       '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
@@ -801,13 +801,13 @@
     // is what keeps the header/close button always visible and the modal's
     // own height fixed regardless of how much consultant content there is.
     var header = document.createElement("div");
-    header.className = "consultly-profile-modal__header";
+    header.className = "advizo-profile-modal__header";
 
     var body = document.createElement("div");
-    body.className = "consultly-profile-modal__body";
+    body.className = "advizo-profile-modal__body";
 
     var footer = document.createElement("div");
-    footer.className = "consultly-profile-modal__footer";
+    footer.className = "advizo-profile-modal__footer";
 
     panel.appendChild(closeBtn);
     panel.appendChild(header);
@@ -883,8 +883,8 @@
     // modal (via the close button, Escape, or a backdrop click) would leave
     // an active Agora/Socket.IO session running invisibly in the background
     // instead of actually ending the call.
-    if (profileModalEls.panel.classList.contains("consultly-profile-modal--call")) {
-      profileModalEls.panel.classList.remove("consultly-profile-modal--call");
+    if (profileModalEls.panel.classList.contains("advizo-profile-modal--call")) {
+      profileModalEls.panel.classList.remove("advizo-profile-modal--call");
       profileModalEls.body.innerHTML = "";
     }
   }
@@ -900,42 +900,42 @@
   function renderProfileModalLoading(els) {
     clearProfileModalChrome(els);
     els.body.innerHTML =
-      '<div class="consultly-profile-modal__state">Loading consultant profile…</div>';
+      '<div class="advizo-profile-modal__state">Loading consultant profile…</div>';
   }
 
   function renderProfileModalNotFound(els) {
     clearProfileModalChrome(els);
     els.body.innerHTML =
-      '<div class="consultly-profile-modal__state">Consultant not found.</div>';
+      '<div class="advizo-profile-modal__state">Consultant not found.</div>';
   }
 
   function renderProfileModalError(els, onRetry) {
     clearProfileModalChrome(els);
     els.body.innerHTML =
-      '<div class="consultly-profile-modal__state">' +
+      '<div class="advizo-profile-modal__state">' +
       "<p>We couldn’t load this consultant’s profile. Please try again shortly.</p>" +
-      '<button type="button" class="consultly-profile-modal__retry">Try again</button>' +
+      '<button type="button" class="advizo-profile-modal__retry">Try again</button>' +
       "</div>";
-    var btn = els.body.querySelector(".consultly-profile-modal__retry");
+    var btn = els.body.querySelector(".advizo-profile-modal__retry");
     if (btn) btn.addEventListener("click", onRetry);
   }
 
   function profileActionButtonMarkup(kind, label, icon, amount, currencySymbol, disabled) {
     return (
-      '<button type="button" class="consultly-profile-modal__action" data-action="' +
+      '<button type="button" class="advizo-profile-modal__action" data-action="' +
       kind +
       '"' +
       (disabled
         ? ' aria-disabled="true" title="' + escapeHtml(COMM_DISABLED_MESSAGE) + '"'
         : "") +
       ">" +
-      '<span class="consultly-profile-modal__action-icon">' +
+      '<span class="advizo-profile-modal__action-icon">' +
       icon +
       "</span>" +
-      '<span class="consultly-profile-modal__action-label">' +
+      '<span class="advizo-profile-modal__action-label">' +
       escapeHtml(label) +
       "</span>" +
-      '<span class="consultly-profile-modal__action-amount">' +
+      '<span class="advizo-profile-modal__action-amount">' +
       escapeHtml(currencySymbol) +
       escapeHtml(formatAmount(amount)) +
       "/min</span>" +
@@ -955,7 +955,7 @@
   //
   // Rating and consultation-count are REAL, database-backed fields now —
   // c.ratingSummary ({average, total, distribution}) and
-  // c.totalConversations, both added to the /apps/consultly/consultant
+  // c.totalConversations, both added to the /apps/advizo/consultant
   // response by proxyConsultantProfileJson (shopifyController.js), computed
   // by ratingController.js's getConsultantRatingSummary /
   // getConsultantTotalConversations from the Rating and TransactionHistroy
@@ -1023,10 +1023,10 @@
       .map(function (value, i) {
         var pct = Math.round((value / max) * 100);
         return (
-          '<div class="consultly-profile-modal__rating-bar-row">' +
-          '<span class="consultly-profile-modal__rating-bar-label">' + labels[i] + "</span>" +
-          '<span class="consultly-profile-modal__rating-bar-track">' +
-          '<span class="consultly-profile-modal__rating-bar-fill" style="width:' + pct + '%"></span>' +
+          '<div class="advizo-profile-modal__rating-bar-row">' +
+          '<span class="advizo-profile-modal__rating-bar-label">' + labels[i] + "</span>" +
+          '<span class="advizo-profile-modal__rating-bar-track">' +
+          '<span class="advizo-profile-modal__rating-bar-fill" style="width:' + pct + '%"></span>' +
           "</span>" +
           "</div>"
         );
@@ -1036,9 +1036,9 @@
 
   function statPairMarkup(value, label) {
     return (
-      '<div class="consultly-profile-modal__stat">' +
-      '<span class="consultly-profile-modal__stat-value">' + escapeHtml(value) + "</span>" +
-      '<span class="consultly-profile-modal__stat-label">' + escapeHtml(label) + "</span>" +
+      '<div class="advizo-profile-modal__stat">' +
+      '<span class="advizo-profile-modal__stat-value">' + escapeHtml(value) + "</span>" +
+      '<span class="advizo-profile-modal__stat-label">' + escapeHtml(label) + "</span>" +
       "</div>"
     );
   }
@@ -1051,7 +1051,7 @@
       if (!url) return;
       var label = SOCIAL_LABELS[key];
       html +=
-        '<a class="consultly-profile-modal__social-icon" href="' +
+        '<a class="advizo-profile-modal__social-icon" href="' +
         escapeHtml(url) +
         '" target="_blank" rel="noopener noreferrer" aria-label="' +
         escapeHtml(label) +
@@ -1074,39 +1074,39 @@
     var currencySymbol = data.shopCurrency || "$";
 
     var statusHtml = c.isBusy
-      ? '<span class="consultly-profile-modal__status consultly-profile-modal__status--busy">Busy · ~5 min</span>'
+      ? '<span class="advizo-profile-modal__status advizo-profile-modal__status--busy">Busy · ~5 min</span>'
       : c.isActive
-        ? '<span class="consultly-profile-modal__status consultly-profile-modal__status--online">Available now</span>'
-        : '<span class="consultly-profile-modal__status consultly-profile-modal__status--offline">Offline</span>';
+        ? '<span class="advizo-profile-modal__status advizo-profile-modal__status--online">Available now</span>'
+        : '<span class="advizo-profile-modal__status advizo-profile-modal__status--offline">Offline</span>';
 
     var extras = getProfileExtras(c);
 
     // ---- header (fixed, does not scroll) ----
     els.header.innerHTML =
-      '<img class="consultly-profile-modal__avatar" src="' +
+      '<img class="advizo-profile-modal__avatar" src="' +
       escapeHtml(imgSrc) +
       '" alt="' +
       escapeHtml(name) +
       '" />' +
-      '<div class="consultly-profile-modal__header-info">' +
-      '<h1 class="consultly-profile-modal__name">' +
+      '<div class="advizo-profile-modal__header-info">' +
+      '<h1 class="advizo-profile-modal__name">' +
       escapeHtml(name) +
       "</h1>" +
-      '<p class="consultly-profile-modal__profession">' +
+      '<p class="advizo-profile-modal__profession">' +
       escapeHtml(profession) +
       "</p>" +
-      '<div class="consultly-profile-modal__header-row">' +
+      '<div class="advizo-profile-modal__header-row">' +
       statusHtml +
-      '<span class="consultly-profile-modal__rating-inline">' +
+      '<span class="advizo-profile-modal__rating-inline">' +
       (extras.hasRatings
-        ? '<span class="consultly-profile-modal__stars">' + starRowMarkup(extras.rating) + "</span>" +
+        ? '<span class="advizo-profile-modal__stars">' + starRowMarkup(extras.rating) + "</span>" +
           "<span>" + extras.rating.toFixed(1) + " · " + extras.reviewCount + " review" + (extras.reviewCount === 1 ? "" : "s") + "</span>"
         : "<span>No ratings yet</span>") +
       "</span>" +
       "</div>" +
       "</div>";
 
-    var avatarEl = els.header.querySelector(".consultly-profile-modal__avatar");
+    var avatarEl = els.header.querySelector(".advizo-profile-modal__avatar");
     if (avatarEl) {
       avatarEl.addEventListener(
         "error",
@@ -1120,9 +1120,9 @@
     // ---- body (the ONLY scrolling region) ----
 
     var aboutHtml = c.bio
-      ? '<section class="consultly-profile-modal__section consultly-profile-modal__section--intro">' +
-        '<h2 class="consultly-profile-modal__section-title">About</h2>' +
-        '<p class="consultly-profile-modal__about">' +
+      ? '<section class="advizo-profile-modal__section advizo-profile-modal__section--intro">' +
+        '<h2 class="advizo-profile-modal__section-title">About</h2>' +
+        '<p class="advizo-profile-modal__about">' +
         escapeHtml(c.bio) +
         "</p>" +
         "</section>"
@@ -1140,10 +1140,10 @@
           .filter(Boolean)
       : [];
     var expertiseHtml = specialties.length
-      ? '<section class="consultly-profile-modal__section' + (aboutHtml ? "" : " consultly-profile-modal__section--intro") + '">' +
-        '<h2 class="consultly-profile-modal__section-title">Expertise</h2>' +
-        '<div class="consultly-profile-modal__chip-row">' +
-        profileChipsMarkup("consultly-profile-modal__expertise-tag", specialties) +
+      ? '<section class="advizo-profile-modal__section' + (aboutHtml ? "" : " advizo-profile-modal__section--intro") + '">' +
+        '<h2 class="advizo-profile-modal__section-title">Expertise</h2>' +
+        '<div class="advizo-profile-modal__chip-row">' +
+        profileChipsMarkup("advizo-profile-modal__expertise-tag", specialties) +
         "</div>" +
         "</section>"
       : "";
@@ -1155,15 +1155,15 @@
     if (experience > 0) statsHtml += statPairMarkup(experience + "+ yrs", "Experience");
     statsHtml += statPairMarkup(extras.consultationsCompleted.toLocaleString(), "Consultations");
     var consultationHtml =
-      '<section class="consultly-profile-modal__section' +
-      (aboutHtml || expertiseHtml ? "" : " consultly-profile-modal__section--intro") +
+      '<section class="advizo-profile-modal__section' +
+      (aboutHtml || expertiseHtml ? "" : " advizo-profile-modal__section--intro") +
       '">' +
-      '<h2 class="consultly-profile-modal__section-title">Consultation</h2>' +
-      '<div class="consultly-profile-modal__stat-row">' + statsHtml + "</div>" +
+      '<h2 class="advizo-profile-modal__section-title">Consultation</h2>' +
+      '<div class="advizo-profile-modal__stat-row">' + statsHtml + "</div>" +
       (languages.length
-        ? '<div class="consultly-profile-modal__chip-row">' +
-          '<span class="consultly-profile-modal__chip-row-label">Speaks</span>' +
-          profileChipsMarkup("consultly-profile-modal__lang-chip", languages) +
+        ? '<div class="advizo-profile-modal__chip-row">' +
+          '<span class="advizo-profile-modal__chip-row-label">Speaks</span>' +
+          profileChipsMarkup("advizo-profile-modal__lang-chip", languages) +
           "</div>"
         : "") +
       "</section>";
@@ -1172,27 +1172,27 @@
     // comment). A consultant with zero ratings gets an honest empty state,
     // never a fabricated average.
     var ratingHtml =
-      '<section class="consultly-profile-modal__section">' +
-      '<h2 class="consultly-profile-modal__section-title">Rating &amp; Reviews</h2>' +
+      '<section class="advizo-profile-modal__section">' +
+      '<h2 class="advizo-profile-modal__section-title">Rating &amp; Reviews</h2>' +
       (extras.hasRatings
-        ? '<div class="consultly-profile-modal__rating-summary">' +
-          '<span class="consultly-profile-modal__rating-number">' + extras.rating.toFixed(1) + "</span>" +
+        ? '<div class="advizo-profile-modal__rating-summary">' +
+          '<span class="advizo-profile-modal__rating-number">' + extras.rating.toFixed(1) + "</span>" +
           "<div>" +
-          '<span class="consultly-profile-modal__stars">' + starRowMarkup(extras.rating) + "</span>" +
-          '<p class="consultly-profile-modal__rating-count">' + extras.reviewCount + " review" + (extras.reviewCount === 1 ? "" : "s") + "</p>" +
+          '<span class="advizo-profile-modal__stars">' + starRowMarkup(extras.rating) + "</span>" +
+          '<p class="advizo-profile-modal__rating-count">' + extras.reviewCount + " review" + (extras.reviewCount === 1 ? "" : "s") + "</p>" +
           "</div>" +
           "</div>" +
-          '<div class="consultly-profile-modal__rating-bars">' + ratingBreakdownMarkup(extras.ratingBreakdown) + "</div>"
-        : '<p class="consultly-profile-modal__rating-empty">No ratings yet.</p>') +
+          '<div class="advizo-profile-modal__rating-bars">' + ratingBreakdownMarkup(extras.ratingBreakdown) + "</div>"
+        : '<p class="advizo-profile-modal__rating-empty">No ratings yet.</p>') +
       "</section>";
 
     var socialHtml = "";
     var socialIcons = socialLinksMarkup(extras.socialLinks);
     if (socialIcons) {
       socialHtml =
-        '<section class="consultly-profile-modal__section">' +
-        '<h2 class="consultly-profile-modal__section-title">Connect</h2>' +
-        '<div class="consultly-profile-modal__social-row">' + socialIcons + "</div>" +
+        '<section class="advizo-profile-modal__section">' +
+        '<h2 class="advizo-profile-modal__section-title">Connect</h2>' +
+        '<div class="advizo-profile-modal__social-row">' + socialIcons + "</div>" +
         "</section>";
     }
 
@@ -1216,7 +1216,7 @@
       );
     }
     els.footer.innerHTML = buttons
-      ? '<div class="consultly-profile-modal__actions">' + buttons + "</div>"
+      ? '<div class="advizo-profile-modal__actions">' + buttons + "</div>"
       : "";
 
     els.footer.querySelectorAll("[data-action]").forEach(function (btn) {
@@ -1252,7 +1252,7 @@
     var els = ensureProfileModal();
     // Defensive: if the shared modal was last showing a call, make sure its
     // call-sizing modifier doesn't leak into this normal profile view.
-    els.panel.classList.remove("consultly-profile-modal--call");
+    els.panel.classList.remove("advizo-profile-modal--call");
     showProfileModalShell(els);
 
     var fetchUrl = PROFILE_API_BASE + "/" + encodeURIComponent(consultantId);
@@ -1284,7 +1284,7 @@
             renderProfileModalNotFound(els);
             return;
           }
-          console.error("[consultly] failed to load consultant profile:", err);
+          console.error("[advizo] failed to load consultant profile:", err);
           renderProfileModalError(els, load);
         });
     }
@@ -1303,7 +1303,7 @@
     // for missing data. See Step 4 report.
     var currencySymbol = ctx.shopCurrency || "$";
 
-    var html = '<div class="consultly-consultant-card__grid">';
+    var html = '<div class="advizo-consultant-card__grid">';
     for (var i = 0; i < consultants.length; i++) {
       html += cardMarkup(consultants[i], currencySymbol, ctx.communicationDisabled);
     }
@@ -1311,16 +1311,16 @@
     root.innerHTML = html;
 
     // Staggered entrance: the actual fade/translateY animation lives in CSS
-    // (.consultly-consultant-card__item, keyed off insertion — see
+    // (.advizo-consultant-card__item, keyed off insertion — see
     // consultant-card.css) and plays automatically once each item is
     // inserted into the DOM above. This only staggers WHEN each one starts,
     // capped after the first 8 so a long list doesn't make anyone wait
     // longer for a "smooth" effect than for the data itself.
-    root.querySelectorAll(".consultly-consultant-card__item").forEach(function (item, i) {
+    root.querySelectorAll(".advizo-consultant-card__item").forEach(function (item, i) {
       item.style.animationDelay = Math.min(i, 8) * 70 + "ms";
     });
 
-    root.querySelectorAll(".consultly-consultant__avatar").forEach(function (img) {
+    root.querySelectorAll(".advizo-consultant__avatar").forEach(function (img) {
       img.addEventListener(
         "error",
         function () {
@@ -1335,7 +1335,7 @@
       consultantsById[c.id] = c;
     });
 
-    root.querySelectorAll(".consultly-consultant").forEach(function (cardEl) {
+    root.querySelectorAll(".advizo-consultant").forEach(function (cardEl) {
       var consultantId = cardEl.getAttribute("data-consultant-id");
       var consultant = consultantsById[consultantId];
       if (consultant) {
@@ -1406,10 +1406,10 @@
   }
 
   function initConsultantCard(container) {
-    if (container.getAttribute("data-consultly-initialized") === "1") return;
-    container.setAttribute("data-consultly-initialized", "1");
+    if (container.getAttribute("data-advizo-initialized") === "1") return;
+    container.setAttribute("data-advizo-initialized", "1");
 
-    var root = container.querySelector(".consultly-consultant-card__root");
+    var root = container.querySelector(".advizo-consultant-card__root");
     if (!root) return;
 
     // Replaces the static "loading…" text the Liquid block renders before
@@ -1518,7 +1518,7 @@
 
         // TEMPORARY debug (Theme Extension identity-sync test) — booleans
         // only, never the DB id value itself. This is the browser seeing
-        // only what /apps/consultly/consultants decided server-side; whether
+        // only what /apps/advizo/consultants decided server-side; whether
         // Shopify actually appended logged_in_customer_id on that request is
         // logged server-side (proxyConsultantsJson) instead, since this
         // bundle never sees that raw query param itself.
@@ -1530,7 +1530,7 @@
         // Shopify-verified server-side (resolveStorefrontCustomer ->
         // manageShopifyUser -> fetchShopifyCustomer's GraphQL check) — never
         // a raw Shopify customer id, never client-computed. "client_u_Identity"
-        // is the SAME key consultly_Frontend/src/utils/browserSession.js's
+        // is the SAME key advizo_Frontend/src/utils/browserSession.js's
         // getSocketUserIdForActiveSession() already reads for Socket.IO, and
         // the same key ConsultantCards.js already writes on its own
         // (React-hosted) storefront pages — this only fills that in for the
@@ -1553,13 +1553,13 @@
         }
       })
       .catch(function (err) {
-        console.error("[consultly] failed to load consultants:", err);
+        console.error("[advizo] failed to load consultants:", err);
         renderError(root);
       });
   }
 
   function initAll() {
-    document.querySelectorAll(".consultly-consultant-card").forEach(initConsultantCard);
+    document.querySelectorAll(".advizo-consultant-card").forEach(initConsultantCard);
   }
 
   if (document.readyState === "loading") {

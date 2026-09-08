@@ -53,7 +53,7 @@ topics = [
   "themes/publish",
   "themes/update"
 ]
-uri = "/api/webhooks/theme/webhooks"
+uri = "https://consultly-backend.onrender.com/api/webhooks/theme/webhooks"
 
 # -------------------------------
 # App lifecycle
@@ -87,6 +87,6 @@ redirect_urls = [
 ]
 
 [app_proxy]
-url = "https://consultly-backend.onrender.com/api/app/consultly"
-subpath = "consultly"
+url = "https://consultly-backend.onrender.com/api/app/advizo"
+subpath = "advizo"
 prefix = "apps"
