@@ -1,5 +1,5 @@
 /**
- * Consultly — Consultant Listing storefront bundle.
+ * advizo — Consultant Listing storefront bundle.
  *
  * Vanilla JS, no build step, no framework. Ported from
  * advizo_Frontend/src/components/ConsultantCards/ConsultantCards.js —
@@ -326,7 +326,7 @@
   // no Consultant Profile intermediate step.
   var callWidgetScriptPromise = null;
   function ensureCallWidgetScript(shop) {
-    if (window.ConsultlyCallWidget) return Promise.resolve();
+    if (window.advizoCallWidget) return Promise.resolve();
     if (callWidgetScriptPromise) return callWidgetScriptPromise;
     callWidgetScriptPromise = new Promise(function (resolve, reject) {
       var script = document.createElement("script");
@@ -357,10 +357,10 @@
     }
     ensureCallWidgetScript(shop)
       .then(function () {
-        if (!window.ConsultlyCallWidget) {
+        if (!window.advizoCallWidget) {
           throw new Error("Call widget script loaded but did not register itself");
         }
-        window.ConsultlyCallWidget.open({
+        window.advizoCallWidget.open({
           shop: shop,
           consultantId: consultantId,
           callType: callType,
@@ -385,8 +385,8 @@
     function run() {
       ensureCallWidgetScript(shop)
         .then(function () {
-          if (window.ConsultlyCallWidget && typeof window.ConsultlyCallWidget.prefetchEngine === "function") {
-            window.ConsultlyCallWidget.prefetchEngine(shop);
+          if (window.advizoCallWidget && typeof window.advizoCallWidget.prefetchEngine === "function") {
+            window.advizoCallWidget.prefetchEngine(shop);
           }
         })
         .catch(function () {});
@@ -602,7 +602,7 @@
       "</div>";
   }
 
-  // TEMP (Chat modal UI test): no Consultly React iframe exists anywhere on
+  // TEMP (Chat modal UI test): no advizo React iframe exists anywhere on
   // this storefront page (this card block is plain Liquid/vanilla JS, not
   // React) — so opening the EXISTING React chat modal (UserChat, normally
   // reached via ConsultantChatModal inside the CRA app) without navigating

@@ -8,4 +8,4 @@
 import { startCustomerCall } from "./engine";
 
 console.log("[CALL DEBUG] engine loaded");
-window.ConsultlyCallEngine = { startCustomerCall };
+window.advizoCallEngine = { startCustomerCall };

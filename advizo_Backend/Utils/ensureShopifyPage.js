@@ -126,7 +126,7 @@ const ensureShopifyPage = async (
 ) => {
   const shopDomain = normalizeShopDomain(shop);
   const label = logLabel || handle;
-  const logPrefix = `[Consultly][ensureShopifyPage:${label}][${shopDomain || "unknown-shop"}]`;
+  const logPrefix = `[advizo][ensureShopifyPage:${label}][${shopDomain || "unknown-shop"}]`;
 
   try {
     if (!shopDomain || !accessToken) {

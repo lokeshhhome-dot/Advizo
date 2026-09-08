@@ -2,7 +2,7 @@
   "name": "shopify-advizo",
   "private": true,
   "version": "1.0.0",
-  "description": "Consultly Shopify app (backend + frontend workspaces)",
+  "description": "advizo Shopify app (backend + frontend workspaces)",
   "workspaces": [],
   "scripts": {
     "deploy": "shopify app deploy"

@@ -939,13 +939,13 @@ const proxyShopifyConsultantPage = async (req, res) => {
   // TEMPORARY diagnostics — tracing the reported admin.shopify.com redirect
   // bug. Safe to log: shop domain, this app's own env var, and the request's
   // own query keys/host are not credentials. Remove once resolved.
-  console.log(`[Consultly] CONSULTANT_APP_URL (raw env) = ${process.env.CONSULTANT_APP_URL || "(unset)"}`);
-  console.log(`[Consultly] request host = ${req.get("host")}`);
+  console.log(`[advizo] CONSULTANT_APP_URL (raw env) = ${process.env.CONSULTANT_APP_URL || "(unset)"}`);
+  console.log(`[advizo] request host = ${req.get("host")}`);
   console.log(
-    `[Consultly] request query = ${JSON.stringify({ ...req.query, signature: req.query.signature ? "[present]" : undefined })}`,
+    `[advizo] request query = ${JSON.stringify({ ...req.query, signature: req.query.signature ? "[present]" : undefined })}`,
   );
   console.log(
-    `[Consultly] consultant login redirect target = ${getTrustedConsultantAppUrl() || resolveFrontendUrl(req)}/login?shop=${shop}`,
+    `[advizo] consultant login redirect target = ${getTrustedConsultantAppUrl() || resolveFrontendUrl(req)}/login?shop=${shop}`,
   );
 
   try {

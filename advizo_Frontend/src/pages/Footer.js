@@ -8,7 +8,7 @@ function Footer() {
     return (
         <footer className={styles.footer}>
             <p className={styles.copyright}>
-                © {year} <span className={styles.brand}>Consultly</span>. All rights
+                © {year} <span className={styles.brand}>advizo</span>. All rights
                 reserved.
             </p>
             <div className={styles.links}>

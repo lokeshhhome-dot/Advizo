@@ -11,7 +11,7 @@ export default function FloatingButton() {
       type="button"
       className={styles.fab}
       onClick={toggle}
-      aria-label={isOpen ? "Close Consultly AI" : "Open Consultly AI"}
+      aria-label={isOpen ? "Close advizo AI" : "Open advizo AI"}
       aria-expanded={isOpen}
     >
       <Icon source={isOpen ? XIcon : ChatIcon} />

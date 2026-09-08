@@ -101,7 +101,7 @@ export function getSetupGuideSteps({
 
   const embedChecklist = buildChecklist([
     { label: "Theme app embed added", isSet: !!appEnabled },
-    { label: "Consultly active on store", isSet: !!appEnabled },
+    { label: "advizo active on store", isSet: !!appEnabled },
   ]);
 
   const menuChecklist = buildChecklist(getMenuChecklist(menuSetupComplete, shop));
@@ -134,7 +134,7 @@ export function getSetupGuideSteps({
       icon: STEP_ICONS[3],
       title: "Activate app on storefront",
       description:
-        "Enable Consultly so customers can access consultants from your online store.",
+        "Enable advizo so customers can access consultants from your online store.",
       status: appEnabled ? "completed" : "pending",
       actionLabel: "Activate app",
       manageLabel: "Manage app status",
@@ -346,11 +346,11 @@ export function DashboardSetupGuide({
   if (allComplete) return null;
 
   return (
-    <section className={styles.shell} aria-label="Set up Consultly">
+    <section className={styles.shell} aria-label="Set up advizo">
       <header className={styles.header}>
         <div className={styles.headerTop}>
           <div>
-            <h3 className={styles.title}>Set up Consultly</h3>
+            <h3 className={styles.title}>Set up advizo</h3>
             <p className={styles.subtitle}>
               Use this guide to get your consultation service up and running.
             </p>

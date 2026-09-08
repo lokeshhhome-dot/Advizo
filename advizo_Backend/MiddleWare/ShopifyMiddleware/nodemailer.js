@@ -20,7 +20,7 @@ const appInstall = () => `
         <p style="color: #333; font-size: 15px; line-height: 1.7; margin: 0 0 16px;">Hi there,</p>
         
         <p style="color: #333; font-size: 15px; line-height: 1.7; margin: 0 0 16px;">
-          You have successfully logged into <strong style="color: #4f46e5;">Consultly</strong>.
+          You have successfully logged into <strong style="color: #4f46e5;">advizo</strong>.
         </p>
         
         <p style="color: #333; font-size: 15px; line-height: 1.7; margin: 0 0 26px;">
@@ -30,7 +30,7 @@ const appInstall = () => `
         <table role="presentation" style="width: 100%; background-color: #f5f5ff; border-radius: 10px; border: 1px solid #e0e0fa; margin-bottom: 26px;">
           <tr>
             <td style="padding: 18px 20px;">
-              <p style="margin: 0 0 10px; font-size: 14px; color: #555;"><strong style="color: #111;">App:</strong> Consultly</p>
+              <p style="margin: 0 0 10px; font-size: 14px; color: #555;"><strong style="color: #111;">App:</strong> advizo</p>
               <p style="margin: 0 0 10px; font-size: 14px; color: #555;"><strong style="color: #111;">Status:</strong> <span style="color: #4f46e5; font-weight: 600;">Login Successful</span></p>
               <p style="margin: 0; font-size: 14px; color: #555;"><strong style="color: #111;">Time:</strong> ${new Date().toLocaleString()}</p>
             </td>
@@ -45,7 +45,7 @@ const appInstall = () => `
 
     <tr>
       <td style="padding: 22px 30px; border-top: 1px solid #eee; text-align: center;">
-        <p style="color: #999; font-size: 13px; margin: 0;">Thanks,<br/><strong style="color: #555;">Consultly Team</strong></p>
+        <p style="color: #999; font-size: 13px; margin: 0;">Thanks,<br/><strong style="color: #555;">advizo Team</strong></p>
       </td>
     </tr>
 
@@ -69,7 +69,7 @@ const appUninstall = () => `
         <p style="color: #333; font-size: 15px; line-height: 1.7; margin: 0 0 16px;">Hi there,</p>
 
         <p style="color: #333; font-size: 15px; line-height: 1.7; margin: 0 0 16px;">
-          <strong style="color: #4f46e5;">Consultly</strong> has been uninstalled from your store.
+          <strong style="color: #4f46e5;">advizo</strong> has been uninstalled from your store.
         </p>
 
         <p style="color: #333; font-size: 15px; line-height: 1.7; margin: 0 0 26px;">
@@ -79,7 +79,7 @@ const appUninstall = () => `
         <table role="presentation" style="width: 100%; background-color: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 26px;">
           <tr>
             <td style="padding: 18px 20px;">
-              <p style="margin: 0 0 10px; font-size: 14px; color: #555;"><strong style="color: #111;">App:</strong> Consultly</p>
+              <p style="margin: 0 0 10px; font-size: 14px; color: #555;"><strong style="color: #111;">App:</strong> advizo</p>
               <p style="margin: 0 0 10px; font-size: 14px; color: #555;"><strong style="color: #111;">Status:</strong> <span style="color: #dc2626; font-weight: 600;">Uninstalled</span></p>
               <p style="margin: 0; font-size: 14px; color: #555;"><strong style="color: #111;">Time:</strong> ${new Date().toLocaleString()}</p>
             </td>
@@ -87,7 +87,7 @@ const appUninstall = () => `
         </table>
 
         <p style="color: #666; font-size: 14px; line-height: 1.7; margin: 0 0 20px; padding: 14px 16px; background-color: #eff6ff; border-radius: 8px; border-left: 3px solid #3b82f6;">
-          💡 Changed your mind? You can reinstall Consultly anytime from the Shopify App Store — your setup can be restored quickly.
+          💡 Changed your mind? You can reinstall advizo anytime from the Shopify App Store — your setup can be restored quickly.
         </p>
 
         <p style="color: #666; font-size: 14px; line-height: 1.7; margin: 0;">
@@ -98,7 +98,7 @@ const appUninstall = () => `
 
     <tr>
       <td style="padding: 22px 30px; border-top: 1px solid #eee; text-align: center;">
-        <p style="color: #999; font-size: 13px; margin: 0;">Thanks,<br/><strong style="color: #555;">Consultly Team</strong></p>
+        <p style="color: #999; font-size: 13px; margin: 0;">Thanks,<br/><strong style="color: #555;">advizo Team</strong></p>
       </td>
     </tr>
 
@@ -289,12 +289,12 @@ const sendPasswordResetEmail = async ({ to, name, otp }) => {
     const info = await mailer.sendMail({
       from: fromEmail || smtpUSER,
       to,
-      subject: "Your Consultly password reset code",
+      subject: "Your advizo password reset code",
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 480px;">
           <h2 style="margin-top: 0;">Reset your password</h2>
           <p>Hi ${escapeHtml(name || "there")},</p>
-          <p>Use the code below to reset your Consultly password. It expires in 10 minutes.</p>
+          <p>Use the code below to reset your advizo password. It expires in 10 minutes.</p>
           <div style="margin: 20px 0; padding: 16px; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; text-align: center;">
             <span style="font-size: 30px; font-weight: 700; letter-spacing: 8px;">${escapeHtml(otp)}</span>
           </div>

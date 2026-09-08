@@ -176,7 +176,7 @@ function getActivityTypeBadge(item) {
 }
 
 /**
- * "Consultly is set up" summary — DashboardSetupGuide.js returns null once
+ * "advizo is set up" summary — DashboardSetupGuide.js returns null once
  * every step is complete (it's a nudge-to-finish-setup component, nothing to
  * nudge once done), so there was previously no all-done state at all. Reuses
  * getSetupGuideSteps for step id/title/status — only the per-step summary
@@ -202,7 +202,7 @@ function SetupCompleteCard({ steps, consultantCount, adminPercentage }) {
     <div className={styles.setupCompleteCard}>
       <div className={styles.setupCompleteHeader}>
         <div>
-          <h3 className={styles.setupCompleteTitle}>Consultly is set up</h3>
+          <h3 className={styles.setupCompleteTitle}>advizo is set up</h3>
           <p className={styles.setupCompleteSubtitle}>
             All four setup steps are complete — bookings are live on your storefront.
           </p>
@@ -672,10 +672,10 @@ function Dashboard() {
 
   const openSupportEmail = useCallback(() => {
     const subject = encodeURIComponent(
-      `Consultly support — ${shopDomain || "my store"}`,
+      `advizo support — ${shopDomain || "my store"}`,
     );
     const body = encodeURIComponent(
-      `Hi Consultly team,\n\nStore: ${shopDomain || "-"}\n\nI need help with:\n`,
+      `Hi advizo team,\n\nStore: ${shopDomain || "-"}\n\nI need help with:\n`,
     );
     const mailtoUrl = `mailto:support@advizo.com?subject=${subject}&body=${body}`;
 
@@ -749,7 +749,7 @@ function Dashboard() {
                     size="slim"
                     tone="critical"
                     onClick={handleToggle}
-                    accessibilityLabel="Deactivate Consultly on your storefront"
+                    accessibilityLabel="Deactivate advizo on your storefront"
                   >
                     Deactivate
                   </Button>
@@ -760,7 +760,7 @@ function Dashboard() {
                   <Button
                     size="slim"
                     onClick={handleToggle}
-                    accessibilityLabel="Activate Consultly on your storefront"
+                    accessibilityLabel="Activate advizo on your storefront"
                   >
                     Activate app
                   </Button>

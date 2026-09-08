@@ -62,7 +62,7 @@ function engineChunkUrl(shop) {
 }
 
 function ensureEngineLoaded(shop) {
-  if (window.ConsultlyCallEngine) return Promise.resolve();
+  if (window.advizoCallEngine) return Promise.resolve();
   if (engineLoadPromise) return engineLoadPromise;
   engineLoadPromise = new Promise((resolve, reject) => {
     const script = document.createElement("script");
@@ -155,7 +155,7 @@ function open(config) {
       // The modal may have been closed (or a newer call started) while the
       // engine chunk was still downloading — don't start a stale session.
       if (activeModal !== modal) return;
-      activeSession = window.ConsultlyCallEngine.startCustomerCall({
+      activeSession = window.advizoCallEngine.startCustomerCall({
         shop,
         consultantId,
         callType: isVideo ? "video" : "voice",
@@ -210,4 +210,4 @@ function close() {
   activeSession?.hangUp("user_cut_call");
 }
 
-window.ConsultlyCallWidget = { open, close, prefetchEngine };
+window.advizoCallWidget = { open, close, prefetchEngine };

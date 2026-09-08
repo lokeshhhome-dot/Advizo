@@ -94,7 +94,7 @@ export const clearConsultantSession = () => {
 
 export const redirectToConsultantLogin = () => {
   const target = getConsultantLoginUrl();
-  console.log(`[Consultly Frontend] redirecting to = ${target}`); // TEMPORARY, see index.js
+  console.log(`[advizo Frontend] redirecting to = ${target}`); // TEMPORARY, see index.js
   if (target.startsWith("http")) {
     window.top.location.href = target;
   } else {
@@ -104,7 +104,7 @@ export const redirectToConsultantLogin = () => {
 
 export const redirectToConsultantDashboard = () => {
   const target = getConsultantDashboardUrl();
-  console.log(`[Consultly Frontend] redirecting to = ${target}`); // TEMPORARY, see index.js
+  console.log(`[advizo Frontend] redirecting to = ${target}`); // TEMPORARY, see index.js
   if (target.startsWith("http")) {
     window.top.location.href = target;
   } else {

@@ -6,7 +6,7 @@ const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "llama3.2";
 const OLLAMA_TIMEOUT_MS = Number(process.env.OLLAMA_TIMEOUT_MS || 60000);
 
 const FALLBACK_ANSWER =
-    "I couldn't find that information in the Consultly knowledge base.";
+    "I couldn't find that information in the advizo knowledge base.";
 
 const escapeRegex = (str) => String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -72,7 +72,7 @@ const buildPrompt = (matches, question) => {
         .join("\n\n");
 
     return [
-        "You are Consultly AI Assistant, helping a Shopify store admin use the Consultly consultation app.",
+        "You are advizo AI Assistant, helping a Shopify store admin use the advizo consultation app.",
         "Answer ONLY from the knowledge below. Be short and direct.",
         `If the answer cannot be found in the knowledge, say exactly: "${FALLBACK_ANSWER}"`,
         "",

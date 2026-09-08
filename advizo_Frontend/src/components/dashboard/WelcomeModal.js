@@ -19,7 +19,7 @@ export default function WelcomeModal({
   const trimmedShopName = shopName?.trim();
   const modalTitle = trimmedOwnerName
     ? `🎉 Welcome ${trimmedOwnerName}!`
-    : `Welcome to ${trimmedShopName || "Consultly"}`;
+    : `Welcome to ${trimmedShopName || "advizo"}`;
 
   const handleStartSetup = async () => {
     if (!adminIdLocal) return;
@@ -51,10 +51,10 @@ export default function WelcomeModal({
       <Modal.Section>
         <BlockStack gap="300">
           <Text variant="headingMd" as="h2">
-            Welcome to Consultly.
+            Welcome to advizo.
           </Text>
           <Text as="p">
-            Thanks for installing Consultly.
+            Thanks for installing advizo.
           </Text>
           <Text as="p">
             Let&apos;s set up your consultation business in just a few minutes.

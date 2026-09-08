@@ -61,7 +61,7 @@ const DEFAULT_FAQS = [
         title: "Storefront setup",
         question: "How do I set up the storefront?",
         answer:
-            "Most storefront setup now happens automatically when you install the app: a My Profile page (/pages/my-profile) and a Consultant Profile page (/pages/consultant-profile) are created for you, and My Profile plus Consultant Login menu items are added to your main menu. The one manual step left is placing the Consultant Cards app block on your Home page and the Consultant Profile / My Profile app blocks on their respective pages: go to Online Store > Themes > Customize, open the page, click Add block > Apps, and add the matching Consultly block. Save when done.",
+            "Most storefront setup now happens automatically when you install the app: a My Profile page (/pages/my-profile) and a Consultant Profile page (/pages/consultant-profile) are created for you, and My Profile plus Consultant Login menu items are added to your main menu. The one manual step left is placing the Consultant Cards app block on your Home page and the Consultant Profile / My Profile app blocks on their respective pages: go to Online Store > Themes > Customize, open the page, click Add block > Apps, and add the matching advizo block. Save when done.",
         keywords: ["storefront", "setup", "menu", "navigation", "theme", "links", "my profile", "app block"],
     },
     {

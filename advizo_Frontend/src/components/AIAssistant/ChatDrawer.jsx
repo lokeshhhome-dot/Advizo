@@ -31,7 +31,7 @@ export default function ChatDrawer() {
         <motion.div
           className={styles.drawer}
           role="dialog"
-          aria-label="Consultly AI Assistant"
+          aria-label="advizo AI Assistant"
           initial={{ opacity: 0, x: 60, scale: 0.96 }}
           animate={{ opacity: 1, x: 0, scale: 1 }}
           exit={{ opacity: 0, x: 60, scale: 0.96 }}
@@ -44,7 +44,7 @@ export default function ChatDrawer() {
                 <Icon source={ChatIcon} />
               </div>
               <div>
-                <h3 className={styles.headerTitle}>Consultly AI</h3>
+                <h3 className={styles.headerTitle}>advizo AI</h3>
                 <div className={styles.headerStatus}>
                   <span className={styles.onlineDot} />
                   Online
@@ -83,7 +83,7 @@ export default function ChatDrawer() {
                 <div className={styles.emptyIcon}>
                   <Icon source={ChatIcon} />
                 </div>
-                <h4 className={styles.emptyTitle}>Hi! I'm Consultly AI</h4>
+                <h4 className={styles.emptyTitle}>Hi! I'm advizo AI</h4>
                 <p className={styles.emptyText}>
                   Ask me anything about managing consultants, vouchers,
                   wallets, or setting up your storefront.

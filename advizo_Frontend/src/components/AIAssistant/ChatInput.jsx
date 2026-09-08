@@ -40,7 +40,7 @@ export default function ChatInput({ onSend, loading }) {
           ref={textareaRef}
           className={styles.textarea}
           rows={1}
-          placeholder="Ask about Consultly…"
+          placeholder="Ask about advizo…"
           value={value}
           maxLength={2000}
           disabled={loading}
@@ -49,7 +49,7 @@ export default function ChatInput({ onSend, loading }) {
             autoGrow();
           }}
           onKeyDown={handleKeyDown}
-          aria-label="Message Consultly AI"
+          aria-label="Message advizo AI"
         />
         <button
           type="button"

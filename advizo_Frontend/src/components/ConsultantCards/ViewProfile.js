@@ -108,7 +108,7 @@ function ViewProfile() {
     }
     if (!userId) {
       // TEMPORARY debug — remove once the redirect-on-click report is resolved.
-      console.log("[Consultly Chat] redirect attempt =", "/account/login (via redirectToLogin, from startCall — the Call handler, not Chat)");
+      console.log("[advizo Chat] redirect attempt =", "/account/login (via redirectToLogin, from startCall — the Call handler, not Chat)");
       redirectToLogin();
       return;
     }

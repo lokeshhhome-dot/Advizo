@@ -38,13 +38,13 @@ const isShopifyAdmin = () => {
 if (typeof window !== "undefined") {
   const params = new URLSearchParams(window.location.search);
   const admin = isShopifyAdmin();
-  console.log(`[Consultly Frontend] pathname = ${window.location.pathname}`);
-  console.log(`[Consultly Frontend] search = ${window.location.search}`);
-  console.log(`[Consultly Frontend] host param present = ${params.has("host")}`);
-  console.log(`[Consultly Frontend] shop param = ${params.get("shop")}`);
-  console.log(`[Consultly Frontend] isShopifyAdmin = ${admin}`);
-  console.log(`[Consultly Frontend] AppBridge enabled = ${admin}`);
-  console.log(`[Consultly Frontend] current href = ${window.location.href}`);
+  console.log(`[advizo Frontend] pathname = ${window.location.pathname}`);
+  console.log(`[advizo Frontend] search = ${window.location.search}`);
+  console.log(`[advizo Frontend] host param present = ${params.has("host")}`);
+  console.log(`[advizo Frontend] shop param = ${params.get("shop")}`);
+  console.log(`[advizo Frontend] isShopifyAdmin = ${admin}`);
+  console.log(`[advizo Frontend] AppBridge enabled = ${admin}`);
+  console.log(`[advizo Frontend] current href = ${window.location.href}`);
 }
 
 const AppWrapper = ({ children }) => {

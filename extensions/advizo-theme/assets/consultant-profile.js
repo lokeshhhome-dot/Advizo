@@ -1,5 +1,5 @@
 /**
- * Consultly — Consultant Profile storefront bundle.
+ * advizo — Consultant Profile storefront bundle.
  *
  * Vanilla JS, no build step, no framework — same constraints as
  * consultant-card.js (no React/Redux/Bootstrap/react-router). Each

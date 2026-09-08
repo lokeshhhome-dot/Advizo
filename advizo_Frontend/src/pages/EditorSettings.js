@@ -28,7 +28,7 @@ export function EditorSettings() {
         <div className={styles.header}>
           <h1 className={styles.title}>Editor</h1>
           <p className={styles.subtitle}>
-            Storefront customization tools for your Consultly app.
+            Storefront customization tools for your advizo app.
           </p>
         </div>
 

@@ -1,5 +1,5 @@
 /**
- * Consultly — My Profile (Customer Profile) storefront bundle.
+ * advizo — My Profile (Customer Profile) storefront bundle.
  *
  * Vanilla JS, no build step, no framework — same constraints as
  * consultant-profile.js. Small formatting helpers are intentionally
