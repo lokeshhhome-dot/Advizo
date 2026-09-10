@@ -1,5 +1,5 @@
 import React, { Fragment, useState, useCallback, useEffect, useMemo } from 'react'
-import { Page } from '@shopify/polaris'
+import { Icon, Page } from '@shopify/polaris'
 import MoneyValue from '../components/Helper/MoneyValue'
 import { useAppBridge } from '../components/createContext/AppBridgeContext'
 import { Redirect } from '@shopify/app-bridge/actions'
@@ -233,7 +233,7 @@ function VoucherTable() {
                     <div className={styles.card}>
                         <div className={styles.toolbar}>
                             <div className={styles.searchWrap}>
-                                <span className={styles.searchIcon}>🔍</span>
+                                <span className={styles.searchIcon}><Icon source={SearchIcon} /></span>
                                 <input
                                     className={styles.searchInput}
                                     value={queryValue}

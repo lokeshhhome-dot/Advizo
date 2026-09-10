@@ -11,6 +11,7 @@ import { usePolarisToast } from "../components/AlertModel/PolariesTostContext";
 import { FullPageSpinner } from "../components/loading/PageSkeletons";
 import { getAppBridgeToken } from "../utils/getAppBridgeToken";
 import styles from "./ConsultantList.module.css";
+import {SearchIcon} from '@shopify/polaris-icons';
 
 const PAGE_SIZE = 10;
 const AVATAR_COLORS = ["#2E7D32", "#1565C0", "#C2185B", "#6A1B9A", "#E65100", "#00838F"];
@@ -203,7 +204,7 @@ function ConsultantList() {
           <div className={styles.card}>
             <div className={styles.toolbar}>
               <div className={styles.searchWrap}>
-                <span className={styles.searchIcon}>🔍</span>
+                <span className={styles.searchIcon}><Icon size="small" source={SearchIcon} /></span>
                 <input
                   className={styles.searchInput}
                   value={queryValue}

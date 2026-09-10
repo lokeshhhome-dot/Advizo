@@ -13,7 +13,7 @@ connectDB();
 initRedis();
 const path = require("path");
 const app = express();
-const PORT = process.env.MVC_BACKEND_PORT
+const PORT = process.env.ADVIZO_BACKEND_PORT
 const server = http.createServer(app);
 const { ioServer } = require("./server-io");
 const shopifyRoute = require("./Routes/shopifyRoute");
@@ -38,11 +38,11 @@ app.use((req, res, next) => {
 });
 
 const CORS_ALLOWLIST = [
-  ...String(process.env.CORS_ALLOWED_ORIGINS || "")
+  ...String(process.env.APP_URL || "")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean),
-  String(process.env.FRONTEND_URL || "").trim().replace(/\/+$/, ""),
+  String(process.env.APP_URL || "").trim().replace(/\/+$/, ""),
   String(process.env.APP_URL || "").trim().replace(/\/+$/, ""),
 ].filter(Boolean);
 

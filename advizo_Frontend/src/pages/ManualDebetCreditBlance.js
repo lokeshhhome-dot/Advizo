@@ -1,6 +1,6 @@
 import React, { Fragment, useEffect, useState } from 'react'
 import MoneyValue from '../components/Helper/MoneyValue'
-import { Page } from '@shopify/polaris'
+import { Icon, Page } from '@shopify/polaris'
 import { fetchWalletHistory, fetchAdminDetails } from '../components/Redux/slices/adminSlice'
 import { useDispatch, useSelector } from 'react-redux'
 import { useAppBridge } from '../components/createContext/AppBridgeContext'
@@ -113,7 +113,7 @@ function ManualDebetCreditBlance() {
                         <div className={styles.toolbar}>
                             <div className={styles.toolbarLeft}>
                                 <div className={styles.searchWrap}>
-                                    <span className={styles.searchIcon}>🔍</span>
+                                    <span className={styles.searchIcon}><Icon source={SearchIcon} /></span>
                                     <input
                                         className={styles.searchInput}
                                         value={queryValue}

@@ -134,10 +134,10 @@ try {
   CookieJar = require("tough-cookie").CookieJar;
 } catch (e) { }
 
-const frontendUrl = process.env.FRONTEND_URL;
+const frontendUrl = process.env.APP_URL;
 
 const resolveFrontendUrl = (req) => {
-  const envUrl = (process.env.FRONTEND_URL || "").replace(/\/+$/, "");
+  const envUrl = (process.env.APP_URL || "").replace(/\/+$/, "");
   const host = (req.get("host") || "").split(",")[0].trim();
   const isUsableHost =
     host &&
@@ -167,26 +167,26 @@ const resolveFrontendUrl = (req) => {
  * redirect. This reads a single, explicit, operator-configured env var
  * instead, and only that.
  *
- * Returns null (not a guessed/fallback URL) until CONSULTANT_APP_URL is
+ * Returns null (not a guessed/fallback URL) until APP_URL is
  * actually set to a real deployed frontend origin — callers must treat
  * null as "standalone portal not configured yet" and fall back to the
  * existing iframe behavior, not fail or redirect to something broken.
  */
 const getTrustedConsultantAppUrl = () => {
-  const raw = (process.env.CONSULTANT_APP_URL || "").trim();
+  const raw = (process.env.APP_URL || "").trim();
   if (!raw) return null;
   try {
     const parsed = new URL(raw);
     if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
       console.error(
-        `[consultant-portal] CONSULTANT_APP_URL has an unsupported protocol (${parsed.protocol}) — ignoring, falling back to iframe`,
+        `[consultant-portal] APP_URL has an unsupported protocol (${parsed.protocol}) — ignoring, falling back to iframe`,
       );
       return null;
     }
     return raw.replace(/\/+$/, "");
   } catch (err) {
     console.error(
-      `[consultant-portal] CONSULTANT_APP_URL is set but not a valid URL ("${raw}") — ignoring, falling back to iframe`,
+      `[consultant-portal] APP_URL is set but not a valid URL ("${raw}") — ignoring, falling back to iframe`,
     );
     return null;
   }
@@ -929,17 +929,17 @@ const proxyShopifyConsultantPage = async (req, res) => {
   // Login intentionally STAYS inside the Shopify-shell iframe (Header/Footer
   // visible) — unlike the dashboard below, this is not a redirect target.
   // The only change from before: the iframe src prefers the explicit,
-  // trusted CONSULTANT_APP_URL when it's configured, instead of always
+  // trusted APP_URL when it's configured, instead of always
   // using resolveFrontendUrl(req) — which in production resolves to this
   // backend's own host (Shopify's App Proxy forwards with that Host
   // header) and 404s there, since the SPA isn't served from this Express
   // app. Falls back to the old resolveFrontendUrl(req) behavior when
-  // CONSULTANT_APP_URL isn't set, so nothing changes until it is.
+  // APP_URL isn't set, so nothing changes until it is.
 
   // TEMPORARY diagnostics — tracing the reported admin.shopify.com redirect
   // bug. Safe to log: shop domain, this app's own env var, and the request's
   // own query keys/host are not credentials. Remove once resolved.
-  console.log(`[advizo] CONSULTANT_APP_URL (raw env) = ${process.env.CONSULTANT_APP_URL || "(unset)"}`);
+  console.log(`[advizo] APP_URL (raw env) = ${process.env.APP_URL || "(unset)"}`);
   console.log(`[advizo] request host = ${req.get("host")}`);
   console.log(
     `[advizo] request query = ${JSON.stringify({ ...req.query, signature: req.query.signature ? "[present]" : undefined })}`,
@@ -1143,13 +1143,13 @@ const proxyShopifyConsultantLoginPage = (req, res) => {
   // Dashboard STAYS inside the Shopify-shell iframe — same pattern as
   // proxyShopifyConsultantPage (login) above. A top-level 302 here broke
   // the JWT/localStorage handoff: the login form runs inside an iframe at
-  // CONSULTANT_APP_URL's origin, so a 302 that took the DASHBOARD to a
+  // APP_URL's origin, so a 302 that took the DASHBOARD to a
   // different top-level origin than that iframe meant the dashboard could
   // never see the token the login iframe had just written — every fresh
   // load re-verified from scratch and inconsistently bounced back to
   // login, producing an infinite login<->dashboard loop (confirmed via
   // Render logs). Keeping both login and dashboard as iframes under the
-  // SAME CONSULTANT_APP_URL origin keeps localStorage consistent between
+  // SAME APP_URL origin keeps localStorage consistent between
   // them, with no code change to the auth/token logic itself.
   const target = `${getTrustedConsultantAppUrl() || resolveFrontendUrl(req)}/consultant-dashboard?shop=${shop}`;
   console.log(`[consultant-portal] /advizo/consultant-dashboard -> iframe src -> ${target}`);

@@ -47,6 +47,6 @@ export const buildCallPageUrl = ({
   }
 
   const frontendBase =
-    process.env.REACT_APP_FRONTEND_URL || window.location.origin;
+    process.env.REACT_APP_APP_URL || window.location.origin;
   return `${frontendBase.replace(/\/$/, "")}/video/calling/page?${query}`;
 };

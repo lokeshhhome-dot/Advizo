@@ -102,7 +102,7 @@ shopifyRoute.get('/advizo/call-widget.js', verifyAppProxy, proxyShopifyCallWidge
 shopifyRoute.get('/advizo/call-engine.js', verifyAppProxy, proxyShopifyCallEngineScript);
 
 // NOT an App Proxy route — called directly by the React app (UserChat.js)
-// over plain HTTPS, from the CONSULTANT_APP_URL origin, not from a Shopify
+// over plain HTTPS, from the APP_URL origin, not from a Shopify
 // storefront page. verifyAppProxy would reject it (no Shopify HMAC signature
 // on a direct browser->backend call). Its own security is the exchange code
 // itself: short-lived, single-use, minted only inside proxyShopifyStorefrontChat

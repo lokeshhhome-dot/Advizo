@@ -1,4 +1,4 @@
-import { Page, Collapsible, Text, BlockStack } from "@shopify/polaris";
+import { Page, Collapsible, Text, BlockStack, Icon } from "@shopify/polaris";
 import { ChevronDownIcon } from "@shopify/polaris-icons";
 import { useState, useEffect, useMemo } from "react";
 import { useSelector } from "react-redux";
@@ -326,7 +326,7 @@ function Faq() {
         </div>
 
         <div className={styles.searchWrap}>
-          <span className={styles.searchIcon}>🔍</span>
+          <span className={styles.searchIcon}><Icon source={SearchIcon} /></span>
           <input
             className={styles.searchInput}
             value={queryValue}

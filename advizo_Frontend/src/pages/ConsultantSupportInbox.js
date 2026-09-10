@@ -13,6 +13,8 @@ import { getAppBridgeToken } from "../utils/getAppBridgeToken";
 import { ToastContext } from "../components/AlertModel/PolariesTostContext";
 import { FullPageSpinner } from "../components/loading/PageSkeletons";
 import styles from "./ConsultantSupportInbox.module.css";
+import {SearchIcon} from '@shopify/polaris-icons';
+
 
 const PAGE_SIZE = 10;
 
@@ -174,7 +176,7 @@ function ConsultantSupportInbox() {
         <div className={styles.card}>
           <div className={styles.toolbar}>
             <div className={styles.searchWrap}>
-              <span className={styles.searchIcon}>🔍</span>
+              <span className={styles.searchIcon}><Icon source={SearchIcon} /></span>
               <input
                 className={styles.searchInput}
                 value={queryValue}
