@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build artifacts
+build/
+dist/
+**/build/
+**/dist/
+*.zip
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Runtime uploads
+advizo_Backend/uploads/
+uploads/
+
+# Frontend generated files
+advizo_Frontend/build/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
