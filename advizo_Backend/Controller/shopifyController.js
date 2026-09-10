@@ -926,7 +926,7 @@ const proxyConsultantsJson = async (req, res) => {
 const proxyShopifyConsultantPage = async (req, res) => {
   const shop = req.query.shop;
 
-  // Login intentionally STAYS inside the Shopify-shell iframe (Header/Footer
+  // Login intentionally STAYS inside the Shopify-shell iframe (Header/Footerlogin
   // visible) — unlike the dashboard below, this is not a redirect target.
   // The only change from before: the iframe src prefers the explicit,
   // trusted APP_URL when it's configured, instead of always
@@ -945,7 +945,7 @@ const proxyShopifyConsultantPage = async (req, res) => {
     `[advizo] request query = ${JSON.stringify({ ...req.query, signature: req.query.signature ? "[present]" : undefined })}`,
   );
   console.log(
-    `[advizo] consultant login redirect target = ${getTrustedConsultantAppUrl() || resolveFrontendUrl(req)}/login?shop=${shop}`,
+    `[advizo] consultant login redirect target = ${getTrustedConsultantAppUrl() || resolveFrontendUrl(req)}/?shop=${shop}`,
   );
 
   try {
@@ -1015,7 +1015,7 @@ const proxyShopifyConsultantPage = async (req, res) => {
     // getTrustedConsultantAppUrl() || resolveFrontendUrl(req)
 
     const consultantLoginSrc =
-      `${"https://untaxed-cattishly-renewal.ngrok-free.dev"}/login?shop=${shop}`;
+      `${"https://advizo.fossilapps.com"}/login?shop=${shop}`;
     // Derived from the exact same URL the iframe actually loads (not
     // recomputed from getTrustedConsultantAppUrl/resolveFrontendUrl
     // separately) so the postMessage origin check below can never drift out
