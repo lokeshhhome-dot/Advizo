@@ -1015,7 +1015,7 @@ const proxyShopifyConsultantPage = async (req, res) => {
     // getTrustedConsultantAppUrl() || resolveFrontendUrl(req)
 
     const consultantLoginSrc =
-      `${"https://advizo.fossilapps.com"}/login?shop=${shop}`;
+      `${getTrustedConsultantAppUrl() || resolveFrontendUrl(req)}/login?shop=${shop}`;
     // Derived from the exact same URL the iframe actually loads (not
     // recomputed from getTrustedConsultantAppUrl/resolveFrontendUrl
     // separately) so the postMessage origin check below can never drift out
