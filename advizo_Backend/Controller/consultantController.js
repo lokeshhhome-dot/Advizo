@@ -760,11 +760,11 @@ const getConsultantHistory = async (request, response) => {
 
     // Only these six fields are read below; `transcript`/`recordingUrl` can be
     // large, so never pull them over the wire for a list view.
-    const Activity-history = await Conversation.find({ consultantId: id })
+    const activityHistory = await Conversation.find({ consultantId: id })
       .select("userId userSnapshot type startTime endTime durationSeconds")
       .lean();
     const userHistory = [];
-    for (const item of Activity-history) {
+    for (const item of activityHistory) {
       userHistory.push({
         userId: item.userId,
         user: item.userSnapshot,
