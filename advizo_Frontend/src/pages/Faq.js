@@ -1,11 +1,12 @@
 import { Page, Collapsible, Text, BlockStack, Icon } from "@shopify/polaris";
-import { ChevronDownIcon } from "@shopify/polaris-icons";
+import { ChevronDownIcon, SearchIcon } from "@shopify/polaris-icons";
 import { useState, useEffect, useMemo } from "react";
 import { useSelector } from "react-redux";
 import { fetchAdminDetails } from "../components/Redux/slices/adminSlice";
 import { useDispatch } from "react-redux";
 import { useAppBridge } from "../components/createContext/AppBridgeContext";
 import styles from "./Faq.module.css";
+import { Redirect } from "@shopify/app-bridge/actions";
 
 function Faq() {
   const [expanded, setExpanded] = useState(0);
@@ -22,6 +23,16 @@ function Faq() {
       dispatch(fetchAdminDetails({ adminIdLocal, app }));
     }
   }, [dispatch]);
+
+  const redirect = useMemo(() => {
+    if (!app) return null;
+    return Redirect.create(app);
+  }, [app]);
+
+  const goToAddConsultant = () => {
+    if (!redirect) return;
+    redirect.dispatch(Redirect.Action.APP, "/settings");
+  };
   const ACCORDION_ITEMS = [
     {
       id: 0,
@@ -111,7 +122,7 @@ function Faq() {
             Click on the <span className="Polaris-Text--bold">Delete</span> icon
             in the Action column next to the consultant you want to remove.
             Confirm the deletion when prompted. Please note that this action
-            cannot be undone, and all consultation history for that consultant
+            cannot be undone, and all consultation Activity-history for that consultant
             will be removed.
           </Text>
         </BlockStack>
@@ -318,6 +329,12 @@ function Faq() {
     <Page fullWidth>
       <div className={styles.page}>
         <div className={styles.header}>
+          <p
+            className={styles.backLink}
+            onClick={goToAddConsultant}
+          >
+            ‹ settings
+          </p>
           <h1 className={styles.title}>Frequently Asked Questions</h1>
           <p className={styles.subtitle}>
             Answers to common questions about managing your consultants and
@@ -347,9 +364,8 @@ function Faq() {
                 <div className={styles.faqItem} key={id}>
                   <button
                     type="button"
-                    className={`${styles.faqHeader} ${
-                      isExpanded ? styles.faqHeaderOpen : ""
-                    }`}
+                    className={`${styles.faqHeader} ${isExpanded ? styles.faqHeaderOpen : ""
+                      }`}
                     onClick={() =>
                       setExpanded((prev) => (id === prev ? null : id))
                     }
@@ -357,9 +373,8 @@ function Faq() {
                     <span className={styles.faqNumber}>{id + 1}</span>
                     <span className={styles.faqTitle}>{title}</span>
                     <span
-                      className={`${styles.faqChevron} ${
-                        isExpanded ? styles.faqChevronOpen : ""
-                      }`}
+                      className={`${styles.faqChevron} ${isExpanded ? styles.faqChevronOpen : ""
+                        }`}
                     >
                       <ChevronDownIcon width="1.25rem" height="1.25rem" />
                     </span>

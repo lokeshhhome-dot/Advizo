@@ -25,7 +25,7 @@ function VoucherSettings() {
   }, [app]);
   const backToVoucherManagement = useCallback(() => {
     if (!redirect) return;
-    redirect.dispatch(Redirect.Action.APP, "/voucher-management");
+    redirect.dispatch(Redirect.Action.APP, "/vouchers");
   }, [redirect]);
   const [formData, setFormData] = useState({
     voucherCode: "",

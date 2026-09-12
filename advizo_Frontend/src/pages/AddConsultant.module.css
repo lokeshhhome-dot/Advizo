@@ -18,6 +18,7 @@
 
 .backLink:hover {
   color: #202223;
+  cursor: pointer;
 }
 
 .header {

@@ -8,6 +8,7 @@ import UpdateUserDetailsModal from './UpdateUserDetailsModal'
 import axios from 'axios'
 import { getAppBridgeToken } from '../utils/getAppBridgeToken'
 import styles from './AdminTable.module.css'
+import {SearchIcon} from '@shopify/polaris-icons';
 
 function ManualDebetCreditBlance() {
     const app = useAppBridge();

@@ -6,6 +6,8 @@ import { useAppBridge } from '../components/createContext/AppBridgeContext'
 import { formatNumber } from '../components/Helper/Helper'
 import MoneyValue from '../components/Helper/MoneyValue'
 import styles from './AdminTable.module.css'
+import {SearchIcon} from '@shopify/polaris-icons';
+
 
 const typeTabs = ['All', 'Chat', 'Voice Call', 'Video Call']
 
@@ -86,7 +88,7 @@ function UserTransHistory() {
                 <div className={styles.page}>
                     <div className={styles.header}>
                         <div className={styles.headerLeft}>
-                            <h1 className={styles.title}>Activity History</h1>
+                            <h1 className={styles.title}>Activity Activity-history</h1>
                             <p className={styles.subtitle}>
                                 Every chat, voice, and video session across your store.
                             </p>

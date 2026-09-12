@@ -11,7 +11,7 @@ export default function AppNavigation() {
                 },
                 {
                     label: "Consultant List",
-                    destination: "/consultant-list",
+                    destination: "/consultants",
                 },
                 {
                     label: "Pricing",

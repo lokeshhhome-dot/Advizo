@@ -6,6 +6,7 @@ import {
   BlockStack,
   Banner,
   Text,
+  Icon,
 } from "@shopify/polaris";
 import axios from "axios";
 import { useAppBridge } from "../components/createContext/AppBridgeContext";
@@ -13,7 +14,8 @@ import { getAppBridgeToken } from "../utils/getAppBridgeToken";
 import { ToastContext } from "../components/AlertModel/PolariesTostContext";
 import { FullPageSpinner } from "../components/loading/PageSkeletons";
 import styles from "./ConsultantSupportInbox.module.css";
-import {SearchIcon} from '@shopify/polaris-icons';
+import { SearchIcon } from '@shopify/polaris-icons';
+import { Redirect } from "@shopify/app-bridge/actions";
 
 
 const PAGE_SIZE = 10;
@@ -150,15 +152,33 @@ function ConsultantSupportInbox() {
     }
   };
 
+   const redirect = useMemo(() => {
+    if (!app) return null;
+    return Redirect.create(app);
+  }, [app]);
   if (adminIdLocal && loading && !requests.length) {
     return <FullPageSpinner label="Loading support requests" />;
   }
+
+
+ 
+
+  const goToAddConsultant = () => {
+    if (!redirect) return;
+    redirect.dispatch(Redirect.Action.APP, "/settings");
+  };
 
   return (
     <Page fullWidth>
       <div className={styles.page}>
         <div className={styles.header}>
           <div className={styles.headerLeft}>
+            <p
+              className={styles.backLink}
+              onClick={goToAddConsultant}
+            >
+              ‹ settings
+            </p>
             <h1 className={styles.title}>Support Inbox</h1>
             <p className={styles.subtitle}>
               View consultant and customer queries and send replies from here.
@@ -237,11 +257,10 @@ function ConsultantSupportInbox() {
                             {request.consultantEmail || "—"}
                           </span>
                           <span
-                            className={`${styles.typeBadge} ${
-                              request.requesterType === "user"
-                                ? styles.typeCustomer
-                                : styles.typeConsultant
-                            }`}
+                            className={`${styles.typeBadge} ${request.requesterType === "user"
+                              ? styles.typeCustomer
+                              : styles.typeConsultant
+                              }`}
                           >
                             {request.requesterType === "user"
                               ? "Customer"

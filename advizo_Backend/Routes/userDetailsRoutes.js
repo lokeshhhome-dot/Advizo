@@ -9,8 +9,8 @@ userDetailsRouter.get("/token", tokenVerify);
 userDetailsRouter.get("/user-details", verifyShopifyToken, getAllUsers);
 userDetailsRouter.get("/d/:id", optionalAuthenticateToken, getUserById);
 userDetailsRouter.get("/app-status-verify-app-status", getAppStatusController);
-userDetailsRouter.get("/get/wallet-history/:userId/:shopId", optionalAuthenticateToken, getUserWalletHistroy);
+userDetailsRouter.get("/get/wallet-Activity-history/:userId/:shopId", optionalAuthenticateToken, getUserWalletHistroy);
 userDetailsRouter.use("/find-call-session", optionalAuthenticateToken, getcallSessionsController);
-userDetailsRouter.get("/find-user-logs-history/:id", optionalAuthenticateToken, getUserConversationController);
+userDetailsRouter.get("/find-user-logs-Activity-history/:id", optionalAuthenticateToken, getUserConversationController);
 
 module.exports = { userDetailsRouter };

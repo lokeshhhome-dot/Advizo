@@ -59,9 +59,9 @@ consultantRoute.put("/update-consultant/:id", verifyShopifyToken, upload.single(
 // getConsultant already returns ONLY safe display fields (no password/PII).
 consultantRoute.put("/api-consultant-update-status/:id", verifyShopifyToken, updateConsultantStatus)
 consultantRoute.get("/consultantid/:id",verifyShopifyToken, getConsultantById)
-consultantRoute.get("/consultant-history/:id", verifyShopifyToken, getConsultantHistory)
+consultantRoute.get("/consultant-Activity-history/:id", verifyShopifyToken, getConsultantHistory)
 consultantRoute.get("/consultant-all-user/:id", verifyShopifyToken, getConsultantAllUser)
-consultantRoute.get("/consultant-all-user-history", verifyShopifyToken, getConsultantAllUserHistory)
+consultantRoute.get("/consultant-all-user-Activity-history", verifyShopifyToken, getConsultantAllUserHistory)
 consultantRoute.delete('/delete-consultant/:id', verifyShopifyToken, deleteConsultant);
 consultantRoute.get("/consultant-by-shop-id-and-consultant-id/:shop_id/:consultant_id", getConsultantByShopIdAndConsultantId);
 consultantRoute.post("/login-consultant", loginConsultant);
@@ -73,7 +73,7 @@ consultantRoute.get("/get/consultant/:id", authenticateToken, getConsultantAllUs
 consultantRoute.put("/update-profile", authenticateToken, upload.single("profileImage"), updateConsultantProfileStoreFront);
 consultantRoute.get("/find-user-chat-logs/:id", authenticateToken, getUserConversationControllerConsultant)
 consultantRoute.get("/me/overview/:consultantId", authenticateToken, getConsultantSelfOverview)
-consultantRoute.get("/find-consultant/wallet/history/:userId/:shopId", authenticateToken, getConsultantWalletHistroy)
+consultantRoute.get("/find-consultant/wallet/Activity-history/:userId/:shopId", authenticateToken, getConsultantWalletHistroy)
 consultantRoute.post("/submit/withdrawal/request/:consultantId/:shopId", authenticateToken, WithdrawalRequestController)
 consultantRoute.get("/find/consultant/withdrawal/request/:consultantId", authenticateToken, getWithdrawalRequest)
 consultantRoute.get("/find/monthly-revenue/:shop_id/:consultantId", authenticateToken, getMonthlyRevenueController) // defult did use 

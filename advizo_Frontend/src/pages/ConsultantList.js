@@ -1,4 +1,4 @@
-import { Page } from "@shopify/polaris";
+import { Icon, Page } from "@shopify/polaris";
 import { useEffect, useState, useCallback, useMemo, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import MoneyValue from "../components/Helper/MoneyValue";
@@ -62,7 +62,7 @@ function ConsultantList() {
 
   const goToAddConsultant = () => {
     if (!redirect) return;
-    redirect.dispatch(Redirect.Action.APP, "/consultant-list/add-consultant");
+    redirect.dispatch(Redirect.Action.APP, "/consultants/add-consultant");
   };
   const navigate = useNavigate();
   const [queryValue, setQueryValue] = useState("");
@@ -137,7 +137,7 @@ function ConsultantList() {
 
   const handleEdit = useCallback(
     (_id) => {
-      navigate(`/consultant-list/add-consultant?id=${_id}`);
+      navigate(`/consultants/add-consultant?id=${_id}`);
     },
     [navigate],
   );

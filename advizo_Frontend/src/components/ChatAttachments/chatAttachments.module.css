@@ -34,7 +34,7 @@
    popups the spec describes, instead of pushing the message stream's height
    around every time a file is staged/cleared. Requires nothing from the
    .chat-messages/.messageStream scroll container, so it can never move with
-   history and is never clipped by the modal's own overflow:hidden (it stays
+   Activity-history and is never clipped by the modal's own overflow:hidden (it stays
    within the modal's box, just above the composer). */
 .composerPreview {
     position: absolute;

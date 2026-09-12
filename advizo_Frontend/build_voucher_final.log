@@ -205,7 +205,7 @@ src\pages\Faq.js
   Line 20:35:  'adminDetailsLoading' is assigned a value but never used                                                no-unused-vars
   Line 31:6:   React Hook useEffect has a missing dependency: 'app'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
 
-src\pages\History.js
+src\pages\Activity-history.js
   Line 41:6:  React Hook useEffect has a missing dependency: 'dispatch'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
 
 src\pages\LayoutFrame.js

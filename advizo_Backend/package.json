@@ -43,12 +43,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/therohitsaini/MVC-sainiWeb-Agora-Backend.git"
+    "url": "git+https://github.com/lokeshhhome-dot/Advizo.git"
   },
   "bugs": {
-    "url": "https://github.com/therohitsaini/MVC-sainiWeb-Agora-Backend/issues"
+    "url": "https://github.com/lokeshhhome-dot/Advizo/issues"
   },
-  "homepage": "https://github.com/therohitsaini/MVC-sainiWeb-Agora-Backend#readme",
+  "homepage": "https://github.com/lokeshhhome-dot/Advizo#readme",
   "devDependencies": {
     "prettier": "^3.8.1"
   }

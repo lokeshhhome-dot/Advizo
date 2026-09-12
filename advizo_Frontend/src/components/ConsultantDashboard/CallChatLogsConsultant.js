@@ -61,7 +61,7 @@ const CallLogsConsultant = () => {
       setCallLogsConsultant(response.data.data || []);
     } catch (err) {
       setError(
-        err.response?.data?.message || "Unable to load call history. Please try again.",
+        err.response?.data?.message || "Unable to load call Activity-history. Please try again.",
       );
       setCallLogsConsultant([]);
     } finally {
@@ -76,7 +76,7 @@ const CallLogsConsultant = () => {
 
   return (
     <div>
-      <PageHeader title="Sessions" description="Your consultation history — calls and their outcomes." />
+      <PageHeader title="Sessions" description="Your consultation Activity-history — calls and their outcomes." />
       <RecordList
         items={callLogsConsultant}
         loading={loading}

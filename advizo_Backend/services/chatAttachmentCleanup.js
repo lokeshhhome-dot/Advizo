@@ -32,7 +32,7 @@ async function cleanupExpiredAttachments() {
         }
 
         // The Message document and its attachment metadata are kept — only
-        // the stored bytes are purged, so chat history stays intact. Access
+        // the stored bytes are purged, so chat Activity-history stays intact. Access
         // is already blocked by attachment.expiresAt regardless of purgedAt.
         await MessageModal.updateOne(
             { _id: msg._id },

@@ -10,6 +10,8 @@ import axios from 'axios'
 import { usePolarisToast } from '../components/AlertModel/PolariesTostContext'
 import { getAppBridgeToken } from '../utils/getAppBridgeToken'
 import styles from './VoucherTable.module.css'
+import {SearchIcon} from '@shopify/polaris-icons';
+
 
 const PAGE_SIZE = 10;
 const ICON_COLORS = ["#2E7D32", "#1565C0", "#C2185B", "#6A1B9A", "#E65100", "#00838F"];
@@ -43,7 +45,7 @@ function VoucherTable() {
     // existing voucher opens in a modal here.
     const goToAddVoucher = useCallback(() => {
         if (!redirect) return;
-        redirect.dispatch(Redirect.Action.APP, '/voucher-management/voucher');
+        redirect.dispatch(Redirect.Action.APP, '/vouchers/voucher');
     }, [redirect]);
 
     const [queryValue, setQueryValue] = useState("");

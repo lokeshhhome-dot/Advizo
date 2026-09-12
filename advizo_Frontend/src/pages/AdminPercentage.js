@@ -8,6 +8,8 @@ import { usePolarisToast } from "../components/AlertModel/PolariesTostContext";
 import { getAppBridgeToken } from "../utils/getAppBridgeToken";
 import MoneyValue from "../components/Helper/MoneyValue";
 import styles from "./AdminPercentage.module.css";
+import { useMemo } from "react";
+import { Redirect } from "@shopify/app-bridge/actions";
 
 // Purely illustrative — the actual split always runs on the real session
 // total (chatPerMinute/voicePerMinute/videoPerMinute x duration), never a
@@ -88,11 +90,28 @@ function AdminPercentage() {
   const consultantEarns = EXAMPLE_AMOUNT - adminEarns;
   const currency = adminDetails_?.currency;
 
+  const redirect = useMemo(() => {
+    if (!app) return null;
+    return Redirect.create(app);
+  }, [app]);
+
+  const goToAddConsultant = () => {
+    if (!redirect) return;
+    redirect.dispatch(Redirect.Action.APP, "/settings");
+  };
+
+
   return (
     <Fragment>
       <Page fullWidth>
         <div className={styles.page}>
           <div className={styles.header}>
+            <p
+              className={styles.backLink}
+              onClick={goToAddConsultant}
+            >
+              ‹ settings
+            </p>
             <h1 className={styles.title}>Commission</h1>
             <p className={styles.subtitle}>
               Set the percentage you keep from every session. Consultants

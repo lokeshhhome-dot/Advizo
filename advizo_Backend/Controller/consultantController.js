@@ -760,11 +760,11 @@ const getConsultantHistory = async (request, response) => {
 
     // Only these six fields are read below; `transcript`/`recordingUrl` can be
     // large, so never pull them over the wire for a list view.
-    const history = await Conversation.find({ consultantId: id })
+    const Activity-history = await Conversation.find({ consultantId: id })
       .select("userId userSnapshot type startTime endTime durationSeconds")
       .lean();
     const userHistory = [];
-    for (const item of history) {
+    for (const item of Activity-history) {
       userHistory.push({
         userId: item.userId,
         user: item.userSnapshot,
@@ -843,7 +843,7 @@ const getConsultantAllUserHistory = async (request, response) => {
     if (!historyConsultantUser) {
       return response
         .status(400)
-        .json({ message: "History consultant user not found" });
+        .json({ message: "Activity-history consultant user not found" });
     }
     return response.status(200).send({ success: true, historyConsultantUser });
   } catch (error) {

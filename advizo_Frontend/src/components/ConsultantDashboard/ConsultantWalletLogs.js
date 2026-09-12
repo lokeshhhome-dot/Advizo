@@ -42,13 +42,13 @@ const ConsultantWalletLogs = () => {
     setError(null);
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_BACKEND_HOST}/api-consultant/find-consultant/wallet/history/${userId}/${shopId}`,
+        `${process.env.REACT_APP_BACKEND_HOST}/api-consultant/find-consultant/wallet/Activity-history/${userId}/${shopId}`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       setWalletLogs(response.data.data || []);
     } catch (err) {
       setError(
-        err.response?.data?.message || "Unable to load wallet history. Please try again.",
+        err.response?.data?.message || "Unable to load wallet Activity-history. Please try again.",
       );
       setWalletLogs([]);
     } finally {

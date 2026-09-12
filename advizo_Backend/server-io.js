@@ -956,7 +956,7 @@ const ioServer = (server) => {
 
           // If a billed chat is currently active between this pair, the pool
           // drained mid-session — end it through the existing autoChatEnded
-          // flow (client emits endChat → server finalizes billing + history).
+          // flow (client emits endChat → server finalizes billing + Activity-history).
           const activeChat = await TransactionHistroy.findOne({
             type: "chat",
             status: "active",

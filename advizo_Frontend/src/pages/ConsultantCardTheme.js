@@ -7,6 +7,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { usePolarisToast } from "../components/AlertModel/PolariesTostContext";
 import { getAppBridgeToken } from "../utils/getAppBridgeToken";
 import styles from "./ConsultantCardTheme.module.css";
+import { useMemo } from "react";
+import { Redirect } from "@shopify/app-bridge/actions";
 
 // Same values as the Theme Extension's own CSS fallbacks
 // (consultant-card.css) — shown here ONLY so the live preview looks like
@@ -311,12 +313,28 @@ function ConsultantCardTheme() {
   const previewHeaderBg = form.headerBackground || DEFAULTS.headerBackground;
   const previewOnline = form.onlineColor || DEFAULTS.onlineColor;
 
+  const redirect = useMemo(() => {
+    if (!app) return null;
+    return Redirect.create(app);
+  }, [app]);
+
+  const goToAddConsultant = () => {
+    if (!redirect) return;
+    redirect.dispatch(Redirect.Action.APP, "/settings");
+  };
+
   return (
     <Fragment>
       <Page fullWidth>
         <div className={styles.page}>
           <div className={styles.header}>
             <div className={styles.headerLeft}>
+              <p
+                className={styles.backLink}
+                onClick={goToAddConsultant}
+              >
+                ‹ settings
+              </p>
               <h1 className={styles.title}>Consultant Card Appearance</h1>
               <p className={styles.subtitle}>
                 Customize how the Consultant Card looks on your storefront. Leave a

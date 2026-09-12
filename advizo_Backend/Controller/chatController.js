@@ -41,12 +41,12 @@ const getChatHistory = async (request, response) => {
         }).sort({ timestamp: 1 });
 
         if (!chatHistory) {
-            return response.status(400).json({ message: "Chat history not found" });
+            return response.status(400).json({ message: "Chat Activity-history not found" });
         }
 
         return response.status(200).json({
             success: true,
-            message: "Chat history fetched successfully",
+            message: "Chat Activity-history fetched successfully",
             chatHistory
         });
 

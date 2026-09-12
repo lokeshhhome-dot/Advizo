@@ -486,7 +486,7 @@ function Dashboard() {
     if (mode === "manage") {
       switch (stepId) {
         case 1:
-          navigateTo("/consultant-list");
+          navigateTo("/consultants");
           break;
         case 2:
           navigateTo("/admin-percentage");
@@ -512,7 +512,7 @@ function Dashboard() {
 
     switch (stepId) {
       case 1:
-        navigateTo("/consultant-list/add-consultant");
+        navigateTo("/consultants/add-consultant");
         break;
       case 2:
         navigateTo("/admin-percentage");
@@ -532,7 +532,7 @@ function Dashboard() {
         break;
       }
       case 5:
-        navigateTo("/history");
+        navigateTo("/Activity-history");
         break;
       default:
         break;
@@ -1047,7 +1047,7 @@ function Dashboard() {
                     Latest consultations booked through your store.
                   </p>
                 </div>
-                <Button variant="plain" onClick={() => navigateTo("/history")}>
+                <Button variant="plain" onClick={() => navigateTo("/Activity-history")}>
                   View all
                 </Button>
               </div>

@@ -99,7 +99,7 @@ export default function WidthrwalRequestApprove({ open, onClose, userDetails, up
                             value={description}
                             onChange={handleChange('description')}
                             multiline={4}
-                            placeholder="history description"
+                            placeholder="Activity-history description"
                         />
 
                     </FormLayout>

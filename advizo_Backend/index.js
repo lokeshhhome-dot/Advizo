@@ -6,69 +6,162 @@ const dotenv = require("dotenv");
 const http = require("http");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
-const { connectDB } = require("./Utils/db"); dotenv.config();
-const { initRedis } = require("./Utils/redis");
-connectDB();
 
+dotenv.config();
+
+const { connectDB } = require("./Utils/db");
+const { initRedis } = require("./Utils/redis");
+
+connectDB();
 initRedis();
+
 const path = require("path");
+
 const app = express();
-const PORT = process.env.ADVIZO_BACKEND_PORT
+const PORT = process.env.ADVIZO_BACKEND_PORT;
+
 const server = http.createServer(app);
+
 const { ioServer } = require("./server-io");
+
 const shopifyRoute = require("./Routes/shopifyRoute");
 const { webHookRoute } = require("./Routes/webHookRoute");
 
 app.set("trust proxy", 1);
+
+/* =========================================================
+   SECURITY HEADERS
+========================================================= */
 
 app.use(
   helmet({
     contentSecurityPolicy: false,
     frameguard: false,
     crossOriginEmbedderPolicy: false,
-    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginResourcePolicy: {
+      policy: "cross-origin",
+    },
   })
 );
+
+/*
+ * Allow Shopify storefront/admin pages to embed Advizo
+ * where required by the application.
+ */
 app.use((req, res, next) => {
   res.setHeader(
     "Content-Security-Policy",
     "frame-ancestors https://*.myshopify.com https://admin.shopify.com;"
   );
+
   next();
 });
 
-const CORS_ALLOWLIST = [
-  ...String(process.env.APP_URL || "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean),
-  String(process.env.APP_URL || "").trim().replace(/\/+$/, ""),
-  String(process.env.APP_URL || "").trim().replace(/\/+$/, ""),
-].filter(Boolean);
+/* =========================================================
+   CORS
+========================================================= */
 
-app.use(
-  cors({
-    origin(origin, cb) {
-      if (!origin) return cb(null, true);
-      const clean = origin.replace(/\/+$/, "");
-      let host = "";
-      try {
-        host = new URL(origin).host;
-      } catch (_) { }
-      const allowed =
-        CORS_ALLOWLIST.includes(clean) ||
-        /\.myshopify\.com$/.test(host) ||
-        host === "admin.shopify.com";
-      return cb(null, allowed);
-    },
-    credentials: true,
-  })
-);
+const CORS_ALLOWLIST = String(process.env.APP_URL || "")
+  .split(",")
+  .map((s) => s.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
+
+const corsOptions = {
+  origin(origin, callback) {
+    // Allow requests that do not contain an Origin header.
+    // Example: server-to-server requests, health checks, etc.
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    const cleanOrigin = origin.replace(/\/+$/, "");
+
+    let hostname = "";
+
+    try {
+      hostname = new URL(origin).hostname;
+    } catch (error) {
+      console.warn("[CORS] Invalid origin:", origin);
+      return callback(new Error("Invalid CORS origin"));
+    }
+
+    /*
+     * Allowed origins:
+     *
+     * 1. APP_URL from Render environment
+     * 2. Any Shopify storefront (*.myshopify.com)
+     * 3. Shopify Admin
+     */
+    const isAllowed =
+      CORS_ALLOWLIST.includes(cleanOrigin) ||
+      hostname.endsWith(".myshopify.com") ||
+      hostname === "admin.shopify.com";
+
+    if (isAllowed) {
+      return callback(null, true);
+    }
+
+    console.warn("[CORS] Blocked origin:", origin);
+
+    return callback(new Error("Not allowed by CORS"));
+  },
+
+  credentials: true,
+
+  methods: [
+    "GET",
+    "POST",
+    "PUT",
+    "PATCH",
+    "DELETE",
+    "OPTIONS",
+  ],
+
+  allowedHeaders: [
+    "Origin",
+    "X-Requested-With",
+    "Content-Type",
+    "Accept",
+    "Authorization",
+  ],
+
+  optionsSuccessStatus: 204,
+};
+
+/*
+ * Normal CORS middleware.
+ *
+ * IMPORTANT:
+ * This must remain before API routes/authentication middleware.
+ */
+app.use(cors(corsOptions));
+
+/*
+ * Explicitly handle browser OPTIONS preflight requests.
+ *
+ * This is important for requests such as:
+ *
+ * Shopify storefront
+ *      ↓
+ * OPTIONS /api/users/shopify/users/checked-balance/...
+ *      ↓
+ * Advizo backend
+ */
+app.options("*", cors(corsOptions));
+
+/* =========================================================
+   COOKIES
+========================================================= */
 
 app.use(cookieParser());
 
+/* =========================================================
+   REQUEST SANITIZATION
+========================================================= */
+
 const deepSanitize = (obj) => {
   if (!obj || typeof obj !== "object") return;
+
   for (const key of Object.keys(obj)) {
     if (
       key.startsWith("$") ||
@@ -80,134 +173,391 @@ const deepSanitize = (obj) => {
       delete obj[key];
       continue;
     }
+
     const val = obj[key];
-    if (val && typeof val === "object") deepSanitize(val);
+
+    if (val && typeof val === "object") {
+      deepSanitize(val);
+    }
   }
 };
 
-// ---- Rate limiting on brute-force-sensitive auth endpoints ----
+/* =========================================================
+   RATE LIMITING
+========================================================= */
+
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 40,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, message: "Too many attempts. Please try again later." },
+  message: {
+    success: false,
+    message: "Too many attempts. Please try again later.",
+  },
 });
-app.get("/api/health", (req, res) => {
 
+/* =========================================================
+   HEALTH CHECK
+========================================================= */
+
+app.get("/api/health", (req, res) => {
   res.status(200).json({
     success: true,
     message: "Server is healthy",
   });
 });
+
+/* =========================================================
+   AUTH RATE LIMITERS
+========================================================= */
+
 app.use("/api/auth", authLimiter);
-app.use("/api/api-consultant/login-consultant", authLimiter);
-app.use("/api/api-consultant/forgot-password", authLimiter);
-app.use("/api/api-consultant/reset-password", authLimiter);
 
-app.use('/api/webhooks', express.raw({ type: 'application/json' }));
-app.use("/api/webhooks", webHookRoute);
+app.use(
+  "/api/api-consultant/login-consultant",
+  authLimiter
+);
 
+app.use(
+  "/api/api-consultant/forgot-password",
+  authLimiter
+);
+
+app.use(
+  "/api/api-consultant/reset-password",
+  authLimiter
+);
+
+/* =========================================================
+   SHOPIFY WEBHOOKS
+========================================================= */
+
+/*
+ * Shopify webhooks require the raw request body,
+ * so this must stay before express.json().
+ */
+app.use(
+  "/api/webhooks",
+  express.raw({
+    type: "application/json",
+  })
+);
+
+app.use(
+  "/api/webhooks",
+  webHookRoute
+);
+
+/* =========================================================
+   BODY PARSING
+========================================================= */
 
 app.use((req, res, next) => {
-  if (req.path.startsWith('/api/webhooks')) return next();
+  if (req.path.startsWith("/api/webhooks")) {
+    return next();
+  }
+
   express.json()(req, res, next);
 });
 
 app.use((req, res, next) => {
-  if (req.path.startsWith('/api/webhooks')) return next();
-  express.urlencoded({ extended: true })(req, res, next);
+  if (req.path.startsWith("/api/webhooks")) {
+    return next();
+  }
+
+  express.urlencoded(
+    {
+      extended: true,
+    }
+  )(req, res, next);
 });
 
-app.use((req, _res, next) => {
+/* =========================================================
+   REQUEST SANITIZATION MIDDLEWARE
+========================================================= */
+
+app.use((req, res, next) => {
   deepSanitize(req.body);
   deepSanitize(req.params);
+
   try {
     deepSanitize(req.query);
   } catch (_) {
+    // Ignore query sanitization errors
   }
+
   next();
 });
 
+/* =========================================================
+   STATIC UPLOADS
+========================================================= */
+
 app.use(
   "/uploads",
-  express.static(path.join(__dirname, "uploads"), {
-    maxAge: "30d",
-    immutable: true,
-    etag: true,
-    lastModified: true,
-  })
+  express.static(
+    path.join(__dirname, "uploads"),
+    {
+      maxAge: "30d",
+      immutable: true,
+      etag: true,
+      lastModified: true,
+    }
+  )
 );
-const reactBuildPath = path.join(__dirname, "..", "consultant-app", "build");
 
-app.use("/static", express.static(path.join(reactBuildPath, "static")));
-app.use("/consultant-app", express.static(reactBuildPath));
+/* =========================================================
+   CONSULTANT REACT BUILD
+========================================================= */
+
+const reactBuildPath = path.join(
+  __dirname,
+  "..",
+  "consultant-app",
+  "build"
+);
+
+app.use(
+  "/static",
+  express.static(
+    path.join(reactBuildPath, "static")
+  )
+);
+
+app.use(
+  "/consultant-app",
+  express.static(reactBuildPath)
+);
+
+/* =========================================================
+   CALL / NOTIFICATION SOUNDS
+========================================================= */
 
 app.use(
   "/sounds",
   express.static(
-    path.join(__dirname, "..", "consultant-app", "public", "sounds"),
+    path.join(
+      __dirname,
+      "..",
+      "consultant-app",
+      "public",
+      "sounds"
+    ),
     {
       setHeaders: (res) => {
-        res.setHeader("Content-Type", "audio/mpeg");
+        res.setHeader(
+          "Content-Type",
+          "audio/mpeg"
+        );
       },
     }
   )
 );
 
+/* =========================================================
+   CACHE CONTROL
+========================================================= */
 
 app.use((req, res, next) => {
-  // Never clobber the long-lived cache headers on static uploads.
-  if (req.path.startsWith("/uploads")) return next();
-  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
-  res.setHeader("Pragma", "no-cache");
-  res.setHeader("Expires", "0");
+  /*
+   * Never overwrite long-lived cache headers
+   * for static uploads.
+   */
+  if (req.path.startsWith("/uploads")) {
+    return next();
+  }
+
+  res.setHeader(
+    "Cache-Control",
+    "no-store, no-cache, must-revalidate, private"
+  );
+
+  res.setHeader(
+    "Pragma",
+    "no-cache"
+  );
+
+  res.setHeader(
+    "Expires",
+    "0"
+  );
+
   next();
 });
 
+/* =========================================================
+   ROUTE IMPORTS
+========================================================= */
+
 const { callRoutes } = require("./Routes/videoCallRotes");
-const { signinSignupRouter } = require("./Routes/signin-signupRoute");
-const { userDetailsRouter } = require("./Routes/userDetailsRoutes");
-const { consultantRoute } = require("./Routes/consultantRoute");
+
+const {
+  signinSignupRouter,
+} = require("./Routes/signin-signupRoute");
+
+const {
+  userDetailsRouter,
+} = require("./Routes/userDetailsRoutes");
+
+const {
+  consultantRoute,
+} = require("./Routes/consultantRoute");
+
 const chatRoutes = require("./Routes/chatRoutes");
+
 const firebaseRouter = require("./Routes/firebaseRoutes");
-const { shopifyDraftOrderRoute } = require("./Routes/shopifyDraftOrderRoute");
-const { userRouter } = require("./Routes/userRoutes");
-const { adminRoute } = require("./Routes/adminRoute");
-const { adminPrincingRoute } = require("./Routes/adminPrincingRoutes");
-const { aiRoute } = require("./Routes/aiRoutes");
-const { ratingRoutes } = require("./Routes/ratingRoutes");
 
+const {
+  shopifyDraftOrderRoute,
+} = require("./Routes/shopifyDraftOrderRoute");
 
-app.use("/api/call", callRoutes);
-app.use("/api/auth", signinSignupRouter);
-app.use("/api/users", userDetailsRouter);
-app.use("/api/api-consultant", consultantRoute)
+const {
+  userRouter,
+} = require("./Routes/userRoutes");
 
-// shopify routes 
-app.use("/api/app", shopifyRoute);
+const {
+  adminRoute,
+} = require("./Routes/adminRoute");
 
-/** Chat Routes */
-app.use("/api/chat", chatRoutes);
-app.use("/api", firebaseRouter);
+const {
+  adminPrincingRoute,
+} = require("./Routes/adminPrincingRoutes");
 
-/** Shopify Draft Order Routes */
-app.use("/api/draft-order", shopifyDraftOrderRoute);
+const {
+  aiRoute,
+} = require("./Routes/aiRoutes");
 
+const {
+  ratingRoutes,
+} = require("./Routes/ratingRoutes");
 
-/** User Routes */
-app.use("/api/users", userRouter);
-app.use("/api/admin", adminRoute);
-app.use("/api/admin/ai", aiRoute);
-app.use("/api/princing", adminPrincingRoute)
-app.use("/api/pricing-callback", adminPrincingRoute)
-app.use("/api/ratings", ratingRoutes);
+/* =========================================================
+   API ROUTES
+========================================================= */
+
+/* Call Routes */
+app.use(
+  "/api/call",
+  callRoutes
+);
+
+/* Authentication */
+app.use(
+  "/api/auth",
+  signinSignupRouter
+);
+
+/* User Details */
+app.use(
+  "/api/users",
+  userDetailsRouter
+);
+
+/* Consultant */
+app.use(
+  "/api/api-consultant",
+  consultantRoute
+);
+
+/* =========================================================
+   SHOPIFY ROUTES
+========================================================= */
+
+app.use(
+  "/api/app",
+  shopifyRoute
+);
+
+/* =========================================================
+   CHAT ROUTES
+========================================================= */
+
+app.use(
+  "/api/chat",
+  chatRoutes
+);
+
+/* =========================================================
+   FIREBASE
+========================================================= */
+
+app.use(
+  "/api",
+  firebaseRouter
+);
+
+/* =========================================================
+   SHOPIFY DRAFT ORDERS
+========================================================= */
+
+app.use(
+  "/api/draft-order",
+  shopifyDraftOrderRoute
+);
+
+/* =========================================================
+   USER ROUTES
+========================================================= */
+
+app.use(
+  "/api/users",
+  userRouter
+);
+
+/* =========================================================
+   ADMIN
+========================================================= */
+
+app.use(
+  "/api/admin",
+  adminRoute
+);
+
+/* =========================================================
+   ADMIN AI
+========================================================= */
+
+app.use(
+  "/api/admin/ai",
+  aiRoute
+);
+
+/* =========================================================
+   ADMIN PRICING
+========================================================= */
+
+app.use(
+  "/api/princing",
+  adminPrincingRoute
+);
+
+app.use(
+  "/api/pricing-callback",
+  adminPrincingRoute
+);
+
+/* =========================================================
+   RATINGS
+========================================================= */
+
+app.use(
+  "/api/ratings",
+  ratingRoutes
+);
+
+/* =========================================================
+   SOCKET.IO
+========================================================= */
 
 ioServer(server);
 
+/* =========================================================
+   START SERVER
+========================================================= */
+
 server.listen(PORT, () => {
-  console.log(` Server running on port ${PORT}`);
- 
+  console.log(
+    `Advizo backend server running on port ${PORT}`
+  );
 });
-
-

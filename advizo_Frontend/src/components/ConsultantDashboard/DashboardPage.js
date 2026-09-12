@@ -23,7 +23,7 @@ import styles from "./DashboardOverview.module.css";
    (consultation list, wallet balance, real notifications). No fabricated
    numbers, and no invented "today's scheduled sessions" — this product has
    no session-scheduling/calendar concept, only chat-based consultations and
-   a separate call-history log, so the activity feed below is built from
+   a separate call-Activity-history log, so the activity feed below is built from
    real timestamped events instead.
 --------------------------------------------------------------------------- */
 

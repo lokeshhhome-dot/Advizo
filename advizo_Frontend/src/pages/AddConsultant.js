@@ -96,7 +96,7 @@ function AddConsultant() {
 
   const goToAddConsultant = () => {
     if (!redirect) return;
-    redirect.dispatch(Redirect.Action.APP, "/consultant-list");
+    redirect.dispatch(Redirect.Action.APP, "/consultants");
   };
 
   const [isSubmitting, setIsSubmitting] = useState(false);

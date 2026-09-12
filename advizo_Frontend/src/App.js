@@ -200,25 +200,25 @@ export default function App() {
 
           <Routes>
             {/* -------- Admin -------- */}
- {/* // <BillingProtectedRoute></BillingProtectedRoute> use after protect route  */}
+            {/* // <BillingProtectedRoute></BillingProtectedRoute> use after protect route  */}
             <Route
               element={
                 <ProtectAdminRoute installed={installed}>
-                 
-                     <SetupGuideProtectRoutes>
-                      <LayoutFrame />
-                     </SetupGuideProtectRoutes>
+
+                  <SetupGuideProtectRoutes>
+                    <LayoutFrame />
+                  </SetupGuideProtectRoutes>
                 </ProtectAdminRoute>
               }
             >
               <Route index element={<Dashboard />} />
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/consultant-list" element={<ConsultantList />} />
+              <Route path="/consultants" element={<ConsultantList />} />
               <Route
-                path="/consultant-list/add-consultant"
+                path="/consultants/add-consultant"
                 element={<AddConsultant />}
               />
-              <Route path="/history" element={<UserTransHistory />} />
+              <Route path="/Activity-history" element={<UserTransHistory />} />
               <Route
                 path="/wallet-management"
                 element={<ManualDebetCreditBlance />}
@@ -229,26 +229,26 @@ export default function App() {
               />
               <Route path="/trial-upgrade" element={<TrialUpgrade />} />
               <Route
-                path="/consultant-support"
+                path="/settings/consultant-support"
                 element={<ConsultantSupportInbox />}
               />
               <Route
-                path="/account-information"
+                path="/billings"
                 element={<AccountInformation />}
               />
               <Route
-                path="/voucher-management/voucher"
+                path="/vouchers/voucher"
                 element={<VoucherSettings />}
               />
-              <Route path="/voucher-management" element={<VoucherTable />} />
-              <Route path="/admin-percentage" element={<AdminPercentage />} />
-              <Route path="/editor/consultant-card-theme" element={<ConsultantCardTheme />} />
-              <Route path="/editor" element={<EditorSettings />} />
+              <Route path="/vouchers" element={<VoucherTable />} />
+              <Route path="/settings/admin-percentage" element={<AdminPercentage />} />
+              <Route path="/settings/consultant-card-theme" element={<ConsultantCardTheme />} />
+              <Route path="/settings" element={<EditorSettings />} />
               <Route
                 path="/revenue-management"
                 element={<RevenuManagement />}
               />
-              <Route path="/faq" element={<Faq />} />
+              <Route path="/settings/faq" element={<Faq />} />
             </Route>
 
             {/* -------- Storefront -------- */}
