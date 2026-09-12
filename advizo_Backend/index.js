@@ -60,24 +60,17 @@ app.use((req, res, next) => {
 /* =========================================================
    CORS
 ========================================================= */
-
-const CORS_ALLOWLIST = String(process.env.APP_URL || "")
-  .split(",")
-  .map((s) => s.trim().replace(/\/+$/, ""))
-  .filter(Boolean);
+/* =========================================================
+   CORS
+========================================================= */
 
 const corsOptions = {
   origin(origin, callback) {
-    // Allow requests that do not contain an Origin header.
-    // Example: server-to-server requests, health checks, etc.
-    if (!origin) {
-      return callback(null, true);
-    }
+    if (!origin) return callback(null, true);
 
     const cleanOrigin = origin.replace(/\/+$/, "");
 
     let hostname = "";
-
     try {
       hostname = new URL(origin).hostname;
     } catch (error) {
@@ -85,13 +78,6 @@ const corsOptions = {
       return callback(new Error("Invalid CORS origin"));
     }
 
-    /*
-     * Allowed origins:
-     *
-     * 1. APP_URL from Render environment
-     * 2. Any Shopify storefront (*.myshopify.com)
-     * 3. Shopify Admin
-     */
     const isAllowed =
       CORS_ALLOWLIST.includes(cleanOrigin) ||
       hostname.endsWith(".myshopify.com") ||
@@ -102,7 +88,6 @@ const corsOptions = {
     }
 
     console.warn("[CORS] Blocked origin:", origin);
-
     return callback(new Error("Not allowed by CORS"));
   },
 
@@ -128,12 +113,6 @@ const corsOptions = {
   optionsSuccessStatus: 204,
 };
 
-/*
- * Normal CORS middleware.
- *
- * IMPORTANT:
- * This must remain before API routes/authentication middleware.
- */
 app.use(cors(corsOptions));
 
 /*
@@ -147,7 +126,7 @@ app.use(cors(corsOptions));
  *      ↓
  * Advizo backend
  */
-app.options("*", cors(corsOptions));
+
 
 /* =========================================================
    COOKIES
