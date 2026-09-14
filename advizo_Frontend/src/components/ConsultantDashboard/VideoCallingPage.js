@@ -760,7 +760,7 @@ function VideoCallingPage({ config, onCallEnded } = {}) {
     const socket = getSocket();
 
     // Shop communication minutes exhausted mid-call — server already
-    // finalized billing/Activity-history; show the role-specific dialog and tear down.
+    // finalized billing/activity-history; show the role-specific dialog and tear down.
     const handleMinutesExhaustedEnd = (data) => {
       console.log("🔥 CALL_ENDED_LOW_BALANCE received:", data);
       if (callEndedRef.current) return;

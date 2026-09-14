@@ -218,7 +218,7 @@ export default function App() {
                 path="/consultants/add-consultant"
                 element={<AddConsultant />}
               />
-              <Route path="/Activity-history" element={<UserTransHistory />} />
+              <Route path="/activity-history" element={<UserTransHistory />} />
               <Route
                 path="/wallet-management"
                 element={<ManualDebetCreditBlance />}

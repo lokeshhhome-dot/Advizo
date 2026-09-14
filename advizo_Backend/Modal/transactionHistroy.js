@@ -90,7 +90,7 @@ const transactionSchema = new mongoose.Schema({
 transactionSchema.index({ shop_id: 1, createdAt: -1 });
 transactionSchema.index({ shop_id: 1, type: 1, createdAt: -1 });
 
-// Per-user conversation Activity-history: $or:[{senderId},{receiverId}] sorted by createdAt.
+// Per-user conversation activity-history: $or:[{senderId},{receiverId}] sorted by createdAt.
 // Mongo evaluates each $or branch independently, so each branch needs its own index.
 transactionSchema.index({ senderId: 1, createdAt: -1 });
 transactionSchema.index({ receiverId: 1, createdAt: -1 });

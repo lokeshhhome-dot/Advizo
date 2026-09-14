@@ -48,8 +48,8 @@
     data-block-id="{{ block.id }}"
     data-shop="{{ shop.permanent_domain }}"
     data-api-base="/apps/advizo/customer/me"
-    data-show-wallet-Activity-history="{{ block.settings.show_wallet_history }}"
-    data-show-consultation-Activity-history="{{ block.settings.show_consultation_history }}"
+    data-show-wallet-activity-history="{{ block.settings.show_wallet_history }}"
+    data-show-consultation-activity-history="{{ block.settings.show_consultation_history }}"
     {{ block.shopify_attributes }}
   >
     {%- if block.settings.heading != blank -%}
@@ -89,13 +89,13 @@
     {
       "type": "checkbox",
       "id": "show_wallet_history",
-      "label": "Show wallet/transaction Activity-history",
+      "label": "Show wallet/transaction activity-history",
       "default": true
     },
     {
       "type": "checkbox",
       "id": "show_consultation_history",
-      "label": "Show chat/call/video consultation Activity-history",
+      "label": "Show chat/call/video consultation activity-history",
       "default": true
     }
   ]

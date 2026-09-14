@@ -843,7 +843,7 @@ const getConsultantAllUserHistory = async (request, response) => {
     if (!historyConsultantUser) {
       return response
         .status(400)
-        .json({ message: "Activity-history consultant user not found" });
+        .json({ message: "activity-history consultant user not found" });
     }
     return response.status(200).send({ success: true, historyConsultantUser });
   } catch (error) {

@@ -458,7 +458,7 @@
 /* Anchored to .composer (position:relative, see below) rather than covering
    the full message stream — floats directly above the input, the same
    pattern chatAttachments.module.css's .composerPreview already uses, so it
-   can never sit centered mid-Activity-history or scroll with .stream. */
+   can never sit centered mid-activity-history or scroll with .stream. */
 .requestOverlay {
     position: absolute;
     left: 16px;

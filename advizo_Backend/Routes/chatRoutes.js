@@ -50,7 +50,7 @@ const handleAttachmentUpload = (req, res, next) => {
     });
 };
 
-chatRoutes.get("/get/chat-Activity-history/:shopId/:userId/:consultantId", optionalAuthenticateToken, getChatHistory);
+chatRoutes.get("/get/chat-activity-history/:shopId/:userId/:consultantId", optionalAuthenticateToken, getChatHistory);
 chatRoutes.put("/update-user-request/:shopId/:userId/:consultantId", optionalAuthenticateToken, getUserInRecentChat);
 
 chatRoutes.post(

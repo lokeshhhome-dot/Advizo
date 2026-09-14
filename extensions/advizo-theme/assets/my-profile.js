@@ -8,7 +8,7 @@
  * Data sources, all App Proxy JSON endpoints resolved server-side from
  * Shopify's own signed customer identity (never a client-supplied id):
  *   GET  /apps/advizo/customer/me            — identity, balance,
- *                                                  wallet + consultation Activity-history
+ *                                                  wallet + consultation activity-history
  *   GET  /apps/advizo/wallet/topup            — recharge catalog (lazy)
  *   POST /apps/advizo/wallet/recharge         — start a recharge
  *   GET  /apps/advizo/support/requests        — support requests (lazy)
@@ -50,10 +50,10 @@
     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>';
 
   // Communication has no filter UI — calls, video calls and chats always
-  // render together as one chronological Activity-history (see renderCommTab).
+  // render together as one chronological activity-history (see renderCommTab).
   var COMM_TYPE_LABELS = { voice: "Voice call", video: "Video call", chat: "Chat" };
 
-  // Both Activity-history lists (Wallet Activity, Communications) page in batches of
+  // Both activity-history lists (Wallet Activity, Communications) page in batches of
   // this size via infinite scroll — see loadMorePage/PAGE_SIZE below and the
   // matching PAGE_SIZE_DEFAULT in shopifyController.js.
   var PAGE_SIZE = 10;
@@ -446,7 +446,7 @@
     );
   }
 
-  // No filter UI — Communication is always the unified chronological Activity-history
+  // No filter UI — Communication is always the unified chronological activity-history
   // of every voice call, video call, and chat together (see PRIMARY
   // REQUIREMENT: filters removed).
   function renderCommTab(state) {
@@ -721,7 +721,7 @@
       sectionState.error = null;
       renderScrollContainer(key);
 
-      var endpoint = key === "wallet" ? "/wallet/Activity-history" : "/communications/Activity-history";
+      var endpoint = key === "wallet" ? "/wallet/activity-history" : "/communications/activity-history";
       var url =
         apiBase.replace(/\/customer\/me$/, endpoint) +
         "?cursor=" + encodeURIComponent(sectionState.nextCursor) +
@@ -974,7 +974,7 @@
   function renderLoginRequired(root, shop) {
     root.innerHTML =
       '<div class="advizo-my-profile__state">' +
-      "<p>Sign in to view your profile, balance, and consultation Activity-history.</p>" +
+      "<p>Sign in to view your profile, balance, and consultation activity-history.</p>" +
       '<a class="advizo-my-profile__login-button" href="' +
       escapeHtml(buildLoginUrl(shop)) +
       '">Sign in</a>' +
@@ -1008,8 +1008,8 @@
     var apiBase = container.getAttribute("data-api-base");
     var shop = container.getAttribute("data-shop");
     var options = {
-      showWalletHistory: container.getAttribute("data-show-wallet-Activity-history") === "true",
-      showConsultationHistory: container.getAttribute("data-show-consultation-Activity-history") === "true",
+      showWalletHistory: container.getAttribute("data-show-wallet-activity-history") === "true",
+      showConsultationHistory: container.getAttribute("data-show-consultation-activity-history") === "true",
     };
 
     if (!apiBase || !shop) {

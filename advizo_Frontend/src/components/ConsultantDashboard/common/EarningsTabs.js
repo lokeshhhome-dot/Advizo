@@ -5,7 +5,7 @@ import styles from "./EarningsTabs.module.css";
 const TABS = [
   { label: "Transactions", path: "/consultant-dashboard/consultant-wallet-logs" },
   { label: "Withdraw", path: "/consultant-dashboard/withdrawal-request" },
-  { label: "Withdrawal Activity-history", path: "/consultant-dashboard/withdrawal-request-table" },
+  { label: "Withdrawal activity-history", path: "/consultant-dashboard/withdrawal-request-table" },
 ];
 
 /**

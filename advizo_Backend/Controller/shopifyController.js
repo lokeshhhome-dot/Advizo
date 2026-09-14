@@ -1243,7 +1243,7 @@ const proxyShopifyViewProfile = async (req, res) => {
  * /call/generate-token and the balance/status checks — the exact same JWT
  * ViewProfile.js already receives via a URL param for the same purpose,
  * just returned in a response body instead (never logged, never a URL/
- * referrer/Activity-history entry). Anonymous shoppers get authenticated:false, not
+ * referrer/activity-history entry). Anonymous shoppers get authenticated:false, not
  * an error — the widget's caller shows a login prompt instead of crashing.
  */
 const proxyShopifyCallIdentity = async (req, res) => {
@@ -1484,7 +1484,7 @@ const clampPageLimit = (raw) => {
   return Math.min(Math.floor(n), PAGE_SIZE_MAX);
 };
 
-// _id (not createdAt) is the pagination cursor for both Activity-history lists below —
+// _id (not createdAt) is the pagination cursor for both activity-history lists below —
 // it is strictly unique and monotonically increasing with insert order for
 // documents created by this app, so a page boundary can never land two
 // records on the exact same cursor value the way two createdAt timestamps
@@ -1555,12 +1555,12 @@ const fetchConsultationHistoryPage = async (userId, { cursor, limit }) => {
  * Replaces the old proxyProfileSection iframe launcher — same identity
  * resolution as proxyConsultantProfileJson (resolveStorefrontCustomer, the
  * shared HMAC-verified App Proxy flow), but aggregates the customer's
- * profile/wallet/Activity-history data server-side into one response instead of
+ * profile/wallet/activity-history data server-side into one response instead of
  * iframing the old React app. Deliberately does NOT return the app JWT —
  * the block never needs a bearer token client-side, since every field it
  * needs is resolved here using the already-authenticated identity.
  *
- * Returns only the FIRST page (PAGE_SIZE_DEFAULT) of each Activity-history list —
+ * Returns only the FIRST page (PAGE_SIZE_DEFAULT) of each activity-history list —
  * the block's own infinite-scroll fetches further pages from
  * proxyWalletHistoryPageJson / proxyCommunicationsHistoryPageJson using the
  * *HasMore/*NextCursor fields below, via the exact same page-fetching core.
@@ -1680,7 +1680,7 @@ const proxyWalletHistoryPageJson = async (req, res) => {
       nextCursor: page.nextCursor,
     });
   } catch (err) {
-    console.error("[app-proxy] /advizo/wallet/Activity-history error:", err);
+    console.error("[app-proxy] /advizo/wallet/activity-history error:", err);
     return res.status(500).json({ success: false, message: "Failed to load wallet activity" });
   }
 };
@@ -1713,7 +1713,7 @@ const proxyCommunicationsHistoryPageJson = async (req, res) => {
       nextCursor: page.nextCursor,
     });
   } catch (err) {
-    console.error("[app-proxy] /advizo/communications/Activity-history error:", err);
+    console.error("[app-proxy] /advizo/communications/activity-history error:", err);
     return res
       .status(500)
       .json({ success: false, message: "Failed to load communications" });

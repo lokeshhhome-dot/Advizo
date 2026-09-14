@@ -532,7 +532,7 @@ function Dashboard() {
         break;
       }
       case 5:
-        navigateTo("/Activity-history");
+        navigateTo("/activity-history");
         break;
       default:
         break;
@@ -1047,7 +1047,7 @@ function Dashboard() {
                     Latest consultations booked through your store.
                   </p>
                 </div>
-                <Button variant="plain" onClick={() => navigateTo("/Activity-history")}>
+                <Button variant="plain" onClick={() => navigateTo("/activity-history")}>
                   View all
                 </Button>
               </div>

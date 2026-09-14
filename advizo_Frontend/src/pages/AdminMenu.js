@@ -18,7 +18,7 @@ export function AdminMenu() {
       <a href="/" rel="home" onClick={(e) => handleNav(e, "/")}>Dashboard</a>
       <a href="/consultants" onClick={(e) => handleNav(e, "/consultants")}>Consultants</a>
       <a href="/vouchers" onClick={(e) => handleNav(e, "/vouchers")}>Vouchers</a>
-      <a href="/Activity-history" onClick={(e) => handleNav(e, "/Activity-history")}>Activity Activity-history</a>
+      <a href="/activity-history" onClick={(e) => handleNav(e, "/activity-history")}>Activity history</a>
       <a href="/wallet-management" onClick={(e) => handleNav(e, "/wallet-management")}>Wallet Management</a>
       <a href="/withdrawal-request" onClick={(e) => handleNav(e, "/withdrawal-request")}>Withdrawal Requests</a>
       <a href="/revenue-management" onClick={(e) => handleNav(e, "/revenue-management")}>Revenue Management</a>

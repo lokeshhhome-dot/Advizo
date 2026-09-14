@@ -86,7 +86,7 @@ export default function UpdateUserDetailsModal({ open, onClose, userDetails, upd
                             value={updateFormData.description}
                             onChange={handleChange('description')}
                             multiline={4}
-                            placeholder="Activity-history description"
+                            placeholder="activity-history description"
                         />
 
                     </FormLayout>

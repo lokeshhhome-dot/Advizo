@@ -64,6 +64,11 @@ app.use((req, res, next) => {
    CORS
 ========================================================= */
 
+const CORS_ALLOWLIST = String(process.env.APP_URL || "")
+  .split(",")
+  .map((s) => s.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
+
 const corsOptions = {
   origin(origin, callback) {
     if (!origin) return callback(null, true);
@@ -71,6 +76,7 @@ const corsOptions = {
     const cleanOrigin = origin.replace(/\/+$/, "");
 
     let hostname = "";
+
     try {
       hostname = new URL(origin).hostname;
     } catch (error) {

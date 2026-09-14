@@ -64,7 +64,7 @@ function formatDayLabel(date) {
 }
 
 // Groups the flat message list into per-day buckets so a day separator only
-// renders when the Activity-history actually spans more than one calendar day.
+// renders when the activity-history actually spans more than one calendar day.
 function groupMessagesByDay(list) {
   const groups = [];
   (list || []).forEach((message) => {
@@ -879,7 +879,7 @@ const UserChat = ({
     });
   }, [clientId, consultantId]);
   // Embedded-modal instances (onClose passed) close in place — leaving the
-  // host page's own URL/Activity-history untouched. Routed/iframed instances (no
+  // host page's own URL/activity-history untouched. Routed/iframed instances (no
   // onClose) keep their exact prior navigation behavior, UNLESS ?embedded=1
   // is set — that marks this as the Theme Extension's dynamically-injected
   // fullscreen iframe (no ConsultantChatModal wrapper, so no onClose prop is

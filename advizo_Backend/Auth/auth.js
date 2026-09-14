@@ -177,7 +177,7 @@ const authorizeChatParticipant = async (req, res, { shopId, userId, consultantId
       return true;
    }
 
-   // No authenticated user → DENY (was silently allowing chat-Activity-history reads).
+   // No authenticated user → DENY (was silently allowing chat-activity-history reads).
    sendUnauthorized(res);
    return false;
 };

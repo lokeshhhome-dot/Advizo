@@ -88,7 +88,7 @@ function UserTransHistory() {
                 <div className={styles.page}>
                     <div className={styles.header}>
                         <div className={styles.headerLeft}>
-                            <h1 className={styles.title}>Activity Activity-history</h1>
+                            <h1 className={styles.title}>Activity activity-history</h1>
                             <p className={styles.subtitle}>
                                 Every chat, voice, and video session across your store.
                             </p>

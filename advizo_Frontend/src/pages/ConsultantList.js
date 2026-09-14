@@ -11,7 +11,7 @@ import { usePolarisToast } from "../components/AlertModel/PolariesTostContext";
 import { FullPageSpinner } from "../components/loading/PageSkeletons";
 import { getAppBridgeToken } from "../utils/getAppBridgeToken";
 import styles from "./ConsultantList.module.css";
-import {SearchIcon} from '@shopify/polaris-icons';
+import { SearchIcon } from '@shopify/polaris-icons';
 
 const PAGE_SIZE = 10;
 const AVATAR_COLORS = ["#2E7D32", "#1565C0", "#C2185B", "#6A1B9A", "#E65100", "#00838F"];
@@ -137,6 +137,7 @@ function ConsultantList() {
 
   const handleEdit = useCallback(
     (_id) => {
+      console.log("handleEdit", _id)
       navigate(`/consultants/add-consultant?id=${_id}`);
     },
     [navigate],
@@ -322,9 +323,8 @@ function ConsultantList() {
                           </td>
                           <td>
                             <span
-                              className={`${styles.statusBadge} ${
-                                consultantStatus ? styles.statusActive : styles.statusInactive
-                              }`}
+                              className={`${styles.statusBadge} ${consultantStatus ? styles.statusActive : styles.statusInactive
+                                }`}
                             >
                               {consultantStatus ? "Active" : "Inactive"}
                             </span>

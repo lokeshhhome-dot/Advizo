@@ -95,7 +95,7 @@ const walletHistorySchema = new mongoose.Schema({
     },
 }, { timestamps: true });
 // ---- Indexes ----
-// User/consultant wallet Activity-history: find({ userId, shop_id }).sort({createdAt:-1}).
+// User/consultant wallet activity-history: find({ userId, shop_id }).sort({createdAt:-1}).
 walletHistorySchema.index({ userId: 1, shop_id: 1, createdAt: -1 });
 
 // Admin customer list: find({ shop_id }).sort({createdAt:-1}) + countDocuments.

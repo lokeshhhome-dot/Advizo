@@ -6,7 +6,7 @@ module.exports = function (app) {
     app.use(
         '/app/callback',
         createProxyMiddleware({
-            target: 'https://untaxed-cattishly-renewal.ngrok-free.dev',
+            target: 'https://advizo.fossilapps.com',
             changeOrigin: true,
             secure: false,
             logLevel: 'debug', // Debug ke liye
@@ -24,7 +24,7 @@ module.exports = function (app) {
     app.use(
         '/api',
         createProxyMiddleware({
-            target: 'https://untaxed-cattishly-renewal.ngrok-free.dev',
+            target: 'https://advizo.fossilapps.com',
             changeOrigin: true,
             secure: false,
             pathRewrite: { '^/api': '' },

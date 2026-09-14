@@ -47,7 +47,7 @@ const DEFAULT_FAQS = [
         title: "Delete a consultant",
         question: "How do I delete a consultant?",
         answer:
-            "Click on the Delete icon in the Action column next to the consultant you want to remove and confirm the deletion when prompted. This action cannot be undone, and all consultation Activity-history for that consultant will be removed.",
+            "Click on the Delete icon in the Action column next to the consultant you want to remove and confirm the deletion when prompted. This action cannot be undone, and all consultation activity-history for that consultant will be removed.",
         keywords: ["delete consultant", "remove consultant"],
     },
     {

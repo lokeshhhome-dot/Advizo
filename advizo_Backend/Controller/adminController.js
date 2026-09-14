@@ -278,7 +278,7 @@ const getUserConsultantController = async (req, res) => {
     if (!(await assertAdminShopAccess(req, res, adminId))) return;
 
     // Filter BEFORE pagination: resolve matching users first, then page over
-    // their wallet Activity-history — filtering after skip/limit hid matches on later
+    // their wallet activity-history — filtering after skip/limit hid matches on later
     // pages and made totalItems wrong.
     const walletFilter = { shop_id: adminId };
     if (search.trim()) {

@@ -73,8 +73,8 @@ shopifyRoute.get('/advizo/customer/me', verifyAppProxy, proxyCustomerProfileJson
 // Communications — same page-fetching core proxyCustomerProfileJson uses for
 // its own first page. See proxyWalletHistoryPageJson /
 // proxyCommunicationsHistoryPageJson in shopifyController.js.
-shopifyRoute.get('/advizo/wallet/Activity-history', verifyAppProxy, proxyWalletHistoryPageJson);
-shopifyRoute.get('/advizo/communications/Activity-history', verifyAppProxy, proxyCommunicationsHistoryPageJson);
+shopifyRoute.get('/advizo/wallet/activity-history', verifyAppProxy, proxyWalletHistoryPageJson);
+shopifyRoute.get('/advizo/communications/activity-history', verifyAppProxy, proxyCommunicationsHistoryPageJson);
 // My Profile block: Add Money (wallet top-up catalog + recharge) — reuses
 // the same recharge-catalog/draft-order logic as the (now unreachable)
 // React app's endpoints, via shared core functions in

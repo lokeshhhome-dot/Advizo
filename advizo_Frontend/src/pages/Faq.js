@@ -122,7 +122,7 @@ function Faq() {
             Click on the <span className="Polaris-Text--bold">Delete</span> icon
             in the Action column next to the consultant you want to remove.
             Confirm the deletion when prompted. Please note that this action
-            cannot be undone, and all consultation Activity-history for that consultant
+            cannot be undone, and all consultation activity-history for that consultant
             will be removed.
           </Text>
         </BlockStack>
