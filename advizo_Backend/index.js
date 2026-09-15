@@ -64,32 +64,46 @@ app.use((req, res, next) => {
    CORS
 ========================================================= */
 
-const CORS_ALLOWLIST = String(process.env.APP_URL || "")
-  .split(",")
-  .map((s) => s.trim().replace(/\/+$/, ""))
-  .filter(Boolean);
+const CORS_ALLOWLIST = [
+  ...String(process.env.APP_URL || "")
+    .split(",")
+    .map((s) => s.trim().replace(/\/+$/, ""))
+    .filter(Boolean),
+
+  // Current Advizo frontend from the CORS error
+  "https://advizo.fossilapps.com",
+];
 
 const corsOptions = {
   origin(origin, callback) {
-    if (!origin) return callback(null, true);
+    // Requests without an Origin header
+    if (!origin) {
+      return callback(null, true);
+    }
 
     const cleanOrigin = origin.replace(/\/+$/, "");
 
     let hostname = "";
 
     try {
-      hostname = new URL(origin).hostname;
+      hostname = new URL(cleanOrigin).hostname;
     } catch (error) {
       console.warn("[CORS] Invalid origin:", origin);
       return callback(new Error("Invalid CORS origin"));
     }
 
     const isAllowed =
+      // Explicit domains from APP_URL
       CORS_ALLOWLIST.includes(cleanOrigin) ||
+
+      // All Shopify storefronts
       hostname.endsWith(".myshopify.com") ||
+
+      // Shopify Admin
       hostname === "admin.shopify.com";
 
     if (isAllowed) {
+      console.log("[CORS] Allowed:", cleanOrigin);
       return callback(null, true);
     }
 
