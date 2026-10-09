@@ -93,19 +93,7 @@ function RevenuManagement() {
                     <div className={styles.card}>
                         <div className={styles.toolbar}>
                             <div className={styles.toolbarLeft}>
-                                <div className={styles.searchWrap}>
-                                    <span className={styles.searchIcon}><Icon source={SearchIcon} /></span>
-                                    <input
-                                        className={styles.searchInput}
-                                        value={queryValue}
-                                        onChange={(e) => {
-                                            setQueryValue(e.target.value);
-                                            setSearchQuery(e.target.value);
-                                            setPage(1);
-                                        }}
-                                        placeholder="Search transactions"
-                                    />
-                                </div>
+                              
                                 <div className={styles.tabs}>
                                     {typeTabs.map((tab, index) => (
                                         <button
@@ -119,9 +107,22 @@ function RevenuManagement() {
                                     ))}
                                 </div>
                             </div>
-                            <button type="button" className={styles.resetButton} onClick={handleReset}>
+                              <div className={styles.searchWrap}>
+                                    <span className={styles.searchIcon}><Icon source={SearchIcon} /></span>
+                                    <input
+                                        className={styles.searchInput}
+                                        value={queryValue}
+                                        onChange={(e) => {
+                                            setQueryValue(e.target.value);
+                                            setSearchQuery(e.target.value);
+                                            setPage(1);
+                                        }}
+                                        placeholder="Search transactions"
+                                    />
+                                </div>
+                            {/* <button type="button" className={styles.resetButton} onClick={handleReset}>
                                 Reset
-                            </button>
+                            </button> */}
                         </div>
 
                         <div className={styles.tableWrap}>

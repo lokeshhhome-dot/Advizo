@@ -224,7 +224,7 @@ export default function App() {
                 element={<ManualDebetCreditBlance />}
               />
               <Route
-                path="/withdrawal-request"
+                path="/withdrawal-request" 
                 element={<WithdrawalRequest />}
               />
               <Route path="/trial-upgrade" element={<TrialUpgrade />} />
@@ -233,7 +233,7 @@ export default function App() {
                 element={<ConsultantSupportInbox />}
               />
               <Route
-                path="/billings"
+                path="/settings/billings"
                 element={<AccountInformation />}
               />
               <Route

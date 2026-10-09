@@ -22,7 +22,7 @@ export function AdminMenu() {
       <a href="/wallet-management" onClick={(e) => handleNav(e, "/wallet-management")}>Wallet Management</a>
       <a href="/withdrawal-request" onClick={(e) => handleNav(e, "/withdrawal-request")}>Withdrawal Requests</a>
       <a href="/revenue-management" onClick={(e) => handleNav(e, "/revenue-management")}>Revenue Management</a>
-      <a href="/billings" onClick={(e) => handleNav(e, "/billings")}>Billing</a>
+      {/* <a href="/billings" onClick={(e) => handleNav(e, "/billings")}>Billing</a> */}
       <a href="/settings" onClick={(e) => handleNav(e, "/settings")}>Settings</a>
     </NavMenu>
   );

@@ -17,23 +17,41 @@ import { Redirect } from "@shopify/app-bridge/actions";
 // null (meaning "use the storefront default"), not as this hex value.
 const DEFAULTS = {
   cardBackground: "#ffffff",
+  // Storefront uses rgba(16, 35, 28, 0.1) — this is that blended on white,
+  // since <input type="color"> only takes 6-digit hex.
+  cardBorderColor: "#e7ebe9",
   headerBackground: "#dcece3",
   nameColor: "#10231c",
   categoryColor: "#14563c",
   supportingTextColor: "#5c6b64",
-  priceColor: "#10231c",
+  priceColor: "#7b8a83",
   chatButtonBg: "#ffffff",
   chatButtonText: "#10231c",
   callButtonBg: "#ffffff",
   callButtonText: "#10231c",
   videoButtonBg: "#ffffff",
   videoButtonText: "#10231c",
+  // rgba(16, 35, 28, 0.12) blended on white
+  buttonBorderColor: "#e3e6e5",
+  buttonHoverColor: "#14563c",
   onlineColor: "#2f9e6a",
   busyColor: "#e0a30b",
   offlineColor: "#9aa5a0",
 };
 
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+
+// Same placeholder avatar the storefront card falls back to
+// (DEFAULT_AVATAR_SVG in consultant-card.js).
+const DEFAULT_AVATAR =
+  "data:image/svg+xml;charset=UTF-8," +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
+      '<circle cx="32" cy="32" r="32" fill="#f3f4f6"/>' +
+      '<circle cx="32" cy="24" r="12" fill="#c7cbd1"/>' +
+      '<path d="M10 56c2-14 12-20 22-20s20 6 22 20" fill="#c7cbd1"/>' +
+      "</svg>",
+  );
 
 const COLOR_FIELD_GROUPS = [
   {
@@ -130,8 +148,10 @@ function mapToProfessionRows(professionColors) {
   }));
 }
 
-function ColorField({ label, value, onChange }) {
-  const displayValue = HEX_RE.test(value) ? value : "#ffffff";
+function ColorField({ label, value, defaultValue, onChange }) {
+  // An unset field shows the storefront default in the swatch, so the admin
+  // sees the colour actually in use — it still saves as null until changed.
+  const displayValue = HEX_RE.test(value) ? value : defaultValue || "#ffffff";
   return (
     <div className={styles.field}>
       <label className={styles.fieldLabel}>{label}</label>
@@ -146,7 +166,7 @@ function ColorField({ label, value, onChange }) {
           type="text"
           className={styles.colorHexInput}
           value={value}
-          placeholder="Default"
+          placeholder={defaultValue ? `Default (${defaultValue})` : "Default"}
           onChange={(e) => onChange(e.target.value)}
         />
         {value ? (
@@ -381,6 +401,7 @@ function ConsultantCardTheme() {
                         key={f.key}
                         label={f.label}
                         value={form[f.key]}
+                        defaultValue={DEFAULTS[f.key]}
                         onChange={(v) => handleFieldChange(f.key, v)}
                       />
                     ))}
@@ -489,7 +510,7 @@ function ConsultantCardTheme() {
                     className={styles.previewCard}
                     style={{
                       background: form.cardBackground || DEFAULTS.cardBackground,
-                      borderColor: form.cardBorderColor || undefined,
+                      borderColor: form.cardBorderColor || DEFAULTS.cardBorderColor,
                       borderRadius:
                         form.cardBorderRadius !== "" ? `${form.cardBorderRadius}px` : undefined,
                     }}
@@ -506,7 +527,7 @@ function ConsultantCardTheme() {
                       </span>
                     </div>
                     <div className={styles.previewAvatarWrap}>
-                      <div className={styles.previewAvatar}>◍</div>
+                      <img className={styles.previewAvatar} src={DEFAULT_AVATAR} alt="Default profile" />
                     </div>
                     <div className={styles.previewBody}>
                       <h4
@@ -534,7 +555,7 @@ function ConsultantCardTheme() {
                           style={{
                             background: form.chatButtonBg || DEFAULTS.chatButtonBg,
                             color: form.chatButtonText || DEFAULTS.chatButtonText,
-                            borderColor: form.buttonBorderColor || undefined,
+                            borderColor: form.buttonBorderColor || DEFAULTS.buttonBorderColor,
                           }}
                         >
                           Chat
@@ -550,7 +571,7 @@ function ConsultantCardTheme() {
                           style={{
                             background: form.callButtonBg || DEFAULTS.callButtonBg,
                             color: form.callButtonText || DEFAULTS.callButtonText,
-                            borderColor: form.buttonBorderColor || undefined,
+                            borderColor: form.buttonBorderColor || DEFAULTS.buttonBorderColor,
                           }}
                         >
                           Call
@@ -566,7 +587,7 @@ function ConsultantCardTheme() {
                           style={{
                             background: form.videoButtonBg || DEFAULTS.videoButtonBg,
                             color: form.videoButtonText || DEFAULTS.videoButtonText,
-                            borderColor: form.buttonBorderColor || undefined,
+                            borderColor: form.buttonBorderColor || DEFAULTS.buttonBorderColor,
                           }}
                         >
                           Video

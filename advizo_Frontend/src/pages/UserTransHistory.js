@@ -6,7 +6,7 @@ import { useAppBridge } from '../components/createContext/AppBridgeContext'
 import { formatNumber } from '../components/Helper/Helper'
 import MoneyValue from '../components/Helper/MoneyValue'
 import styles from './AdminTable.module.css'
-import {SearchIcon} from '@shopify/polaris-icons';
+import { SearchIcon } from '@shopify/polaris-icons';
 
 
 const typeTabs = ['All', 'Chat', 'Voice Call', 'Video Call']
@@ -88,7 +88,7 @@ function UserTransHistory() {
                 <div className={styles.page}>
                     <div className={styles.header}>
                         <div className={styles.headerLeft}>
-                            <h1 className={styles.title}>Activity activity-history</h1>
+                            <h1 className={styles.title}>Activity History</h1>
                             <p className={styles.subtitle}>
                                 Every chat, voice, and video session across your store.
                             </p>
@@ -97,7 +97,20 @@ function UserTransHistory() {
 
                     <div className={styles.card}>
                         <div className={styles.toolbar}>
+                            <div className={styles.tabs}>
+                                {typeTabs.map((tab, index) => (
+                                    <button
+                                        key={tab}
+                                        type="button"
+                                        className={`${styles.tabButton} ${type === index ? styles.tabButtonActive : ""}`}
+                                        onClick={() => handleTabClick(index)}
+                                    >
+                                        {tab}
+                                    </button>
+                                ))}
+                            </div>
                             <div className={styles.toolbarLeft}>
+
                                 <div className={styles.searchWrap}>
                                     <span className={styles.searchIcon}><Icon source={SearchIcon} /></span>
                                     <input
@@ -111,22 +124,11 @@ function UserTransHistory() {
                                         placeholder="Search transactions"
                                     />
                                 </div>
-                                <div className={styles.tabs}>
-                                    {typeTabs.map((tab, index) => (
-                                        <button
-                                            key={tab}
-                                            type="button"
-                                            className={`${styles.tabButton} ${type === index ? styles.tabButtonActive : ""}`}
-                                            onClick={() => handleTabClick(index)}
-                                        >
-                                            {tab}
-                                        </button>
-                                    ))}
-                                </div>
+
                             </div>
-                            <button type="button" className={styles.resetButton} onClick={handleReset}>
+                            {/* <button type="button" className={styles.resetButton} onClick={handleReset}>
                                 Reset
-                            </button>
+                            </button> */}
                         </div>
 
                         <div className={styles.tableWrap}>

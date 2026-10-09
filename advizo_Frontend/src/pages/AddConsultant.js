@@ -23,6 +23,8 @@ import {
 import styles from "./AddConsultant.module.css";
 import { fetchAdminDetails } from "../components/Redux/slices/adminSlice";
 import { useDispatch, useSelector } from "react-redux";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 
 const validationOrder = [
   { key: "fullName", label: "Full Name" },
@@ -31,7 +33,6 @@ const validationOrder = [
   { key: "phoneNumber", label: "Phone Number" },
   { key: "profession", label: "Profession" },
   { key: "specialization", label: "Specialization" },
-  { key: "licenseIdNumber", label: "License / ID Number" },
   { key: "yearOfExperience", label: "Year of Experience" },
   { key: "chatPerMinute", label: "Chat per minute" },
   { key: "videoPerMinute", label: "Video per minute" },
@@ -39,21 +40,14 @@ const validationOrder = [
   { key: "languages", label: "Languages" },
   { key: "displayName", label: "Display Name" },
   { key: "gender", label: "Gender" },
-  { key: "houseNumber", label: "House Number" },
-  { key: "streetArea", label: "Street Area" },
-  { key: "landmark", label: "Landmark" },
-  { key: "address", label: "Address" },
-  { key: "pincode", label: "Pincode" },
-  { key: "dateOfBirth", label: "Date of Birth" },
-  { key: "pancardNumber", label: "Pancard Number" },
 ];
+// License, address, date of birth and PAN are optional — not validated here.
 const validationOrderUpdate = [
   { key: "fullName", label: "Full Name" },
   { key: "email", label: "Email" },
   { key: "phoneNumber", label: "Phone Number" },
   { key: "profession", label: "Profession" },
   { key: "specialization", label: "Specialization" },
-  { key: "licenseIdNumber", label: "License / ID Number" },
   { key: "yearOfExperience", label: "Year of Experience" },
   { key: "chatPerMinute", label: "Chat per minute" },
   { key: "videoPerMinute", label: "Video per minute" },
@@ -61,13 +55,17 @@ const validationOrderUpdate = [
   { key: "languages", label: "Languages" },
   { key: "displayName", label: "Display Name" },
   { key: "gender", label: "Gender" },
-  { key: "houseNumber", label: "House Number" },
-  { key: "streetArea", label: "Street Area" },
-  { key: "landmark", label: "Landmark" },
-  { key: "address", label: "Address" },
-  { key: "pincode", label: "Pincode" },
-  { key: "dateOfBirth", label: "Date of Birth" },
-  { key: "pancardNumber", label: "Pancard Number" },
+];
+
+const OPTIONAL_FIELDS = [
+  "licenseIdNumber",
+  "houseNumber",
+  "streetArea",
+  "landmark",
+  "address",
+  "pincode",
+  "dateOfBirth",
+  "pancardNumber",
 ];
 
 function Field({ label, optional, hint, error, children }) {
@@ -372,6 +370,12 @@ function AddConsultant() {
     }
     Object.keys(formData).forEach((key) => {
       const value = formData[key];
+      // Optional fields are sent even when blank, so clearing one on the edit
+      // form removes the saved value instead of silently keeping it.
+      if (OPTIONAL_FIELDS.includes(key) && (value === "" || value == null)) {
+        form.append(key, "");
+        return;
+      }
       if (
         value !== "" &&
         value !== null &&
@@ -682,15 +686,28 @@ function AddConsultant() {
                       placeholder="name@example.com"
                     />
                   </Field>
+
+                  
                   <Field label="Phone number" error={errors.phoneNumber}>
-                    <input
-                      type="tel"
-                      className={`${styles.input} ${errors.phoneNumber ? styles.inputError : ""}`}
+                    <PhoneInput
+                      international
+                      defaultCountry="IN"
+                      withCountryCallingCode
+                      countryCallingCodeEditable={false}
                       value={formData.phoneNumber}
-                      onChange={handleInputEvent("phoneNumber")}
-                      placeholder="+91 98765 43210"
+                      onChange={(value) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          phoneNumber: value || "",
+                        }))
+                      }
+                      placeholder="Enter phone number"
+                      className={`${styles.phoneInput} ${errors.phoneNumber ? styles.inputError : ""
+                        }`}
                     />
                   </Field>
+
+
                 </div>
                 {!updateIsTrue && (
                   <div className={styles.fieldRow} style={{ "--cols": 2 }}>
@@ -750,35 +767,19 @@ function AddConsultant() {
                 <div className={styles.fieldRow} style={{ "--cols": 2 }}>
                   <Field
                     label="License / ID number"
-                    hint="Optional — for verified badge"
+                    optional
+                    hint="For a verified badge"
                     error={errors.licenseIdNumber}
                   >
                     <input
                       className={`${styles.input} ${errors.licenseIdNumber ? styles.inputError : ""}`}
                       value={formData.licenseIdNumber}
                       onChange={handleInputEvent("licenseIdNumber")}
-                      placeholder="Optional — for verified badge"
+                      placeholder="e.g. MCI-123456"
                     />
                   </Field>
                   <Field label="Languages" error={errors.languages}>
                     <div className={styles.tagInputWrap}>
-                      {formData.languages.length > 0 && (
-                        <div className={styles.tagList}>
-                          {formData.languages.map((tag) => (
-                            <span key={tag} className={styles.tagPill}>
-                              {tag}
-                              <button
-                                type="button"
-                                className={styles.tagRemove}
-                                onClick={() => handleRemoveTag(tag)}
-                                aria-label={`Remove ${tag}`}
-                              >
-                                ×
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
                       <input
                         className={styles.input}
                         value={textFieldValue}
@@ -803,6 +804,23 @@ function AddConsultant() {
                         </div>
                       )}
                     </div>
+                    {formData.languages.length > 0 && (
+                      <div className={styles.tagList}>
+                        {formData.languages.map((tag) => (
+                          <span key={tag} className={styles.tagPill}>
+                            {tag}
+                            <button
+                              type="button"
+                              className={styles.tagRemove}
+                              onClick={() => handleRemoveTag(tag)}
+                              aria-label={`Remove ${tag}`}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </Field>
                 </div>
               </div>
@@ -868,25 +886,25 @@ function AddConsultant() {
                 <div className={styles.cardHeader}>
                   <h3 className={styles.cardTitle}>Address</h3>
                   <p className={styles.cardSubtitle}>
-                    Not shown on the storefront — used for records only.
+                    Optional. Not shown on the storefront — used for records only.
                   </p>
                 </div>
                 <div className={styles.fieldRow} style={{ "--cols": 3 }}>
-                  <Field label="House number" error={errors.houseNumber}>
+                  <Field label="House number" optional error={errors.houseNumber}>
                     <input
                       className={`${styles.input} ${errors.houseNumber ? styles.inputError : ""}`}
                       value={formData.houseNumber}
                       onChange={handleInputEvent("houseNumber")}
                     />
                   </Field>
-                  <Field label="Street area" error={errors.streetArea}>
+                  <Field label="Street area" optional error={errors.streetArea}>
                     <input
                       className={`${styles.input} ${errors.streetArea ? styles.inputError : ""}`}
                       value={formData.streetArea}
                       onChange={handleInputEvent("streetArea")}
                     />
                   </Field>
-                  <Field label="Landmark" error={errors.landmark}>
+                  <Field label="Landmark" optional error={errors.landmark}>
                     <input
                       className={`${styles.input} ${errors.landmark ? styles.inputError : ""}`}
                       value={formData.landmark}
@@ -895,14 +913,14 @@ function AddConsultant() {
                   </Field>
                 </div>
                 <div className={styles.fieldRow} style={{ "--cols": 2 }}>
-                  <Field label="Address" error={errors.address}>
+                  <Field label="Address" optional error={errors.address}>
                     <input
                       className={`${styles.input} ${errors.address ? styles.inputError : ""}`}
                       value={formData.address}
                       onChange={handleInputEvent("address")}
                     />
                   </Field>
-                  <Field label="Pincode" error={errors.pincode}>
+                  <Field label="Pincode" optional error={errors.pincode}>
                     <input
                       type="number"
                       className={`${styles.input} ${errors.pincode ? styles.inputError : ""}`}
@@ -1005,7 +1023,7 @@ function AddConsultant() {
                       ))}
                     </select>
                   </Field>
-                  <Field label="Date of birth" error={errors.dateOfBirth}>
+                  <Field label="Date of birth" optional error={errors.dateOfBirth}>
                     <input
                       type="date"
                       className={`${styles.input} ${errors.dateOfBirth ? styles.inputError : ""}`}
@@ -1015,6 +1033,7 @@ function AddConsultant() {
                   </Field>
                   <Field
                     label="PAN number"
+                    optional
                     hint="Used for payouts and verification only — never shown publicly."
                     error={errors.pancardNumber}
                   >

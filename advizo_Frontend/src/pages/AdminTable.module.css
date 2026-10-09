@@ -41,18 +41,27 @@
 .toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content:space-between;
   gap: 12px;
   flex-wrap: wrap;
   padding: 14px 16px;
   border-bottom: 1px solid #e9e9eb;
 }
-
+.toolbar_end {
+  display: flex;
+  align-items: center;
+  justify-content:end;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e9e9eb;
+}
 .toolbarLeft {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+  width:300px;
 }
 
 .searchWrap {

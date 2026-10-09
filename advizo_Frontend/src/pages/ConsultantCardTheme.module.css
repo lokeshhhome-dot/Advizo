@@ -353,6 +353,12 @@
   font-size: 26px;
 }
 
+img.previewAvatar {
+  display: block;
+  object-fit: cover;
+  background: transparent;
+}
+
 .previewBody {
   padding: 0 14px 14px;
   display: flex;

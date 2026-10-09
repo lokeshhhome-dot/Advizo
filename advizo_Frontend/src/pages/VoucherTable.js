@@ -10,24 +10,24 @@ import axios from 'axios'
 import { usePolarisToast } from '../components/AlertModel/PolariesTostContext'
 import { getAppBridgeToken } from '../utils/getAppBridgeToken'
 import styles from './VoucherTable.module.css'
-import {SearchIcon} from '@shopify/polaris-icons';
+import { SearchIcon } from '@shopify/polaris-icons';
 
 
 const PAGE_SIZE = 10;
 const ICON_COLORS = ["#2E7D32", "#1565C0", "#C2185B", "#6A1B9A", "#E65100", "#00838F"];
 
 function iconColorFor(code) {
-  const str = code || "?";
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  return ICON_COLORS[Math.abs(hash) % ICON_COLORS.length];
+    const str = code || "?";
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    return ICON_COLORS[Math.abs(hash) % ICON_COLORS.length];
 }
 
 function formatDate(value) {
-  if (!value) return "—";
-  const d = new Date(value);
-  if (isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+    if (!value) return "—";
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return "—";
+    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
 const EMPTY_FORM = { voucherCode: "", totalCoin: "", extraCoin: "" };
@@ -233,6 +233,9 @@ function VoucherTable() {
                     </div>
 
                     <div className={styles.card}>
+                        {/* <span className={styles.resultsCount}>
+                            {filteredVouchers.length} result{filteredVouchers.length === 1 ? "" : "s"}
+                        </span> */}
                         <div className={styles.toolbar}>
                             <div className={styles.searchWrap}>
                                 <span className={styles.searchIcon}><Icon source={SearchIcon} /></span>
@@ -243,9 +246,7 @@ function VoucherTable() {
                                     placeholder="Search vouchers"
                                 />
                             </div>
-                            <span className={styles.resultsCount}>
-                                {filteredVouchers.length} result{filteredVouchers.length === 1 ? "" : "s"}
-                            </span>
+
                         </div>
 
                         {adminDetailsLoading && vouchers.length === 0 ? (

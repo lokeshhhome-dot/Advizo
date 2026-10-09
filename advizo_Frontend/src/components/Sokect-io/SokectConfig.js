@@ -1,21 +1,47 @@
 import { io } from "socket.io-client";
 import {
+  getActiveSession,
   getSocketUserIdForActiveSession,
+  SESSION_TYPES,
   setupBrowserSessionSync,
 } from "../../utils/browserSession";
+import {
+  clearConsultantSession,
+  redirectToConsultantLogin,
+} from "../../utils/consultantAuth";
 
 setupBrowserSessionSync();
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 
+// const resolveSocketUrl = () => {
+//   if (process.env.REACT_APP_SOCKET_URL) {
+//     return process.env.REACT_APP_SOCKET_URL.replace(/\/$/, "");
+//   }
+
+//   const backendHost =
+//     process.env.REACT_APP_BACKEND_HOST
+//   return backendHost.replace(/\/api\/?$/, "").replace(/\/$/, "");
+// };
+
 const resolveSocketUrl = () => {
-  if (process.env.REACT_APP_SOCKET_URL) {
-    return process.env.REACT_APP_SOCKET_URL.replace(/\/$/, "");
+  const socketUrl = process.env.REACT_APP_SOCKET_URL?.trim();
+
+  if (socketUrl) {
+    return socketUrl.replace(/\/$/, "");
   }
 
-  const backendHost =
-    process.env.REACT_APP_BACKEND_HOST
-  return backendHost.replace(/\/api\/?$/, "").replace(/\/$/, "");
+  const backendHost = process.env.REACT_APP_BACKEND_HOST?.trim();
+
+  if (backendHost) {
+    return backendHost.replace(/\/api\/?$/, "").replace(/\/$/, "");
+  }
+
+  console.error(
+    "[socket] Missing REACT_APP_SOCKET_URL and REACT_APP_BACKEND_HOST"
+  );
+
+  return "";
 };
 
 const SOCKET_URL = resolveSocketUrl();
@@ -47,6 +73,18 @@ export const getSocket = () => {
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
       auth: getSocketAuthPayload(),
+    });
+    // The same consultant logged in on another device — the backend has
+    // already invalidated this device's token, so log out here too.
+    socketInstance.on("session:replaced", (payload) => {
+      if (getActiveSession() !== SESSION_TYPES.CONSULTANT) return;
+      socketInstance.io.opts.reconnection = false;
+      clearConsultantSession();
+      window.alert(
+        payload?.message ||
+          "You were logged out because your account signed in on another device.",
+      );
+      redirectToConsultantLogin();
     });
   } else {
     socketInstance.auth = getSocketAuthPayload();

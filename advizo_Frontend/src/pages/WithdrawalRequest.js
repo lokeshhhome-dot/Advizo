@@ -151,7 +151,7 @@ function WithdrawalRequest() {
                     </div>
 
                     <div className={styles.card}>
-                        <div className={styles.toolbar}>
+                        <div className={styles.toolbar_end}>
                             <div className={styles.toolbarLeft}>
                                 <div className={styles.searchWrap}>
                                     <span className={styles.searchIcon}><Icon source={SearchIcon} /></span>
@@ -167,9 +167,9 @@ function WithdrawalRequest() {
                                     />
                                 </div>
                             </div>
-                            <button type="button" className={styles.resetButton} onClick={handleReset}>
+                            {/* <button type="button" className={styles.resetButton} onClick={handleReset}>
                                 Reset
-                            </button>
+                            </button> */}
                         </div>
 
                         <div className={styles.tableWrap}>

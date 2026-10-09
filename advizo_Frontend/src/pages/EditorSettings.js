@@ -38,6 +38,14 @@ const EDITOR_ITEMS = [
     description:
       "Manage consultant support requests, respond to inquiries, and help consultants resolve their issues.",
   },
+    {
+    key: "Blling",
+    path: "/settings/billings",
+    icon: ChatIcon,
+    title: "Bllings",
+    description:
+      "Manage consultant support requests, respond to inquiries, and help consultants resolve their issues.",
+  },
   {
     key: "FAQ",
     path: "/settings/faq",

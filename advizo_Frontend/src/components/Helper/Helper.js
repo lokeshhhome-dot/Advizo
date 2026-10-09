@@ -43,3 +43,4 @@ export const formatNumber = (value, decimals = 2) => {
     return Number(num.toFixed(decimals));
 };
 
+
