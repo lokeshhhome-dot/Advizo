@@ -2,6 +2,7 @@ const { Conversation } = require("../Modal/Histroy");
 const { User } = require("../Modal/userSchema");
 const { find } = require("../Modal/userSchema");
 const bcrypt = require("bcrypt");
+const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 const fs = require("fs");
@@ -18,6 +19,44 @@ const { MessageModal } = require("../Modal/messageSchema");
 const { missCalled } = require("../Modal/miscallasHistroy");
 const dotenv = require("dotenv");
 const { validatePhone } = require("../Utils/validations");
+
+// Consultant fields the admin may leave blank. Maps request key -> User field.
+const OPTIONAL_CONSULTANT_FIELDS = {
+  licenseIdNumber: "licenseNo",
+  houseNumber: "houseNumber",
+  streetArea: "streetArea",
+  landmark: "landmark",
+  address: "address",
+  pincode: "pincode",
+  dateOfBirth: "dateOfBirth",
+  pancardNumber: "pan_cardNumber",
+};
+
+// Splits the optional fields into values to save and fields to clear. Blank
+// values are never stored as "" — licenseNo has a sparse unique index, so an
+// empty string on two consultants would collide.
+const readOptionalConsultantFields = (body) => {
+  const set = {};
+  const unset = {};
+  for (const [key, field] of Object.entries(OPTIONAL_CONSULTANT_FIELDS)) {
+    if (!(key in body)) continue;
+    const raw = typeof body[key] === "string" ? body[key].trim() : body[key];
+    if (raw === "" || raw === null || raw === undefined) {
+      unset[field] = "";
+      continue;
+    }
+    if (key === "dateOfBirth") {
+      const date = new Date(raw);
+      if (isNaN(date.getTime())) {
+        return { error: "Invalid date of birth" };
+      }
+      set[field] = date;
+    } else {
+      set[field] = String(raw);
+    }
+  }
+  return { set, unset };
+};
 const {
   assertConsultantSelf,
   assertConsultantInAdminShop,
@@ -106,18 +145,10 @@ const consultantController = async (req, res) => {
       "phoneNumber",
       "profession",
       "specialization",
-      "licenseIdNumber",
       "yearOfExperience",
       "languages",
       "displayName",
       "gender",
-      "houseNumber",
-      "streetArea",
-      "landmark",
-      "address",
-      "pincode",
-      "dateOfBirth",
-      "pancardNumber",
       "voicePerMinute",
       "videoPerMinute",
       "chatPerMinute",
@@ -147,13 +178,21 @@ const consultantController = async (req, res) => {
     //     });
     // }
 
+    const optional = readOptionalConsultantFields(body);
+    if (optional.error) {
+      return res.status(400).json({ success: false, message: optional.error });
+    }
+
     // Two independent uniqueness checks — run them together instead of paying
     // two serial round-trips. Both are `_id`-only: existence is all we need.
+    // License is optional, so it is only checked when one was entered.
     const [existingEmail, existingLicense] = await Promise.all([
       User.findOne({ email: body.email.toLowerCase().trim() })
         .select("_id")
         .lean(),
-      User.findOne({ licenseNo: body.licenseIdNumber }).select("_id").lean(),
+      optional.set.licenseNo
+        ? User.findOne({ licenseNo: optional.set.licenseNo }).select("_id").lean()
+        : null,
     ]);
 
     if (existingEmail) {
@@ -235,19 +274,12 @@ const consultantController = async (req, res) => {
       password: hashPassword,
       profession: body.profession,
       specialization: body.specialization,
-      licenseNo: body.licenseIdNumber,
       experience: String(body.yearOfExperience),
       // fees: String(body.chargingPerMinute),
       language: languagesArray,
       displayName: body.displayName,
       gender: body.gender,
-      houseNumber: body.houseNumber,
-      streetArea: body.streetArea,
-      landmark: body.landmark,
-      address: body.address,
-      pincode: body.pincode,
-      dateOfBirth: new Date(body.dateOfBirth),
-      pan_cardNumber: body.pancardNumber,
+      ...optional.set,
       profileImage: imageURL,
       isActive: false,
       agoraUid: randomAgoraUid,
@@ -314,18 +346,10 @@ const updateConsultantData = async (req, res) => {
       "phoneNumber",
       "profession",
       "specialization",
-      "licenseIdNumber",
       "yearOfExperience",
       "languages",
       "displayName",
       "gender",
-      "houseNumber",
-      "streetArea",
-      "landmark",
-      "address",
-      "pincode",
-      "dateOfBirth",
-      "pancardNumber",
       "voicePerMinute",
       "videoPerMinute",
       "chatPerMinute",
@@ -340,6 +364,11 @@ const updateConsultantData = async (req, res) => {
       });
     }
 
+    const optional = readOptionalConsultantFields(body);
+    if (optional.error) {
+      return res.status(400).json({ success: false, message: optional.error });
+    }
+
     // Three independent reads → one round-trip instead of three. The checks are
     // still evaluated in the original order below, so responses are unchanged.
     const [existingUser, emailExists, licenseExists] = await Promise.all([
@@ -347,9 +376,11 @@ const updateConsultantData = async (req, res) => {
       User.findOne({ email: body.email.toLowerCase().trim(), _id: { $ne: id } })
         .select("_id")
         .lean(),
-      User.findOne({ licenseNo: body.licenseIdNumber, _id: { $ne: id } })
-        .select("_id")
-        .lean(),
+      optional.set.licenseNo
+        ? User.findOne({ licenseNo: optional.set.licenseNo, _id: { $ne: id } })
+            .select("_id")
+            .lean()
+        : null,
     ]);
 
     if (!existingUser) {
@@ -432,25 +463,21 @@ const updateConsultantData = async (req, res) => {
       password: hashedPassword,
       profession: body.profession,
       specialization: body.specialization,
-      licenseNo: body.licenseIdNumber,
       experience: String(body.yearOfExperience),
       language: languagesArray,
       displayName: body.displayName,
       gender: body.gender,
-      houseNumber: body.houseNumber,
-      streetArea: body.streetArea,
-      landmark: body.landmark,
-      address: body.address,
-      pincode: body.pincode,
-      dateOfBirth: new Date(body.dateOfBirth),
-      pan_cardNumber: body.pancardNumber,
+      ...optional.set,
       profileImage: imageURL,
       voicePerMinute: body.voicePerMinute,
       videoPerMinute: body.videoPerMinute,
       chatPerMinute: body.chatPerMinute,
     };
 
-    await User.findByIdAndUpdate(id, updatedData, { new: true });
+    const update = { $set: updatedData };
+    // Optional fields the admin blanked out are removed, not saved as "".
+    if (Object.keys(optional.unset).length > 0) update.$unset = optional.unset;
+    await User.findByIdAndUpdate(id, update, { new: true });
     await invalidateConsultantList(existingUser.shop_id);
 
     return res.status(200).json({
@@ -503,15 +530,32 @@ const loginConsultant = async (request, response) => {
       });
     }
 
+    // Single-device login: a new session id replaces the previous one, so the
+    // old device's token stops verifying and its sockets are told to log out.
+    const sessionId = crypto.randomUUID();
+    await User.updateOne(
+      { _id: find_User._id },
+      { $set: { activeSessionId: sessionId } },
+    );
+
     const token = jwt.sign(
-      { id: find_User._id, role: "consultant" },
+      { id: find_User._id, role: "consultant", sid: sessionId },
       process.env.JWT_SECRET_KEY,
       { expiresIn: "7d" },
     );
 
+    try {
+      const { revokeReplacedConsultantSessions } = require("../server-io");
+      await revokeReplacedConsultantSessions(find_User._id, sessionId);
+    } catch (err) {
+      // Best effort — the old token is already rejected by verify_Token.
+      console.error("loginConsultant: failed to notify old sessions:", err.message);
+    }
+
     const safeUser = find_User.toObject();
     delete safeUser.password;
     delete safeUser.firebaseToken;
+    delete safeUser.activeSessionId;
 
     return response.status(200).send({
       success: true,

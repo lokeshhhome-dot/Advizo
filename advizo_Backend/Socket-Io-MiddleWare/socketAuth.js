@@ -2,6 +2,7 @@ const JWT = require("jsonwebtoken");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const { User } = require("../Modal/userSchema");
+const { isConsultantSessionCurrent } = require("../Auth/auth");
 
 dotenv.config();
 
@@ -45,6 +46,11 @@ const authenticateSocketHandshake = async (handshake) => {
   if (token) {
     try {
       const payload = JWT.verify(token, process.env.JWT_SECRET_KEY);
+      // A consultant token from a device that has since been replaced by a
+      // newer login must not reconnect.
+      if (!(await isConsultantSessionCurrent(payload))) {
+        return { error: "session_replaced" };
+      }
       const userId = await resolveUserIdFromPayload(payload);
 
       if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
@@ -56,7 +62,7 @@ const authenticateSocketHandshake = async (handshake) => {
         return { error: "invalid_token" };
       }
 
-      return { user, authMethod: "jwt" };
+      return { user, authMethod: "jwt", sessionId: payload.sid || null };
     } catch (err) {
       return { error: "invalid_token" };
     }
@@ -79,6 +85,7 @@ const createSocketAuthMiddleware = () => {
       socket.data.role = result.user.userType || null;
       socket.data.shopId = result.user.shop_id ? String(result.user.shop_id) : null;
       socket.data.authMethod = result.authMethod;
+      socket.data.sessionId = result.sessionId || null;
       socket.user = {
         id: userId,
         role: socket.data.role,

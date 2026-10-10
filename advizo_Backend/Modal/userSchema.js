@@ -166,6 +166,14 @@ const registerUserSchema = new mongoose.Schema(
 
         },
 
+        // Consultant single-device login: each login stores a fresh id here
+        // and puts it in the JWT as `sid`. Tokens carrying any other sid are
+        // rejected, which logs the previous device out.
+        activeSessionId: {
+            type: String,
+            default: null,
+        },
+
         firebaseToken: {
             token: { type: String, default: null },
             updatedAt: { type: Date, default: null },

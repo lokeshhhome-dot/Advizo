@@ -44,6 +44,7 @@ const RING_TIMEOUT_MS = 15000;
 
 let callManagerInstance = null;
 let chatManagerInstance = null;
+let ioInstance = null;
 
 function getCallManager() {
   return callManagerInstance;
@@ -51,6 +52,22 @@ function getCallManager() {
 
 function getChatManager() {
   return chatManagerInstance;
+}
+
+// Consultant single-device login: tell every socket of this consultant that
+// belongs to an older login to log out, then drop it. Sockets of the new
+// session (e.g. its dashboard and call window) share the new sid and stay.
+async function revokeReplacedConsultantSessions(userId, currentSessionId) {
+  if (!ioInstance || !userId) return;
+  const sockets = await ioInstance.in(String(userId)).fetchSockets();
+  for (const s of sockets) {
+    if (s.data?.sessionId === currentSessionId) continue;
+    s.emit("session:replaced", {
+      message: "You were logged out because your account signed in on another device.",
+    });
+    // Give the event a moment to reach the client before disconnecting.
+    setTimeout(() => s.disconnect(true), 500);
+  }
 }
 
 const ioServer = (server) => {
@@ -63,6 +80,7 @@ const ioServer = (server) => {
     pingTimeout: 5000,
   });
 
+  ioInstance = io;
   const callManager = createCallSessionManager(io);
   callManagerInstance = callManager;
   const {
@@ -1383,4 +1401,9 @@ const ioServer = (server) => {
   });
 };
 
-module.exports = { ioServer, getCallManager, getChatManager };
+module.exports = {
+  ioServer,
+  getCallManager,
+  getChatManager,
+  revokeReplacedConsultantSessions,
+};

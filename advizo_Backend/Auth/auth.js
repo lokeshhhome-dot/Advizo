@@ -5,6 +5,24 @@ const { User } = require("../Modal/userSchema");
 const { shopModel } = require("../Modal/shopify");
 dotenv.config();
 
+/**
+ * Consultant single-device login: a consultant token is only valid while its
+ * `sid` matches the session id stored by the latest login. Logging in on
+ * another device replaces that id, so the previous device's token fails here.
+ * Non-consultant tokens are unaffected.
+ */
+const isConsultantSessionCurrent = async (payload) => {
+   if (payload?.role !== "consultant" || !payload.id) return true;
+   if (!mongoose.Types.ObjectId.isValid(String(payload.id))) return false;
+
+   const user = await User.findById(payload.id).select("activeSessionId").lean();
+   if (!user) return false;
+   // Consultants who haven't logged in since this check was added have no
+   // stored session yet — keep their existing token working.
+   if (!user.activeSessionId) return true;
+   return payload.sid === user.activeSessionId;
+};
+
 const verify_Token = async (request) => {
    try {
       const auth = request.headers.authorization || request.headers.Authorization;
@@ -23,7 +41,9 @@ const verify_Token = async (request) => {
       }
 
       const jwt_ = JWT.verify(token, process.env.JWT_SECRET_KEY);
-      return !!jwt_ && jwt_;
+      if (!jwt_) return false;
+      if (!(await isConsultantSessionCurrent(jwt_))) return false;
+      return jwt_;
    } catch (err) {
       console.log("token is invalid ", err);
       return false;
@@ -281,6 +301,7 @@ const assertAuthenticatedUserShop = async (req, res, shopId) => {
 
 module.exports = {
    verify_Token,
+   isConsultantSessionCurrent,
    resolveAuthenticatedUserId,
    assertAdminShopAccess,
    assertConsultantSelf,
