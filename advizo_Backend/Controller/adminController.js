@@ -1478,7 +1478,7 @@ const getConsultantAd = async (req, res) => {
       shop_id: shop_id,
     })
       .select(
-        "fullname displayName profileImage profession specialization experience language voicePerMinute videoPerMinute chatPerMinute isActive isBusy consultantStatus rating shop_id agoraUid walletBalance",
+        "fullname displayName profileImage profession specialization experience language voicePerMinute videoPerMinute chatPerMinute isActive isBusy consultantStatus rating shop_id agoraUid walletBalance email",
       )
       .lean();
 

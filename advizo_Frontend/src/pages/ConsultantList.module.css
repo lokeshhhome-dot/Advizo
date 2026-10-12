@@ -1,318 +1,1140 @@
+/* =========================================================
+   PAGE
+========================================================= */
+
 .page {
-  padding: 20px 200px 32px;
+  width: 100%;
+  padding: 28px 200px 40px;
+  color: #202223;
+  /* background: #ffffff; */
+  box-sizing: border-box;
 }
+
+
+/* =========================================================
+   HEADER
+========================================================= */
 
 .header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
+  gap: 24px;
+  margin-bottom: 22px;
 }
 
 .headerLeft {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .title {
   margin: 0;
-  font-size: 22px;
-  font-weight: 650;
   color: #202223;
-  letter-spacing: -0.02em;
+  font-size: 24px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.directoryCount {
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid #e1e3e5;
+  border-radius: 999px;
+
+  background: #f7f7f8;
+  color: #6d7175;
+
+  font-size: 11px;
+  font-weight: 650;
 }
 
 .subtitle {
   margin: 0;
-  font-size: 13px;
+
   color: #6d7175;
+
+  font-size: 13px;
+  line-height: 1.5;
 }
 
+
+/* =========================================================
+   ADD BUTTON
+========================================================= */
+
 .addButton {
+  min-height: 38px;
+
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border-radius: 8px;
+  justify-content: center;
+  gap: 7px;
+
+  padding: 8px 15px;
+
   border: 1px solid #1a1a1a;
+  border-radius: 8px;
+
   background: #1a1a1a;
   color: #ffffff;
+
+  font-family: inherit;
   font-size: 13px;
   font-weight: 600;
+
   cursor: pointer;
-  font-family: inherit;
   white-space: nowrap;
+
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .addButton:hover {
   background: #303030;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
 }
 
-.card {
-  background: #ffffff;
-  border: 1px solid #e3e3e3;
-  border-radius: 12px;
-  overflow: hidden;
+.addButton:active {
+  transform: translateY(1px);
 }
+
+.addIcon {
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 400;
+}
+
+
+/* =========================================================
+   MAIN DIRECTORY
+========================================================= */
+
+.directory {
+  width: 100%;
+
+  overflow: hidden;
+
+  border: 1px solid #e1e3e5;
+  border-radius: 13px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.025);
+}
+
+
+/* =========================================================
+   TOOLBAR
+========================================================= */
 
 .toolbar {
+  min-height: 67px;
+
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 14px 16px;
-  border-bottom: 1px solid #e9e9eb;
+
+  gap: 18px;
+
+  padding: 13px 18px;
+
+  border-bottom: 1px solid #ececed;
+
+  background: #ffffff;
 }
 
 .searchWrap {
   position: relative;
-  flex: 1;
-  min-width: 200px;
-  max-width: 360px;
+
+  width: 100%;
+  max-width: 390px;
 }
 
 .searchIcon {
   position: absolute;
+
   left: 12px;
   top: 50%;
+
+  display: flex;
+  align-items: center;
+
   transform: translateY(-50%);
+
   color: #8c9196;
-  font-size: 13px;
+
   pointer-events: none;
+
+  z-index: 1;
+}
+
+.searchIcon svg {
+  width: 15px;
+  height: 15px;
 }
 
 .searchInput {
   width: 100%;
-  padding: 8px 12px 8px 30px;
-  border-radius: 8px;
+  height: 38px;
+
+  box-sizing: border-box;
+
+  padding: 8px 12px 8px 34px;
+
   border: 1px solid #d1d3d5;
+  border-radius: 8px;
+
   background: #ffffff;
-  font-size: 13px;
-  font-family: inherit;
   color: #202223;
+
+  font-family: inherit;
+  font-size: 13px;
+
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.searchInput::placeholder {
+  color: #9a9da1;
 }
 
 .searchInput:focus {
   outline: none;
+
   border-color: #1a73e8;
-  box-shadow: 0 0 0 1px #1a73e8;
+
+  box-shadow:
+    0 0 0 1px #1a73e8;
 }
 
 .toolbarRight {
   display: flex;
   align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
+}
+
+.filterGroup {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.filterLabel {
+  color: #8c9196;
+
+  font-size: 11px;
+  font-weight: 600;
+
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .statusSelect {
-  padding: 8px 12px;
-  border-radius: 8px;
+  height: 38px;
+
+  padding: 0 30px 0 11px;
+
   border: 1px solid #d1d3d5;
+  border-radius: 8px;
+
   background: #ffffff;
-  font-size: 13px;
+  color: #202223;
+
   font-family: inherit;
-  color: #202223;
-}
-
-.resultsCount {
-  font-size: 12px;
-  color: #6d7175;
-  white-space: nowrap;
-}
-
-.tableWrap {
-  overflow-x: auto;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
   font-size: 13px;
+
+  cursor: pointer;
+  outline: none;
 }
 
-.table th {
-  text-align: left;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+.statusSelect:focus {
+  border-color: #1a73e8;
+
+  box-shadow:
+    0 0 0 1px #1a73e8;
+}
+
+.resultPill {
+  height: 32px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  padding: 0 10px;
+
+  border: 1px solid #e5e6e7;
+  border-radius: 999px;
+
+  background: #fafafa;
+
   color: #8c9196;
-  padding: 10px 16px;
-  border-bottom: 1px solid #e9e9eb;
+
+  font-size: 11px;
   white-space: nowrap;
-  background: #fafbfb;
 }
 
-.table td {
-  padding: 12px 16px;
-  border-bottom: 1px solid #f1f1f2;
+.resultNumber {
   color: #202223;
-  vertical-align: middle;
+  font-weight: 700;
 }
 
-.table tr:last-child td {
+
+/* =========================================================
+   DIRECTORY BAR
+========================================================= */
+
+.directoryBar {
+  min-height: 46px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 22px;
+
+  border-bottom: 1px solid #ededee;
+
+  background: #fcfcfc;
+}
+
+.directoryBarLeft {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.directoryBarTitle {
+  color: #454a4f;
+
+  font-size: 11px;
+  font-weight: 700;
+
+  text-transform: uppercase;
+  letter-spacing: 0.055em;
+}
+
+.directoryBarDescription {
+  padding-left: 9px;
+
+  border-left: 1px solid #dfe1e3;
+
+  color: #9a9da1;
+
+  font-size: 11px;
+}
+
+.directoryLegend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  color: #8c9196;
+
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.legendDot {
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+}
+
+.legendActive {
+  background: #29845a;
+}
+
+.legendInactive {
+  background: #c0341f;
+}
+
+
+/* =========================================================
+   CONSULTANT LIST
+========================================================= */
+
+.consultantList {
+  width: 100%;
+}
+
+
+/* =========================================================
+   CONSULTANT ROW
+========================================================= */
+
+.consultantRow {
+  position: relative;
+
+  min-height: 104px;
+
+  display: grid;
+
+  grid-template-columns:
+    minmax(230px, 1.15fr)
+    minmax(220px, 1.05fr)
+    minmax(390px, 1.8fr)
+    90px
+    150px;
+
+  align-items: center;
+
+  gap: 18px;
+
+  padding: 14px 20px 14px 24px;
+
+  box-sizing: border-box;
+
+  background: #ffffff;
+
+  border-bottom: 1px solid #eeeeef;
+
+  transition:
+    background 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.consultantRow:last-child {
   border-bottom: none;
 }
 
-.table tr:hover td {
-  background: #fafbfb;
+.consultantRow:hover {
+  background: #fcfcfc;
+
+  box-shadow:
+    inset 0 1px 0 rgba(0, 0, 0, 0.015),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.015);
 }
 
-.consultantCell {
+
+/* =========================================================
+   STATUS RAIL
+========================================================= */
+
+.rowIndicator {
+  position: absolute;
+
+  left: 0;
+  top: 16px;
+  bottom: 16px;
+
+  width: 3px;
+
+  border-radius: 0 5px 5px 0;
+}
+
+.rowIndicatorActive {
+  background: #29845a;
+}
+
+.rowIndicatorInactive {
+  background: #c0341f;
+}
+
+
+/* =========================================================
+   CONSULTANT PROFILE
+========================================================= */
+
+.consultantInfo {
+  min-width: 0;
+
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-width: 200px;
+
+  gap: 12px;
+}
+
+.avatarWrap {
+  position: relative;
+
+  flex: 0 0 46px;
+
+  width: 46px;
+  height: 46px;
 }
 
 .avatar {
-  width: 34px;
-  height: 34px;
+  width: 46px;
+  height: 46px;
+
+  display: block;
+
   border-radius: 50%;
-  flex-shrink: 0;
+
   object-fit: cover;
+
+  background: #f1f1f2;
+
+  border: 1px solid rgba(0, 0, 0, 0.055);
 }
 
 .avatarInitials {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: 650;
+
+  border-radius: 50%;
+
   color: #ffffff;
+
+  font-size: 13px;
+  font-weight: 700;
+
+  letter-spacing: 0.01em;
+
   text-transform: uppercase;
 }
 
+.onlineIndicator {
+  position: absolute;
+
+  right: -1px;
+  bottom: 1px;
+
+  width: 9px;
+  height: 9px;
+
+  border: 2px solid #ffffff;
+
+  border-radius: 50%;
+}
+
+.online {
+  background: #29845a;
+}
+
+.offline {
+  background: #b8babd;
+}
+
 .consultantText {
+  min-width: 0;
+
   display: flex;
   flex-direction: column;
+
+  gap: 3px;
+}
+
+.nameLine {
   min-width: 0;
+
+  display: flex;
+  align-items: center;
+  gap: 7px;
 }
 
 .consultantName {
-  font-weight: 600;
+  min-width: 0;
+
+  overflow: hidden;
+
   color: #202223;
+
+  font-size: 14px;
+  line-height: 1.25;
+  font-weight: 650;
+
   white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.professionTag {
+  flex-shrink: 0;
+
+  max-width: 110px;
+
+  overflow: hidden;
+
+  padding: 2px 6px;
+
+  border: 1px solid #e4e5e7;
+  border-radius: 5px;
+
+  background: #f7f7f8;
+  color: #6d7175;
+
+  font-size: 9px;
+  font-weight: 600;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .consultantEmail {
-  font-size: 12px;
+  overflow: hidden;
+
   color: #8c9196;
+
+  font-size: 11px;
+  line-height: 1.25;
+
   white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.amount {
-  font-variant-numeric: tabular-nums;
+.profileMeta {
+  color: #b0b3b6;
+
+  font-size: 9px;
+  line-height: 1.2;
+
+  text-transform: uppercase;
+  letter-spacing: 0.035em;
+}
+
+
+/* =========================================================
+   SPECIALIZATION
+========================================================= */
+
+.specializationCell {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 7px;
+}
+
+.sectionMiniLabel {
+  color: #a0a4a8;
+
+  font-size: 9px;
+  line-height: 1;
+
+  font-weight: 700;
+
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.categoryList {
+  min-width: 0;
+
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+
+  gap: 5px;
+}
+
+.categoryChip {
+  min-width: 0;
+  max-width: 145px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  padding: 5px 7px 5px 5px;
+
+  border: 1px solid #e4e5e7;
+  border-radius: 7px;
+
+  background: #fafafa;
+
+  color: #454a4f;
+
+  font-size: 10px;
+  font-weight: 600;
+
   white-space: nowrap;
+
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.categoryChip:hover {
+  border-color: #d5d7d9;
+  background: #f7f7f8;
+}
+
+.categoryIcon {
+  width: 19px;
+  height: 19px;
+
+  flex: 0 0 19px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 5px;
+}
+
+.categoryIcon svg {
+  width: 12px;
+  height: 12px;
+}
+
+.categoryName {
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+}
+
+.categoryTone0 .categoryIcon {
+  background: #f0eafd;
+  color: #6a1b9a;
+}
+
+.categoryTone1 .categoryIcon {
+  background: #e8f3ff;
+  color: #1565c0;
+}
+
+.categoryTone2 .categoryIcon {
+  background: #fff0f4;
+  color: #c2185b;
+}
+
+.categoryTone3 .categoryIcon {
+  background: #eaf7f0;
+  color: #29845a;
+}
+
+.categoryTone4 .categoryIcon {
+  background: #fff3e8;
+  color: #e65100;
+}
+
+.moreCategories {
+  min-width: 26px;
+  height: 26px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid #e1e3e5;
+  border-radius: 7px;
+
+  background: #f7f7f8;
+  color: #6d7175;
+
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.noCategory {
+  color: #a0a4a8;
+
+  font-size: 11px;
+}
+
+
+/* =========================================================
+   SERVICE METRICS
+========================================================= */
+
+.serviceMetrics {
+  min-width: 0;
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(78px, 1fr));
+
+  gap: 6px;
+}
+
+.metric {
+  min-width: 0;
+
+  min-height: 51px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 7px;
+
+  padding: 7px 8px;
+
+  border: 1px solid #ececed;
+  border-radius: 8px;
+
+  background: #fcfcfc;
+
+  box-sizing: border-box;
+}
+
+.metricIcon {
+  width: 26px;
+  height: 26px;
+
+  flex: 0 0 26px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 7px;
+}
+
+.metricIcon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.metricChat .metricIcon {
+  background: #eef5ff;
+  color: #3975b8;
+}
+
+.metricCall .metricIcon {
+  background: #eef8f2;
+  color: #32835c;
+}
+
+.metricVideo .metricIcon {
+  background: #f3efff;
+  color: #7357b8;
+}
+
+.metricWallet .metricIcon {
+  background: #fff4e8;
+  color: #b36a24;
+}
+
+.metricContent {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 1px;
+}
+
+.metricLabel {
+  color: #92969a;
+
+  font-size: 9px;
+  line-height: 1;
+
+  font-weight: 600;
+}
+
+.metricValue {
+  overflow: hidden;
+
+  color: #202223;
+
+  font-size: 12px;
+  line-height: 1.25;
+
+  font-weight: 700;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.metricSuffix {
+  color: #a0a4a8;
+
+  font-size: 8px;
+  line-height: 1;
+}
+
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+.statusCell {
+  min-width: 0;
+
+  display: flex;
+  align-items: center;
 }
 
 .statusBadge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 10px;
+  gap: 6px;
+
+  padding: 6px 9px;
+
   border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
+
+  font-size: 10px;
+  font-weight: 650;
+
   white-space: nowrap;
 }
 
-.statusBadge::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
 .statusActive {
-  background: #e7f6ec;
+  background: #eaf7ef;
   color: #29845a;
 }
 
 .statusInactive {
-  background: #fbeae5;
+  background: #fff0ed;
   color: #c0341f;
 }
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+
+  flex: 0 0 6px;
+
+  border-radius: 50%;
+
+  background: currentColor;
+}
+
+
+/* =========================================================
+   ACTIONS
+========================================================= */
 
 .rowActions {
   display: flex;
   align-items: center;
-  gap: 4px;
   justify-content: flex-end;
+
+  gap: 5px;
 }
 
-.iconButton {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  display: flex;
+.editButton,
+.deleteButton {
+  height: 31px;
+
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+
+  gap: 5px;
+
+  padding: 0 8px;
+
+  border-radius: 7px;
+
+  background: #ffffff;
+
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 650;
+
   cursor: pointer;
-  color: #6d7175;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
-.iconButton:hover {
-  background: #f1f1f2;
+.editButton {
+  border: 1px solid #d8dadd;
+  color: #454a4f;
+}
+
+.editButton:hover {
+  background: #f5f5f5;
+  border-color: #bfc2c5;
   color: #202223;
 }
 
-.iconButton.deleteButton:hover {
-  background: #fbeae5;
+.deleteButton {
+  border: 1px solid #ead0ca;
+  background: #fffafa;
   color: #c0341f;
 }
 
-.iconButton svg {
-  width: 16px;
-  height: 16px;
-  fill: currentColor !important;
+.deleteButton:hover {
+  background: #fbeae5;
+  border-color: #e4b8af;
 }
+
+.actionIcon {
+  width: 14px;
+  height: 14px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.actionIcon svg {
+  width: 13px;
+  height: 13px;
+}
+
+
+/* =========================================================
+   EMPTY STATE
+========================================================= */
 
 .emptyState {
-  padding: 48px 16px;
+  min-height: 280px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  padding: 40px 20px;
+
   text-align: center;
-  color: #6d7175;
-  font-size: 13px;
 }
 
+.emptyIcon {
+  width: 46px;
+  height: 46px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  margin-bottom: 12px;
+
+  border: 1px solid #e5e6e7;
+  border-radius: 50%;
+
+  background: #f7f7f8;
+
+  color: #8c9196;
+}
+
+.emptyIcon svg {
+  width: 21px;
+  height: 21px;
+}
+
+.emptyTitle {
+  margin-bottom: 5px;
+
+  color: #202223;
+
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.emptyDescription {
+  max-width: 420px;
+
+  color: #8c9196;
+
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
 .footer {
+  min-height: 54px;
+
   display: flex;
   align-items: center;
   justify-content: space-between;
+
   gap: 12px;
-  flex-wrap: wrap;
-  padding: 12px 16px;
+
+  padding: 10px 18px;
+
   border-top: 1px solid #e9e9eb;
+
+  background: #ffffff;
 }
 
 .footerText {
-  font-size: 12px;
-  color: #6d7175;
+  color: #8c9196;
+
+  font-size: 11px;
+}
+
+.footerText strong {
+  color: #454a4f;
+  font-weight: 650;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+}
+
+.pageIndicator {
+  min-width: 90px;
+
+  color: #8c9196;
+
+  font-size: 10px;
+
+  text-align: center;
+}
+
+.pageIndicator strong {
+  color: #454a4f;
+  font-weight: 650;
 }
 
 .pagerButton {
   width: 30px;
   height: 30px;
-  border-radius: 8px;
-  border: 1px solid #d1d3d5;
-  background: #ffffff;
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
+
+  padding: 0;
+
+  border: 1px solid #d1d3d5;
+  border-radius: 7px;
+
+  background: #ffffff;
+
   color: #202223;
+
+  font-size: 19px;
+  line-height: 1;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.pagerButton:hover:not(:disabled) {
+  background: #f5f5f5;
+  border-color: #b8babd;
 }
 
 .pagerButton:disabled {
@@ -320,19 +1142,362 @@
   cursor: not-allowed;
 }
 
-@media (max-width: 1100px) {
+
+/* =========================================================
+   LARGE LAPTOP
+========================================================= */
+
+@media (max-width: 1400px) {
   .page {
-    padding: 20px 24px 32px;
+    padding: 26px 100px 36px;
+  }
+
+  .consultantRow {
+    grid-template-columns:
+      minmax(210px, 1.1fr)
+      minmax(190px, 0.95fr)
+      minmax(350px, 1.65fr)
+      82px
+      125px;
+
+    gap: 12px;
+  }
+
+  .metric {
+    padding: 6px;
+  }
+
+  .metricIcon {
+    display: none;
+  }
+
+  .actionText {
+    display: none;
+  }
+
+  .editButton,
+  .deleteButton {
+    width: 31px;
+    padding: 0;
   }
 }
 
-@media (max-width: 600px) {
+
+/* =========================================================
+   TABLET
+========================================================= */
+
+@media (max-width: 1150px) {
   .page {
-    padding: 16px;
+    padding: 22px 30px 32px;
   }
 
-  .header {
-    flex-direction: column;
+  .consultantRow {
+    grid-template-columns:
+      minmax(210px, 1.2fr)
+      minmax(180px, 1fr)
+      minmax(260px, 1.3fr)
+      80px
+      100px;
+
+    gap: 10px;
+  }
+
+  .serviceMetrics {
+    grid-template-columns:
+      repeat(2, minmax(75px, 1fr));
+  }
+
+  .metric {
+    min-height: 45px;
+  }
+}
+
+
+/* =========================================================
+   SMALL TABLET
+========================================================= */
+
+@media (max-width: 900px) {
+  .page {
+    padding: 18px 18px 28px;
+  }
+
+  .toolbar {
     align-items: stretch;
+    flex-direction: column;
+  }
+
+  .searchWrap {
+    max-width: none;
+  }
+
+  .toolbarRight {
+    justify-content: space-between;
+  }
+
+  .directoryBar {
+    padding: 0 16px;
+  }
+
+  .consultantRow {
+    grid-template-columns:
+      minmax(210px, 1fr)
+      minmax(180px, 0.9fr)
+      105px;
+
+    grid-template-areas:
+      "profile specialization status"
+      "services services actions";
+
+    align-items: center;
+
+    min-height: 125px;
+
+    padding: 16px 18px 16px 22px;
+  }
+
+  .consultantInfo {
+    grid-area: profile;
+  }
+
+  .specializationCell {
+    grid-area: specialization;
+  }
+
+  .statusCell {
+    grid-area: status;
+    justify-content: flex-end;
+  }
+
+  .serviceMetrics {
+    grid-area: services;
+
+    grid-template-columns:
+      repeat(4, minmax(80px, 1fr));
+  }
+
+  .rowActions {
+    grid-area: actions;
+  }
+
+  .metricIcon {
+    display: flex;
+  }
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 700px) {
+  .header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .addButton {
+    align-self: flex-start;
+  }
+
+  .directoryBar {
+    min-height: auto;
+
+    align-items: flex-start;
+    flex-direction: column;
+
+    gap: 8px;
+
+    padding-top: 11px;
+    padding-bottom: 11px;
+  }
+
+  .directoryLegend {
+    display: none;
+  }
+
+  .consultantRow {
+    grid-template-columns: 1fr auto;
+
+    grid-template-areas:
+      "profile status"
+      "specialization specialization"
+      "services services"
+      "actions actions";
+
+    gap: 13px;
+
+    padding: 17px 16px 17px 20px;
+  }
+
+  .statusCell {
+    justify-content: flex-end;
+  }
+
+  .serviceMetrics {
+    grid-template-columns:
+      repeat(4, minmax(0, 1fr));
+
+    gap: 5px;
+  }
+
+  .metric {
+    min-height: 47px;
+
+    padding: 6px;
+  }
+
+  .metricIcon {
+    display: none;
+  }
+
+  .metricContent {
+    width: 100%;
+  }
+
+  .metricValue {
+    font-size: 11px;
+  }
+
+  .actionText {
+    display: inline;
+  }
+
+  .editButton,
+  .deleteButton {
+    width: auto;
+    padding: 0 10px;
+  }
+}
+
+
+/* =========================================================
+   SMALL MOBILE
+========================================================= */
+
+@media (max-width: 520px) {
+  .page {
+    padding: 16px 12px 24px;
+  }
+
+  .title {
+    font-size: 21px;
+  }
+
+  .subtitle {
+    font-size: 12px;
+  }
+
+  .toolbarRight {
+    width: 100%;
+  }
+
+  .filterGroup {
+    flex: 1;
+  }
+
+  .statusSelect {
+    flex: 1;
+  }
+
+  .resultPill {
+    flex-shrink: 0;
+  }
+
+  .consultantRow {
+    grid-template-columns: 1fr;
+
+    grid-template-areas:
+      "profile"
+      "status"
+      "specialization"
+      "services"
+      "actions";
+
+    padding-left: 18px;
+  }
+
+  .statusCell {
+    justify-content: flex-start;
+  }
+
+  .serviceMetrics {
+    grid-template-columns:
+      repeat(2, 1fr);
+
+    gap: 7px;
+  }
+
+  .metric {
+    min-height: 50px;
+    padding: 8px;
+  }
+
+  .metricIcon {
+    display: flex;
+  }
+
+  .footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .pagination {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .pageIndicator {
+    flex: 1;
+  }
+}
+
+
+/* =========================================================
+   VERY SMALL MOBILE
+========================================================= */
+
+@media (max-width: 360px) {
+  .page {
+    padding: 14px 9px 22px;
+  }
+
+  .directory {
+    border-radius: 10px;
+  }
+
+  .avatar,
+  .avatarInitials {
+    width: 40px;
+    height: 40px;
+
+    flex-basis: 40px;
+  }
+
+  .avatarWrap {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+  }
+
+  .consultantInfo {
+    gap: 9px;
+  }
+
+  .consultantName {
+    font-size: 13px;
+  }
+
+  .consultantEmail {
+    font-size: 10px;
+  }
+
+  .categoryChip {
+    max-width: 130px;
+  }
+
+  .metricValue {
+    font-size: 11px;
   }
 }
