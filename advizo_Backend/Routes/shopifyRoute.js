@@ -26,6 +26,15 @@ const { installShopifyApp,
     exchangeChatSession
 } = require('../Controller/shopifyController');
 
+const {
+    proxyAstrologyConfig,
+    proxyAstrologyPlaces,
+    proxyAstrologyRun,
+    proxyAstrologyHistory,
+    proxyAstrologyReading,
+    proxyAstrologyDeleteReading,
+} = require('../Controller/astrologyController');
+
 const { verifyShopifyToken } = require('../MiddleWare/ShopifyMiddleware/verifyShopifyToken');
 const { verifyAppProxy } = require('../MiddleWare/ShopifyMiddleware/verifyAppProxy');
 
@@ -90,6 +99,16 @@ shopifyRoute.post('/advizo/wallet/recharge', verifyAppProxy, proxyWalletRecharge
 shopifyRoute.get('/advizo/support/requests', verifyAppProxy, proxySupportRequestsJson);
 shopifyRoute.post('/advizo/support/requests', verifyAppProxy, proxySubmitSupportRequestJson);
 shopifyRoute.put('/advizo/support/requests/:requestId/read', verifyAppProxy, proxyMarkSupportReplyReadJson);
+// Astrology Theme Extension blocks (/pages/astrology) — see
+// astrologyController.js. Identity via resolveStorefrontCustomer like every
+// route above; the Jyotisham key never leaves the backend. The literal
+// /history paths are registered before the /:feature param route.
+shopifyRoute.get('/advizo/astrology/config', verifyAppProxy, proxyAstrologyConfig);
+shopifyRoute.get('/advizo/astrology/places', verifyAppProxy, proxyAstrologyPlaces);
+shopifyRoute.get('/advizo/astrology/history', verifyAppProxy, proxyAstrologyHistory);
+shopifyRoute.get('/advizo/astrology/history/:id', verifyAppProxy, proxyAstrologyReading);
+shopifyRoute.post('/advizo/astrology/history/:id/delete', verifyAppProxy, proxyAstrologyDeleteReading);
+shopifyRoute.post('/advizo/astrology/:feature', verifyAppProxy, proxyAstrologyRun);
 shopifyRoute.get('/advizo/video-calling-page', verifyAppProxy, proxyShopifyCallAccepted);
 // JSON identity endpoint for the Theme Extension's native call widget
 // (advizo_CallWidget) — see proxyShopifyCallIdentity's own comment.

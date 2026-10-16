@@ -1,0 +1,40 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "1216ebdd9f32511b5357c889ecf00478"
+name = "talk2consultant"
+application_url = "https://untaxed-cattishly-renewal.ngrok-free.dev"
+embedded = true
+handle = "talk2consultant"
+
+[webhooks]
+api_version = "2026-07"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "https://consultly-backend.onrender.com/api/webhooks/app-uninstalled"
+
+  [[webhooks.subscriptions]]
+  topics = [ "themes/publish", "themes/update" ]
+  uri = "https://consultly-backend.onrender.com/api/webhooks/theme/webhooks"
+
+  [[webhooks.subscriptions]]
+  topics = [ "orders/paid" ]
+  uri = "https://consultly-backend.onrender.com/api/webhooks/shop/webhooks"
+
+  [[webhooks.subscriptions]]
+  uri = "https://consultly-backend.onrender.com/api/webhooks/webhooks"
+  compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_customers,read_online_store_navigation,read_online_store_pages,read_orders,read_themes,write_customers,write_draft_orders,write_online_store_navigation,write_online_store_pages,write_orders"
+optional_scopes = [ ]
+use_legacy_install_flow = false
+
+[auth]
+redirect_urls = [ "https://consultly-backend.onrender.com/api/app/callback" ]
+
+[app_proxy]
+url = "https://consultly-backend.onrender.com/api/app/advizo"
+subpath = "advizo"
+prefix = "apps"

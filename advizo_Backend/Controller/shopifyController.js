@@ -21,6 +21,7 @@ const { resolveShopProfile } = require("../Utils/shopifyShopProfile");
 const { setupStorefrontMenu } = require("../Utils/setupStorefrontMenu");
 const { ensureConsultantProfilePage } = require("../Utils/ensureConsultantProfilePage");
 const { ensureMyProfilePage } = require("../Utils/ensureMyProfilePage");
+const { ensureAstrologyPage } = require("../Utils/ensureAstrologyPage");
 const { User } = require("../Modal/userSchema");
 const { WalletHistory } = require("../Modal/walletHistory");
 const { TransactionHistroy } = require("../Modal/transactionHistroy");
@@ -483,6 +484,13 @@ const authCallback = async (req, res) => {
     ensureMyProfilePage(shop, accessToken).catch((error) => {
       console.error(
         "[authCallback] ensureMyProfilePage error:",
+        error?.message || error,
+      );
+    });
+
+    ensureAstrologyPage(shop, accessToken).catch((error) => {
+      console.error(
+        "[authCallback] ensureAstrologyPage error:",
         error?.message || error,
       );
     });
@@ -1966,4 +1974,8 @@ module.exports = {
   proxyShopifyCallWidgetScript,
   proxyShopifyCallEngineScript,
   exchangeChatSession,
+  // Shared with astrologyController.js — same storefront identity
+  // resolution, not a second implementation.
+  resolveStorefrontCustomer,
+  setAppSessionCookie,
 };

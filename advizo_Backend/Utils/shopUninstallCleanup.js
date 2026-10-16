@@ -9,6 +9,7 @@ const { MessageModal } = require("../Modal/messageSchema");
 const { CallSession } = require("../Modal/callSessions");
 const { WithdrawalRequestSchema } = require("../Modal/withdrawalSchema");
 const { ReachargeTransactionHistroy } = require("../Modal/reachargeTransactionHistroy");
+const { AstrologyResult } = require("../Modal/astrologyResult");
 
 const normalizeShopDomain = (shopDomain) => {
   if (!shopDomain || typeof shopDomain !== "string") return "";
@@ -39,6 +40,7 @@ const purgeShopTenantData = async (shopDoc) => {
     callSessionsResult,
     withdrawalsResult,
     rechargeHistoryResult,
+    astrologyResult,
   ] = await Promise.all([
     User.deleteMany(shopRefFilter),
     ConsultantClient.deleteMany({ shop_id: shopObjectId }),
@@ -56,6 +58,7 @@ const purgeShopTenantData = async (shopDoc) => {
       $or: [{ shopId: shopIdStr }, { shopId: shopObjectId }],
     }),
     ReachargeTransactionHistroy.deleteMany({ shop: shopDomain }),
+    AstrologyResult.deleteMany({ shop_id: shopObjectId }),
   ]);
 
   return {
@@ -72,6 +75,7 @@ const purgeShopTenantData = async (shopDoc) => {
       callSessions: callSessionsResult.deletedCount,
       withdrawals: withdrawalsResult.deletedCount,
       rechargeHistory: rechargeHistoryResult.deletedCount,
+      astrologyReadings: astrologyResult.deletedCount,
     },
   };
 };

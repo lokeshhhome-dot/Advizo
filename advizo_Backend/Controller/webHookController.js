@@ -3,6 +3,7 @@ const { sendEmail } = require("../MiddleWare/ShopifyMiddleware/nodemailer");
 const { shopModel } = require("../Modal/shopify");
 const { User } = require("../Modal/userSchema");
 const { WalletHistory } = require("../Modal/walletHistory");
+const { AstrologyResult } = require("../Modal/astrologyResult");
 const {
   cleanupShopOnUninstall,
   normalizeShopDomain,
@@ -84,6 +85,15 @@ const webhooksCustomerRedact = async (req, res) => {
       if (shopDomain) {
         const shopDoc = await shopModel.findOne({ shop: shopDomain }).select("_id");
         if (shopDoc) filter.shop_id = shopDoc._id;
+      }
+
+      // Saved astrology readings are birth details (personal data) with no
+      // financial-integrity reason to keep — hard-delete them, before the
+      // anonymization below (which keeps the matching User ids stable).
+      const redactedUserIds = await User.find(filter).distinct("_id");
+      if (redactedUserIds.length) {
+        const astro = await AstrologyResult.deleteMany({ user_id: { $in: redactedUserIds } });
+        console.log(`[GDPR] customers/redact deleted ${astro.deletedCount} astrology reading(s)`);
       }
 
       const result = await User.updateMany(filter, {

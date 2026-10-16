@@ -7,5 +7,22 @@
   },
   "my_profile": {
     "loading": "Loading your profile…"
+  },
+  "astrology": {
+    "tools": {
+      "kundli_kicker": "Birth chart",
+      "kundli_title": "Kundli",
+      "kundli_desc": "Your Rashi and Navamsa charts, planetary positions, current dasha and doshas.",
+      "panchang_kicker": "Daily calendar",
+      "panchang_title": "Panchang",
+      "panchang_desc": "Tithi, nakshatra, yoga and karana with sunrise, sunset and Rahu Kaal for any place.",
+      "matchmaking_kicker": "Compatibility",
+      "matchmaking_title": "Match Making",
+      "matchmaking_desc": "Compare two birth charts with Ashtakoot guna milan and dosha checks."
+    },
+    "experience": {
+      "loading": "Opening astrology tools…",
+      "noscript": "Please enable JavaScript to use the astrology tools."
+    }
   }
 }
