@@ -36,6 +36,17 @@ const getConfig = () => ({
 
 const isConfigured = () => Boolean(getConfig().apiKey);
 
+// One startup line so `pm2 logs` shows immediately whether this server
+// process can serve astrology. Logs a boolean only — never the key.
+if (isConfigured()) {
+  console.log("[astrology] ASTROLOGY_API_KEY configured = true");
+} else {
+  console.warn(
+    "[astrology] ASTROLOGY_API_KEY configured = false — astrology tools will show " +
+    "\"not available\". Add ASTROLOGY_API_KEY to advizo_Backend/.env ON THE SERVER and restart.",
+  );
+}
+
 const errorForStatus = (status, path) => {
   const detail = `jyotisham ${path} -> HTTP/status ${status}`;
   if (status === 401 || status === 403) return new AstrologyError("PROVIDER_AUTH", { detail });

@@ -910,6 +910,17 @@
 }
 .advizo-astro__state-icon svg { width: 44px; height: 44px; }
 .advizo-astro__state p { margin: 0; max-width: 420px; }
+.advizo-astro__state .advizo-astro__merchant-hint {
+  max-width: 520px;
+  margin-top: 8px;
+  padding: 12px 14px;
+  border: 1px dashed var(--ast-amber);
+  border-radius: var(--ast-radius-sm);
+  background: var(--ast-amber-soft);
+  color: var(--ast-amber-strong);
+  font-size: 14px;
+  text-align: left;
+}
 
 /* ---------------------------------------------------------------- narrow: stacked tables */
 @container (max-width: 599px) {

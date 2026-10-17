@@ -1221,13 +1221,25 @@
 
     // -------------------------------------------------- boot
 
-    function renderUnavailable(message, login) {
+    /**
+     * @param {string} message  shopper-facing text
+     * @param {boolean} [login] show a Sign in button
+     * @param {object} [opts]   { retry: show "Try again" (only useful for
+     *                          transient failures), merchantHint: extra text
+     *                          shown ONLY in the Theme Editor }
+     */
+    function renderUnavailable(message, login, opts) {
+      opts = opts || {};
+      var hint = opts.merchantHint && container.getAttribute("data-design-mode") === "true"
+        ? '<p class="advizo-astro__merchant-hint"><strong>Merchant note (only visible in the Theme Editor):</strong> ' + escapeHtml(opts.merchantHint) + "</p>"
+        : "";
       root.innerHTML =
         '<div class="advizo-astro__state">' +
         '<span class="advizo-astro__state-icon">' + ICON.kundli + "</span>" +
         "<p>" + escapeHtml(message) + "</p>" +
         (login ? '<a class="advizo-astro__btn advizo-astro__btn--primary" href="' + escapeHtml(loginHref()) + '">Sign in</a>' : "") +
-        (!login ? '<button type="button" class="advizo-astro__btn advizo-astro__btn--ghost" data-retry>Try again</button>' : "") +
+        (opts.retry ? '<button type="button" class="advizo-astro__btn advizo-astro__btn--ghost" data-retry>Try again</button>' : "") +
+        hint +
         "</div>";
       var retry = root.querySelector("[data-retry]");
       if (retry) retry.addEventListener("click", boot);
@@ -1237,12 +1249,19 @@
       api(app.apiBase + "/config", { timeout: 15000 }).then(function (out) {
         if (!out.ok) {
           logErr("config failed:", out.status, out.data && out.data.code);
-          renderUnavailable("Astrology tools couldn't be loaded right now.");
+          renderUnavailable("Astrology tools couldn't be loaded right now.", false, {
+            retry: true,
+            merchantHint: "The Advizo backend did not answer /apps/advizo/astrology/config (HTTP " + out.status +
+              "). Check that the backend with the astrology routes is deployed and running, and that the app proxy points to it.",
+          });
           return;
         }
         app.config = out.data;
         if (!app.config.available) {
-          renderUnavailable("Astrology tools are not available on this store right now.");
+          // Not transient (provider credentials missing) — retrying can't help.
+          renderUnavailable("Astrology tools are not available on this store right now.", false, {
+            merchantHint: "The astrology provider is not configured. Add ASTROLOGY_API_KEY (your Jyotisham Astro API key) to the Advizo backend environment and restart the backend.",
+          });
           return;
         }
         if (!app.config.authenticated && !app.config.guestsAllowed) {
